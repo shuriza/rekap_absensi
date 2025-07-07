@@ -1,0 +1,127 @@
+@extends('layouts.app')
+
+@section('content')
+<div class="min-h-screen flex flex-col px-6 py-4">
+    <h1 class="text-lg font-semibold mb-4">
+        Laporan Detail Absensi Dinas Penanaman Modal & Pelayanan Terpadu Satu Pintu
+    </h1>
+
+    {{-- Filter Bar --}}
+    <form method="GET" class="flex flex-wrap items-end gap-4 mb-6">
+    {{-- Bulan --}}
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Bulan</label>
+            <select name="bulan" class="mt-1 block w-40 rounded border-gray-300 shadow-sm text-sm">
+                @for ($i = 1; $i <= 12; $i++)
+                    <option value="{{ $i }}" {{ $bulan == $i ? 'selected' : '' }}>
+                        {{ \Carbon\Carbon::create()->month($i)->translatedFormat('F') }}
+                    </option>
+                @endfor
+            </select>
+        </div>
+
+        {{-- Tahun --}}
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Tahun</label>
+            <select name="tahun" class="mt-1 block w-28 rounded border-gray-300 shadow-sm text-sm">
+                @for ($y = 2022; $y <= now()->year; $y++)
+                    <option value="{{ $y }}" {{ $tahun == $y ? 'selected' : '' }}>{{ $y }}</option>
+                @endfor
+            </select>
+        </div>
+
+        {{-- Unit Kerja --}}
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Unit Kerja</label>
+            <select name="unit" class="mt-1 block w-80 rounded border-gray-300 shadow-sm text-sm">
+                <option value="">-- Semua Unit --</option>
+                <option value="DPMPTSP" {{ request('unit') == 'DPMPTSP' ? 'selected' : '' }}>
+                    Dinas Penanaman Modal & Pelayanan Terpadu Satu Pintu
+                </option>
+            </select>
+        </div>
+
+        {{-- Cari Nama (auto-submit on input) --}}
+        <div>
+            <label class="block text-sm font-medium text-gray-700">Cari Nama</label>
+            <input type="text" name="search" value="{{ request('search') }}"
+                placeholder="Cari nama pegawai..."
+                oninput="this.form.submit()"
+                class="mt-1 block w-64 rounded border-gray-300 shadow-sm text-sm" />
+        </div>
+
+       <div>
+            <label class="block text-sm font-medium text-gray-700">Segment Tanggal</label>
+            <select name="segment" class="mt-1 block w-44 rounded border-gray-300 shadow-sm text-sm" onchange="this.form.submit()">
+                <option value="1" {{ request('segment', 1) == 1 ? 'selected' : '' }}>Tanggal 1–10</option>
+                <option value="2" {{ request('segment') == 2 ? 'selected' : '' }}>Tanggal 11–20</option>
+                <option value="3" {{ request('segment') == 3 ? 'selected' : '' }}>Tanggal 21–{{ \Carbon\Carbon::create($tahun, $bulan)->daysInMonth }}</option>
+            </select>
+            </div>
+
+
+    </form>
+
+
+    {{-- Tabel Data --}}
+    <div class="overflow-x-auto border border-gray-300 rounded">
+        <table class="min-w-full text-sm text-center border-collapse">
+            <thead class="bg-gray-800 text-white">
+                <tr>
+                    <th class="border px-2 py-2">No</th>
+                    <th class="border px-2 py-2">NIP</th>
+                    <th class="border px-2 py-2">Nama</th>
+                    <th class="border px-2 py-2">Jenjang Jabatan</th>
+                    @foreach ($tanggalList as $tgl)
+                        <th class="border px-2 py-2">{{ $tgl }}</th>
+                    @endforeach
+                    <th class="border px-2 py-2">Total Akumulasi</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white text-gray-800">
+                @foreach ($pegawaiList as $pegawai)
+                <tr class="hover:bg-gray-50">
+                    <td class="border px-2 py-1">{{ $loop->iteration }}</td>
+                    <td class="border px-2 py-1">{{ $pegawai->nip }}</td>
+                    <td class="border px-2 py-1">{{ $pegawai->nama }}</td>
+                    <td class="border px-2 py-1">{{ $pegawai->jabatan }}</td>
+                    @foreach ($tanggalList as $tgl)
+                        @php
+                            $tanggalFull = sprintf('%04d-%02d-%02d', $tahun, $bulan, $tgl);
+                            $absen = $pegawai->absensi->firstWhere('tanggal', $tanggalFull);
+                        @endphp
+                        <td class="border px-1 py-1 {{ $absen && $absen->keterangan ? 'bg-yellow-100 font-semibold text-xs' : '' }}">
+                            @if ($absen)
+                                @if ($absen->keterangan)
+                                    <span class="text-xs">{{ $absen->keterangan }}</span>
+                                @else
+                                    <div class="text-green-600 text-xs">{{ $absen->jam_masuk ?? '-' }}</div>
+                                    <div class="text-red-600 text-xs">{{ $absen->jam_pulang ?? '-' }}</div>
+                                @endif
+                            @else
+                                /
+                            @endif
+                        </td>
+                    @endforeach
+                    <td class="border px-2 py-1 text-xs">{{ $pegawai->akumulasi ?? '/' }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+
+    {{-- Pagination --}}
+    <div class="flex justify-between items-center mt-4 text-sm text-gray-600">
+        <div>
+            Showing {{ $pegawaiList->firstItem() }} to {{ $pegawaiList->lastItem() }} of {{ $pegawaiList->total() }} entries
+        </div> 
+    </div>
+
+
+</div>
+ {{-- Footer --}}
+<footer class="text-center py-4 text-sm text-gray-600">
+        Dinas Penanaman Modal & Pelayanan Terpadu Satu Pintu 
+        ({{ $tahun }} - {{ \Carbon\Carbon::create()->month((int) $bulan)->translatedFormat('F') }})
+</footer>
+@endsection
