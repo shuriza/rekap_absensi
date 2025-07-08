@@ -1,16 +1,12 @@
 <?php
 
-// File: app/Http/Controllers/AbsensiController.php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Karyawan;
 use App\Models\Absensi;
 use Maatwebsite\Excel\Facades\Excel;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 
 class AbsensiController extends Controller
 {
@@ -21,80 +17,134 @@ class AbsensiController extends Controller
 
     public function preview(Request $request)
     {
-        $request->validate([
-            'file_excel.*' => 'required|mimes:xlsx,xls',
-        ]);
+        if ($request->isMethod('post')) {
+            $request->validate([
+                'file_excel.*' => 'required|mimes:xlsx,xls',
+                'jam_masuk_min' => 'required|date_format:H:i',
+                'jam_masuk_max' => 'required|date_format:H:i',
+                'jam_pulang_min' => 'required|date_format:H:i',
+                'jam_pulang_max' => 'required|date_format:H:i',
+            ]);
+        }
 
         $preview = [];
 
-        foreach ($request->file('file_excel') as $file) {
-            $path = $file->getRealPath();
-            $data = Excel::toArray([], $path);
-            $sheet = $data[2] ?? [];
-            $barisTanggal = $sheet[3] ?? [];
+        // Ambil jam batas dari user
+        $jamMasukMin = $request->input('jam_masuk_min', '07:00');
+        $jamMasukMax = $request->input('jam_masuk_max', '07:30');
+        $jamPulangMin = $request->input('jam_pulang_min', '15:30');
+        $jamPulangMax = $request->input('jam_pulang_max', '17:00');
 
-            for ($i = 4; $i < count($sheet); $i += 2) {
-                $infoRow = $sheet[$i];
-                $dataRow = $sheet[$i + 1] ?? [];
+        // Proses hanya jika ada file upload
+        if ($request->hasFile('file_excel')) {
+            foreach ($request->file('file_excel') as $file) {
+                $path = $file->getRealPath();
+                $data = Excel::toArray([], $path);
+                $sheet = $data[2] ?? [];
+                $barisTanggal = $sheet[3] ?? [];
 
-                $nama = $infoRow[10] ?? null;
-                $departemen = $infoRow[20] ?? null;
+                for ($i = 4; $i < count($sheet); $i += 2) {
+                    $infoRow = $sheet[$i];
+                    $dataRow = $sheet[$i + 1] ?? [];
 
-                if (!$nama || !$departemen) continue;
+                    $nama = $infoRow[10] ?? null;
+                    $departemen = $infoRow[20] ?? null;
 
-                for ($col = 1; $col <= 30; $col++) {
-                    $tanggalKe = $barisTanggal[$col] ?? null;
-                    if (!$tanggalKe) continue;
+                    if (!$nama || !$departemen) continue;
 
-                    $raw = $dataRow[$col] ?? null;
-                    if ($raw && is_string($raw)) {
-                        preg_match_all('/\d{2}:\d{2}/', $raw, $matches);
-                        $jam = $matches[0];
+                    for ($col = 1; $col <= 30; $col++) {
+                        $tanggalKe = $barisTanggal[$col] ?? null;
+                        if (!$tanggalKe) continue;
 
-                        $jamMasuk = null;
-                        $jamPulang = null;
+                        $raw = $dataRow[$col] ?? null;
+                        if ($raw && is_string($raw)) {
+                            preg_match_all('/\d{2}:\d{2}/', $raw, $matches);
+                            $jam = $matches[0];
 
-                        foreach ($jam as $j) {
-                            $jamInt = (int) explode(':', $j)[0];
-                            if ($jamInt < 12 && !$jamMasuk) {
-                                $jamMasuk = $j;
+                            $jamMasuk = null;
+                            $jamPulang = null;
+
+                            foreach ($jam as $j) {
+                                $jamInt = (int) explode(':', $j)[0];
+                                if ($jamInt < 12 && !$jamMasuk) {
+                                    $jamMasuk = $j;
+                                }
+                                if ($jamInt >= 12) {
+                                    $jamPulang = $j;
+                                }
                             }
-                            if ($jamInt >= 12) {
-                                $jamPulang = $j;
+
+                            // Validasi jam
+                            $isValid = true;
+                            if ($jamMasuk && ($jamMasuk < $jamMasukMin || $jamMasuk > $jamMasukMax)) {
+                                $isValid = false;
                             }
+                            if ($jamPulang && ($jamPulang < $jamPulangMin || $jamPulang > $jamPulangMax)) {
+                                $isValid = false;
+                            }
+
+                            if (!$isValid) continue;
+
+                            $tanggal = '2025-04-' . str_pad((int) $tanggalKe, 2, '0', STR_PAD_LEFT);
+
+                            $preview[] = [
+                                'nama' => $nama,
+                                'departemen' => $departemen,
+                                'tanggal' => $tanggal,
+                                'jam_masuk' => $jamMasuk,
+                                'jam_pulang' => $jamPulang,
+                            ];
                         }
-
-                        $tanggal = '2025-04-' . str_pad((int) $tanggalKe, 2, '0', STR_PAD_LEFT);
-
-                        $preview[] = [
-                            'nama' => $nama,
-                            'departemen' => $departemen,
-                            'tanggal' => $tanggal,
-                            'jam_masuk' => $jamMasuk,
-                            'jam_pulang' => $jamPulang,
-                        ];
                     }
                 }
             }
+
+            // Simpan ke session
+            session(['preview_data' => $preview]);
+        } else {
+            // Ambil dari session saat GET (misalnya pagination)
+            $preview = session('preview_data', []);
         }
 
         if (count($preview) === 0) {
             return back()->with('success', 'Tidak ada data absensi yang bisa ditampilkan.');
         }
 
+        // Filtering dan sorting
+        $collection = collect($preview);
+
+        if ($search = $request->input('search')) {
+            $collection = $collection->filter(fn($item) =>
+                stripos($item['nama'], $search) !== false
+            );
+        }
+
+        $sortBy = $request->input('sort_by');
+        if ($sortBy === 'nama_asc') {
+            $collection = $collection->sortBy('nama');
+        } elseif ($sortBy === 'nama_desc') {
+            $collection = $collection->sortByDesc('nama');
+        } elseif ($sortBy === 'tanggal_asc') {
+            $collection = $collection->sortBy('tanggal');
+        } elseif ($sortBy === 'tanggal_desc') {
+            $collection = $collection->sortByDesc('tanggal');
+        }
+
+        // Pagination
         $currentPage = LengthAwarePaginator::resolveCurrentPage();
         $perPage = 40;
-        $collection = collect($preview);
         $currentItems = $collection->slice(($currentPage - 1) * $perPage, $perPage)->values();
         $paginatedPreview = new LengthAwarePaginator(
             $currentItems,
             $collection->count(),
             $perPage,
             $currentPage,
-            ['path' => request()->url(), 'query' => request()->query()]
+            ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        return view('absensi.index', ['preview' => $paginatedPreview]);
+        return view('absensi.index', [
+            'preview' => $paginatedPreview,
+        ]);
     }
 
     public function store(Request $request)
@@ -108,8 +158,8 @@ class AbsensiController extends Controller
             ]);
 
             $cek = Absensi::where('karyawan_id', $karyawan->id)
-                          ->where('tanggal', $row['tanggal'])
-                          ->first();
+                ->where('tanggal', $row['tanggal'])
+                ->first();
 
             if (!$cek) {
                 Absensi::create([
@@ -122,12 +172,5 @@ class AbsensiController extends Controller
         }
 
         return redirect()->route('absensi.index')->with('success', 'Data absensi berhasil disimpan!');
-    }
-
-    public function cetak()
-    {
-        $data = Absensi::with('karyawan')->orderBy('tanggal')->get();
-        $pdf = Pdf::loadView('absensi.cetak', compact('data'));
-        return $pdf->download('rekap-absensi.pdf');
     }
 }

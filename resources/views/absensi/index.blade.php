@@ -4,32 +4,39 @@
   <div class="max-w-4xl mx-auto mt-10 space-y-6">
     {{-- Upload Form --}}
     <div class="bg-white p-6 rounded-xl shadow border">
-      <h2 class="text-xl font-bold mb-4">📤 Upload File Excel Absensi</h2>
-
-      {{-- Success Message --}}
-      @if (session('success'))
-        <div class="bg-green-100 text-green-700 p-3 rounded mb-4">
-          {{ session('success') }}
-        </div>
-      @endif
-
-      {{-- Error Message --}}
-      @if ($errors->any())
-        <div class="bg-red-100 text-red-700 p-3 rounded mb-4">
-          <ul class="list-disc ml-5">
-            @foreach ($errors->all() as $error)
-              <li>{{ $error }}</li>
-            @endforeach
-          </ul>
-        </div>
-      @endif
-
+      <h2 class="text-lg font-semibold mb-2">⏰ Filter Jam Masuk & Pulang</h2>
       <form method="POST" action="{{ route('absensi.preview') }}" enctype="multipart/form-data">
         @csrf
-        <input type="file" name="file_excel[]" multiple required
-          class="border p-2 rounded w-full mb-4">
-        <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Preview
-          Data</button>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium">Jam Masuk Minimal</label>
+            <input type="time" name="jam_masuk_min" value="{{ old('jam_masuk_min', '07:00') }}"
+              class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Jam Masuk Maksimal</label>
+            <input type="time" name="jam_masuk_max" value="{{ old('jam_masuk_max', '07:30') }}"
+              class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Jam Pulang Minimal</label>
+            <input type="time" name="jam_pulang_min" value="{{ old('jam_pulang_min', '15:30') }}"
+              class="border p-2 rounded w-full">
+          </div>
+          <div>
+            <label class="block text-sm font-medium">Jam Pulang Maksimal</label>
+            <input type="time" name="jam_pulang_max" value="{{ old('jam_pulang_max', '17:00') }}"
+              class="border p-2 rounded w-full">
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <input type="file" name="file_excel[]" multiple required
+            class="border p-2 rounded w-full mb-4">
+          <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Preview
+            Data</button>
+        </div>
       </form>
     </div>
 
