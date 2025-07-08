@@ -78,13 +78,15 @@
                     <th class="border px-2 py-2">Total Akumulasi</th>
                 </tr>
             </thead>
-            <tbody class="bg-white text-gray-800">
+           <tbody class="bg-white text-gray-800">
                 @foreach ($pegawaiList as $pegawai)
                 <tr class="hover:bg-gray-50">
                     <td class="border px-2 py-1">{{ $loop->iteration }}</td>
                     <td class="border px-2 py-1">{{ $pegawai->nip }}</td>
                     <td class="border px-2 py-1">{{ $pegawai->nama }}</td>
                     <td class="border px-2 py-1">{{ $pegawai->jabatan }}</td>
+
+                    {{-- Loop tanggal --}}
                     @foreach ($tanggalList as $tgl)
                         @php
                             $tanggalFull = sprintf('%04d-%02d-%02d', $tahun, $bulan, $tgl);
@@ -95,18 +97,33 @@
                                 @if ($absen->keterangan)
                                     <span class="text-xs">{{ $absen->keterangan }}</span>
                                 @else
-                                    <div class="text-green-600 text-xs">{{ $absen->jam_masuk ?? '-' }}</div>
-                                    <div class="text-red-600 text-xs">{{ $absen->jam_pulang ?? '-' }}</div>
+                                    <div class="text-xs">
+                                        @php
+                                            $jamMasuk = $absen->jam_masuk ? substr($absen->jam_masuk, 0, 5) : null;
+                                            $jamPulang = $absen->jam_pulang ? substr($absen->jam_pulang, 0, 5) : null;
+                                        @endphp
+                                        {{ $jamMasuk && $jamPulang ? "$jamMasuk - $jamPulang" : ($jamMasuk ?: '-') }}
+                                    </div>
                                 @endif
                             @else
                                 /
                             @endif
                         </td>
                     @endforeach
-                    <td class="border px-2 py-1 text-xs">{{ $pegawai->akumulasi ?? '/' }}</td>
+
+                    {{-- Kolom akumulasi hadir --}}
+                   <td class="border px-2 py-1 text-xs">
+                        @php
+                            $jam = str_pad(floor($pegawai->total_menit / 60), 2, '0', STR_PAD_LEFT);
+                            $menit = str_pad($pegawai->total_menit % 60, 2, '0', STR_PAD_LEFT);
+                        @endphp
+                        {{ $jam }}:{{ $menit }}
+                    </td>
+
                 </tr>
                 @endforeach
             </tbody>
+
         </table>
     </div>
 
