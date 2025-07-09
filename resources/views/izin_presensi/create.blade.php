@@ -1,124 +1,98 @@
 @extends('layouts.app')
 
+@push('styles')
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tom-select/dist/css/tom-select.css" rel="stylesheet">
+@endpush
+
 @section('content')
-<div class="max-w-7xl mx-auto my-25 space-y-6">
-  <div class="bg-white p-6 rounded-xl shadow border">
-    <h2 class="text-xl font-bold mb-4">📝 Form New Izin Presensi</h2>
+<div class="container mx-auto px-4 py-8 max-w-xl">
+    <h2 class="text-2xl font-semibold text-gray-800 mb-6">Buat Izin Presensi</h2>
 
-    {{-- Success Message --}}
-    @if(session('success'))
-      <div class="bg-green-100 text-green-700 p-3 rounded mb-4">
-        {{ session('success') }}
-      </div>
-    @endif
+    <form action="{{ route('izin_presensi.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6 bg-white p-6 rounded-xl shadow">
+        @csrf
 
-    {{-- Error Message --}}
-    @if($errors->any())
-      <div class="bg-red-100 text-red-700 p-3 rounded mb-4">
-        <ul class="list-disc ml-5">
-          @foreach($errors->all() as $error)
-            <li>{{ $error }}</li>
-          @endforeach
-        </ul>
-      </div>
-    @endif
-
-    <form action="{{ route('izin_presensi.store') }}" method="POST" enctype="multipart/form-data">
-      @csrf
-
-      <div class="mb-4">
-        <label for="karyawan_id" class="block mb-1 font-medium">Karyawan</label>
-        <select id="karyawan_id" name="karyawan_id" class="border p-2 rounded w-full"></select>
-      </div>
-
-      <div class="grid grid-cols-2 gap-4 mb-4">
+        <!-- Karyawan -->
         <div>
-          <label for="nip" class="block mb-1 font-medium">NIP</label>
-          <input type="text" id="nip" class="border p-2 rounded w-full bg-gray-100" readonly>
+            <label class="block mb-2 font-medium text-gray-700">Nama Karyawan</label>
+            <select id="karyawan_id" name="karyawan_id" required class="tom-select w-full rounded-lg border-gray-300">
+                <option value="">– Pilih karyawan –</option>
+                @foreach($karyawans as $karyawan)
+                    <option value="{{ $karyawan->id }}" {{ old('karyawan_id') == $karyawan->id ? 'selected' : '' }}>
+                        {{ $karyawan->nama }}
+                    </option>
+                @endforeach
+            </select>
+            @error('karyawan_id') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
         </div>
-        <div>
-          <label for="nama" class="block mb-1 font-medium">Nama</label>
-          <input type="text" id="nama" class="border p-2 rounded w-full bg-gray-100" readonly>
-        </div>
-      </div>
 
-      <div class="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <label for="tipe_ijin" class="block mb-1 font-medium">Tipe Ijin</label>
-          <select id="tipe_ijin" name="tipe_ijin" class="border p-2 rounded w-full">
-            @foreach($tipeIjin as $t)
-              <option value="{{ $t }}">{{ $t }}</option>
-            @endforeach
-          </select>
+        <!-- Tipe & Jenis Izin -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block mb-2 font-medium text-gray-700">Tipe Izin</label>
+                <select name="tipe_ijin" required class="w-full rounded-lg border-gray-300">
+                    <option value="">– Pilih tipe –</option>
+                    @foreach($tipeIjin as $tipe)
+                        <option value="{{ $tipe }}" {{ old('tipe_ijin') == $tipe ? 'selected' : '' }}>{{ $tipe }}</option>
+                    @endforeach
+                </select>
+                @error('tipe_ijin') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="block mb-2 font-medium text-gray-700">Jenis Izin</label>
+                <select name="jenis_ijin" required class="w-full rounded-lg border-gray-300">
+                    <option value="">– Pilih jenis –</option>
+                    @foreach($listJenis as $jenis)
+                        <option value="{{ $jenis }}" {{ old('jenis_ijin') == $jenis ? 'selected' : '' }}>{{ $jenis }}</option>
+                    @endforeach
+                </select>
+                @error('jenis_ijin') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+            </div>
         </div>
-        <div>
-          <label for="jenis_ijin" class="block mb-1 font-medium">Jenis Ijin</label>
-          <select id="jenis_ijin" name="jenis_ijin" class="border p-2 rounded w-full">
-            @foreach($listJenis as $j)
-              <option value="{{ $j }}">{{ $j }}</option>
-            @endforeach
-          </select>
+
+        <!-- Periode -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block mb-2 font-medium text-gray-700">Tanggal Awal</label>
+                <input type="date" name="tanggal_awal" value="{{ old('tanggal_awal') }}" required class="w-full rounded-lg border-gray-300">
+                @error('tanggal_awal') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="block mb-2 font-medium text-gray-700">Tanggal Akhir</label>
+                <input type="date" name="tanggal_akhir" value="{{ old('tanggal_akhir') }}" class="w-full rounded-lg border-gray-300">
+                @error('tanggal_akhir') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+            </div>
         </div>
-      </div>
 
-      <div class="grid grid-cols-2 gap-4 mb-4">
+        <!-- Berkas -->
         <div>
-          <label for="tanggal_awal" class="block mb-1 font-medium">Tanggal Mulai</label>
-          <input type="date" name="tanggal_awal" id="tanggal_awal" class="border p-2 rounded w-full">
+            <label class="block mb-2 font-medium text-gray-700">Lampiran (opsional, PDF/JPG/PNG)</label>
+            <input type="file" name="berkas" accept="application/pdf,image/*" class="w-full rounded-lg border-gray-300">
+            @error('berkas') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
         </div>
+
+        <!-- Keterangan -->
         <div>
-          <label for="tanggal_akhir" class="block mb-1 font-medium">Tanggal Selesai</label>
-          <input type="date" name="tanggal_akhir" id="tanggal_akhir" class="border p-2 rounded w-full">
-          <p class="text-sm text-gray-600">Kosongkan jika satu hari</p>
+            <label class="block mb-2 font-medium text-gray-700">Keterangan</label>
+            <textarea name="keterangan" rows="3" class="w-full rounded-lg border-gray-300">{{ old('keterangan') }}</textarea>
+            @error('keterangan') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
         </div>
-      </div>
 
-      <div class="mb-4">
-        <label for="berkas" class="block mb-1 font-medium">Upload Berkas</label>
-        <input type="file" id="berkas" name="berkas" class="border p-2 rounded w-full">
-      </div>
-
-      <div class="mb-6">
-        <label for="keterangan" class="block mb-1 font-medium">Keterangan</label>
-        <textarea name="keterangan" id="keterangan" class="border p-2 rounded w-full" rows="3"></textarea>
-      </div>
-
-      <div class="flex justify-between">
-        <a href="{{ route('izin_presensi.index') }}"
-           class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
-          Batal
-        </a>
-        <button type="submit"
-           class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-          Simpan
-        </button>
-      </div>
+        <!-- Tombol -->
+        <div class="flex justify-end">
+            <a href="{{ route('izin_presensi.index') }}" class="inline-block px-4 py-2 mr-3 rounded-lg border text-gray-700 hover:bg-gray-50 transition">Batal</a>
+            <button type="submit" class="inline-block px-6 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">Simpan</button>
+        </div>
     </form>
-  </div>
 </div>
 @endsection
 
 @push('scripts')
-  <!-- Select2 untuk pencarian karyawan -->
-  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet"/>
-  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/js/select2.min.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      $('#karyawan_id').select2({
-        placeholder: 'Cari karyawan...',
-        width: '100%',
-        ajax: {
-          url: '{{ route("karyawan.search") }}',
-          dataType: 'json',
-          delay: 250,
-          data: params => ({ q: params.term }),
-          processResults: data => ({ results: data.results })
-        }
-      }).on('select2:select', e => {
-        const d = e.params.data;
-        document.getElementById('nip').value = d.nip;
-        document.getElementById('nama').value = d.nama;
-      });
-    });
-  </script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select/dist/js/tom-select.complete.min.js"></script>
+    <script>
+        new TomSelect('#karyawan_id', {
+            create: false,
+            sortField: {field: 'text'}
+        });
+    </script>
 @endpush
