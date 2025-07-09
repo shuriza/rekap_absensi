@@ -1,10 +1,18 @@
 <?php
 
+use App\Exports\RekapAbsensiExport as ExportsRekapAbsensiExport;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\AbsensiController;
 use App\Http\Controllers\RekapController;
 use App\Http\Controllers\IzinPresensiController;
+use App\Http\Controllers\ExportRekapController;
+
+
+
+
+
+
 
 
 
@@ -29,3 +37,6 @@ Route::post('izin-presensi', [IzinPresensiController::class,'store'])->name('izi
 
 // AJAX search karyawan
 Route::get('karyawan/search', [IzinPresensiController::class,'searchKaryawan'])->name('karyawan.search');
+
+Route::get('/rekap/export-bulanan', [ExportRekapController::class, 'exportBulanan'])->name('rekap.export.bulanan');
+Route::get('/rekap/export-tahunan', [ExportRekapController::class, 'exportTahunan'])->name('rekap.export.tahunan');
