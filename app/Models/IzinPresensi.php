@@ -19,6 +19,15 @@ class IzinPresensi extends Model
         'keterangan',
     ];
 
+
+        // Tambahkan ini:
+    protected $casts = [
+        // Jika di database bertipe DATE, cukup 'date'.
+        // Anda juga bisa langsung sertakan format:
+        'tanggal_awal'  => 'date:d-m-Y',
+        'tanggal_akhir' => 'date:d-m-Y',
+    ];
+
     public function karyawan()
     {
         return $this->belongsTo(Karyawan::class);

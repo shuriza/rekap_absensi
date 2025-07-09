@@ -29,3 +29,8 @@ Route::post('izin-presensi', [IzinPresensiController::class,'store'])->name('izi
 
 // AJAX search karyawan
 Route::get('karyawan/search', [IzinPresensiController::class,'searchKaryawan'])->name('karyawan.search');
+
+Route::resource('izin_presensi', IzinPresensiController::class);
+// AJAX untuk Tom Select
+Route::get('/ajax/karyawan', [IzinPresensiController::class, 'searchKaryawan'])
+    ->name('ajax.karyawan');
