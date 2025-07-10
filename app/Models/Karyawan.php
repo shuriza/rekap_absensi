@@ -8,10 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class Karyawan extends Model
 {
     use HasFactory;
+    #protected $table = 'karyawan';
 
     protected $fillable = [
         'nama', 'departemen'
     ];
+
+    
 
     public function absensi()
     {

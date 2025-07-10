@@ -11,15 +11,42 @@ use Illuminate\Support\Facades\Storage;
 class IzinPresensiController extends Controller
 {
     /** Tampil list izin */
-    public function index()
+    public function index(Request $request)
     {
-        $data = IzinPresensi::with('karyawan')
-            ->latest('tanggal_awal')
-            ->paginate(10);
+        // ────────── ambil parameter filter & sortir ──────────
+        $start  = $request->query('start_date');
+        $end    = $request->query('end_date');
+        $sortBy = $request->query('sort_by', 'tanggal_awal');   // default
+        $order  = $request->query('order',   'desc');           // asc | desc
 
-        return view('izin_presensi.index', compact('data'));
+        // ────────── query dasar ──────────
+        $query = IzinPresensi::with('karyawan');
+
+        // filter rentang tanggal (tanggal_awal)
+        if ($start && $end) {
+            $query->whereBetween('tanggal_awal', [$start, $end]);
+        }
+
+        // sortir kolom yang di-izinkan
+        $allowedCols = ['tanggal_awal','tanggal_akhir','tipe_ijin','nama'];
+        $izinTable = (new IzinPresensi)->getTable();   // hasil: 'izin_presensi'
+
+        if ($sortBy === 'nama') {
+            $query->join('karyawans', 'karyawans.id', '=', $izinTable.'.karyawan_id')
+                ->orderBy('karyawans.nama', $order)
+                ->select($izinTable.'.*');           // hindari kolom ganda
+        } else {
+            $query->orderBy($sortBy, $order);
+        }
+
+        // paginasi + pertahankan query string
+        $data = $query->paginate(10)->withQueryString();
+
+        return view(
+            'izin_presensi.index',
+            compact('data', 'start', 'end', 'sortBy', 'order')
+        );
     }
-
     /** Form create */
     public function create()
     {
@@ -81,14 +108,17 @@ class IzinPresensiController extends Controller
     /** AJAX dropdown karyawan */
     public function searchKaryawan(Request $request)
     {
-        $q = $request->get('q','');
-        $list = Karyawan::where('nama','like',"%{$q}%")
-                 ->limit(10)->get(['id','nama']);
+        $q = $request->get('q', '');
+
+        $list = Karyawan::where('nama', 'like', "%{$q}%")
+                        ->orderBy('nama')
+                        ->limit(10)
+                        ->get(['id', 'nama']);
 
         return response()->json([
             'results' => $list->map(fn($k) => [
                 'id'   => $k->id,
-                'text' => $k->nama,
+                'text' => $k->nama,   // hanya nama
             ]),
         ]);
     }

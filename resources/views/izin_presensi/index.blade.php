@@ -30,7 +30,33 @@
         </div>
     </div>
 
-```
+<form method="GET" action="{{ route('izin_presensi.index') }}" class="mb-4 space-y-2">
+    <div class="flex flex-wrap items-center gap-2">
+        <label>Dari:</label>
+        <input type="date" name="start_date" value="{{ $start }}" class="border p-1">
+        <label>Sampai:</label>
+        <input type="date" name="end_date" value="{{ $end }}" class="border p-1">
+
+        {{-- pilihan sortir --}}
+        <select name="sort_by" class="border p-1">
+            <option value="tanggal_awal"  {{ $sortBy=='tanggal_awal'  ? 'selected' : '' }}>Tanggal Awal</option>
+            <option value="tanggal_akhir" {{ $sortBy=='tanggal_akhir' ? 'selected' : '' }}>Tanggal Akhir</option>
+            <option value="tipe_ijin"     {{ $sortBy=='tipe_ijin'     ? 'selected' : '' }}>Tipe Ijin</option>
+            <option value="nama"          {{ $sortBy=='nama'          ? 'selected' : '' }}>Nama Karyawan</option>
+        </select>
+
+        <select name="order" class="border p-1">
+            <option value="asc"  {{ $order=='asc'  ? 'selected' : '' }}>A-Z / Lama-Baru</option>
+            <option value="desc" {{ $order=='desc' ? 'selected' : '' }}>Z-A / Baru-Lama</option>
+        </select>
+
+        <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded">
+            Terapkan
+        </button>
+        <a href="{{ route('izin_presensi.index') }}" class="text-sm underline">Reset</a>
+    </div>
+</form>
+
 <!-- Table Card -->
 <div class="bg-white shadow-lg rounded-lg overflow-hidden">
     <div class="overflow-x-auto">
