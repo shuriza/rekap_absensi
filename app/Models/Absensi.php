@@ -16,6 +16,14 @@ class Absensi extends Model
     public function karyawan()
     {
         return $this->belongsTo(Karyawan::class, 'karyawan_id');
-}
+    }
+
+    protected $table = 'absensis';        // atau nama tabel Anda
+
+    protected $casts = [
+        'tanggal'    => 'date:Y-m-d',     // ⬅️ wajib supaya $presensi->tanggal jadi Carbon
+        'jam_masuk'  => 'datetime:H:i:s',
+        'jam_pulang' => 'datetime:H:i:s',
+    ];
 
 }
