@@ -2,9 +2,34 @@
 
 @section('content')
   <div class="max-w-4xl mx-auto mt-10 space-y-6">
+
     {{-- Upload Form --}}
     <div class="bg-white p-6 rounded-xl shadow border">
       <h2 class="text-lg font-semibold mb-2">⏰ Filter Jam Masuk & Pulang</h2>
+
+      {{-- Flash Messages --}}
+      @if (session('success'))
+        <div class="bg-green-100 text-green-700 p-3 rounded mb-4">
+          {{ session('success') }}
+        </div>
+      @endif
+
+      @if (session('error'))
+        <div class="bg-red-100 text-red-700 p-3 rounded mb-4">
+          {{ session('error') }}
+        </div>
+      @endif
+
+      @if ($errors->any())
+        <div class="bg-red-100 text-red-700 p-3 rounded mb-4">
+          <ul class="list-disc ml-5">
+            @foreach ($errors->all() as $error)
+              <li>{{ $error }}</li>
+            @endforeach
+          </ul>
+        </div>
+      @endif
+
       <form method="POST" action="{{ route('absensi.preview') }}" enctype="multipart/form-data">
         @csrf
 
@@ -34,8 +59,9 @@
         <div class="mt-4">
           <input type="file" name="file_excel[]" multiple required
             class="border p-2 rounded w-full mb-4">
-          <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Preview
-            Data</button>
+          <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            Preview Data
+          </button>
         </div>
       </form>
     </div>
@@ -46,9 +72,32 @@
         <h2 class="text-xl font-bold mb-4">📄 Preview Data Absensi</h2>
         <p class="text-sm text-gray-600 mb-2">Menampilkan {{ $preview->total() }} data absensi.</p>
 
+        {{-- Filter Search & Sort --}}
+        <form method="GET" action="{{ route('absensi.preview') }}"
+          class="mb-4 flex flex-col md:flex-row gap-2 md:items-center justify-between">
+          <input type="text" name="search" placeholder="Cari nama..."
+            value="{{ request('search') }}" class="border p-2 rounded w-full md:w-1/3" />
+
+          <select name="sort_by" class="border p-2 rounded w-12 md:w-auto">
+            <option value="">Urutkan</option>
+            <option value="nama_asc" {{ request('sort_by') == 'nama_asc' ? 'selected' : '' }}>Nama
+              A-Z</option>
+            <option value="nama_desc" {{ request('sort_by') == 'nama_desc' ? 'selected' : '' }}>Nama
+              Z-A</option>
+            <option value="tanggal_asc" {{ request('sort_by') == 'tanggal_asc' ? 'selected' : '' }}>
+              Tanggal Terlama</option>
+            <option value="tanggal_desc"
+              {{ request('sort_by') == 'tanggal_desc' ? 'selected' : '' }}>Tanggal Terbaru</option>
+          </select>
+
+          <button type="submit"
+            class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">Terapkan</button>
+        </form>
+
+        {{-- Form Simpan --}}
         <form method="POST" action="{{ route('absensi.store') }}">
           @csrf
-          <table class="w-full text-sm border mb-4">
+          <table class="w-full text-sm border mb-4 mt-4">
             <thead class="bg-gray-100">
               <tr>
                 <th class="border px-2 py-1">Nama</th>
@@ -72,6 +121,7 @@
               @endforeach
             </tbody>
           </table>
+
           <div class="flex items-center justify-between flex-col">
             <button type="submit"
               class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">

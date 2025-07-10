@@ -110,15 +110,17 @@ class AbsensiController extends Controller
             return back()->with('success', 'Tidak ada data absensi yang bisa ditampilkan.');
         }
 
-        // Filtering dan sorting
+
         $collection = collect($preview);
 
+        // Pencarian nama
         if ($search = $request->input('search')) {
-            $collection = $collection->filter(fn($item) =>
-                stripos($item['nama'], $search) !== false
-            );
+            $collection = $collection->filter(function ($item) use ($search) {
+                return stripos($item['nama'], $search) !== false;
+            });
         }
 
+        // Sorting
         $sortBy = $request->input('sort_by');
         if ($sortBy === 'nama_asc') {
             $collection = $collection->sortBy('nama');
@@ -147,30 +149,37 @@ class AbsensiController extends Controller
         ]);
     }
 
-    public function store(Request $request)
-    {
-        $data = $request->input('data');
+public function store(Request $request)
+{
+    $data = session('preview_data');
 
-        foreach ($data as $row) {
-            $karyawan = Karyawan::firstOrCreate([
-                'nama' => $row['nama'],
-                'departemen' => $row['departemen'],
-            ]);
-
-            $cek = Absensi::where('karyawan_id', $karyawan->id)
-                ->where('tanggal', $row['tanggal'])
-                ->first();
-
-            if (!$cek) {
-                Absensi::create([
-                    'karyawan_id' => $karyawan->id,
-                    'tanggal'     => $row['tanggal'],
-                    'jam_masuk'   => $row['jam_masuk'],
-                    'jam_pulang'  => $row['jam_pulang'],
-                ]);
-            }
-        }
-
-        return redirect()->route('absensi.index')->with('success', 'Data absensi berhasil disimpan!');
+    if (!$data || !is_array($data)) {
+        return back()->with('error', 'Tidak ada data yang bisa disimpan.');
     }
+
+    foreach ($data as $row) {
+        $karyawan = Karyawan::firstOrCreate([
+            'nama' => $row['nama'],
+            'departemen' => $row['departemen'],
+        ]);
+
+        $cek = Absensi::where('karyawan_id', $karyawan->id)
+                      ->where('tanggal', $row['tanggal'])
+                      ->first();
+
+        if (!$cek) {
+            Absensi::create([
+                'karyawan_id' => $karyawan->id,
+                'tanggal'     => $row['tanggal'],
+                'jam_masuk'   => $row['jam_masuk'],
+                'jam_pulang'  => $row['jam_pulang'],
+            ]);
+        }
+    }
+
+    // Hapus session preview setelah disimpan
+    session()->forget('preview_data');
+
+    return redirect()->route('absensi.index')->with('success', 'Semua data absensi berhasil disimpan!');
+}
 }
