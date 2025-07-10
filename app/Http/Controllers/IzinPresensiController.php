@@ -18,7 +18,9 @@ class IzinPresensiController extends Controller
         $end    = $request->query('end_date');
         $sortBy = $request->query('sort_by', 'tanggal_awal');   // default
         $order  = $request->query('order',   'desc');           // asc | desc
-
+        $q      = $request->query('q');  
+        
+        
         // ────────── query dasar ──────────
         $query = IzinPresensi::with('karyawan');
 
@@ -27,15 +29,25 @@ class IzinPresensiController extends Controller
             $query->whereBetween('tanggal_awal', [$start, $end]);
         }
 
+        // filter kata kunci: nama karyawan atau tipe_ijin
+        if ($q) {
+            $query->where(function ($qr) use ($q) {
+                $qr->whereHas('karyawan', fn($k) => $k->where('nama', 'like', "%{$q}%"))
+                ->orWhere('tipe_ijin', 'like', "%{$q}%");
+            });
+        }
+
         // sortir kolom yang di-izinkan
         $allowedCols = ['tanggal_awal','tanggal_akhir','tipe_ijin','nama'];
         $izinTable = (new IzinPresensi)->getTable();   // hasil: 'izin_presensi'
+
+
 
         if ($sortBy === 'nama') {
             $query->join('karyawans', 'karyawans.id', '=', $izinTable.'.karyawan_id')
                 ->orderBy('karyawans.nama', $order)
                 ->select($izinTable.'.*');           // hindari kolom ganda
-        } else {
+        } else { 
             $query->orderBy($sortBy, $order);
         }
 
@@ -44,7 +56,7 @@ class IzinPresensiController extends Controller
 
         return view(
             'izin_presensi.index',
-            compact('data', 'start', 'end', 'sortBy', 'order')
+            compact('data', 'start', 'end', 'sortBy', 'order', 'q')
         );
     }
     /** Form create */
