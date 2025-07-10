@@ -78,7 +78,7 @@
                         <td class="px-4 py-3 text-sm text-gray-700">{{ $data->firstItem() + $i }}</td>
                         <td class="px-4 py-3 text-sm text-gray-700">
                             <div class="font-medium">{{ $izin->karyawan->nama }}</div>
-                            <div class="text-xs text-gray-500">{{ $izin->karyawan->nip }}</div>
+                            <div class="text-xs text-gray-500">{{ $izin->karyawan->departemen }}</div>
                         </td>
                         <td class="px-4 py-3 text-sm text-center text-gray-700">{{ $izin->tipe_ijin }}</td>
                         <td class="px-4 py-3 text-sm text-center text-gray-700">
@@ -130,6 +130,7 @@
         </table>
     </div>
     <!-- Pagination -->
+     
     <div class="px-4 py-4 bg-gray-50">
         {{ $data->links('pagination::tailwind') }}
     </div>

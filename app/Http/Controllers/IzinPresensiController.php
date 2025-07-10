@@ -52,7 +52,7 @@ class IzinPresensiController extends Controller
         }
 
         // paginasi + pertahankan query string
-        $data = $query->paginate(10)->withQueryString();
+        $data = $query->paginate(5)->withQueryString();
 
         return view(
             'izin_presensi.index',
