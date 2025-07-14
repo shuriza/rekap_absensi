@@ -4,167 +4,176 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Karyawan;
-use App\Models\IzinPresensi;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 
 class RekapController extends Controller
 {
-    /**
-     * Halaman rekap presensi + izin
-     * URL contoh: /rekap?bulan=7&tahun=2025&segment=2
-     */
-    public function rekap(Request $request)
+    /** Default 7 jam 30 menit (450 menit) bila salah satu jam hilang */
+    private int $DEFAULT_MINUTES = 7 * 60 + 30;
+
+    /* =========================================================== *
+     *  REKAP BULANAN  (tabel segment, total 1-bulan penuh)
+     * =========================================================== */
+    public function rekap(Request $r)
     {
-        /* ─── 1. Parameter & validasi ─────────────────────────────── */
-        $bulan   = (int) $request->input('bulan',  date('m'));
-        $tahun   = (int) $request->input('tahun',  date('Y'));
-        $segment = (int) $request->input('segment', 1);
+        /* 1. parameter */
+        $bulan   = max(1,  min(12, (int) $r->input('bulan',  date('m'))));
+        $tahun   =         (int) $r->input('tahun',  date('Y'));
+        $segment = max(1,  min(3,  (int) $r->input('segment', 1)));
 
-        $bulan   = max(1, min(12, $bulan));
-        $segment = max(1, min(3,  $segment));
-
-        /* ─── 2. Tentukan deret tanggal untuk segment ─────────────── */
-        $jumlahHari = Carbon::create($tahun, $bulan)->daysInMonth;
-
-        [$start, $end] = match ($segment) {
+        /* 2. tanggal segment */
+        $daysInMonth = Carbon::create($tahun, $bulan)->daysInMonth;
+        [$start,$end] = match ($segment) {
             1       => [1, 10],
             2       => [11, 20],
-            default => [21, $jumlahHari],
+            default => [21, $daysInMonth],
         };
+        $tanggalList = range($start,$end);
 
-        $tanggalList = range($start, $end);
-        $periodeBulan = CarbonPeriod::create(
-            "$tahun-$bulan-01",
-            "$tahun-$bulan-$jumlahHari"
-        );
-
-        /* ─── 3. Ambil data presensi & izin secara eager load ─────── */
+        /* 3. query karyawan + presensi & izin satu bulan */
         $pegawaiQuery = Karyawan::with([
-            // presensi 1 bulan penuh
-            'absensi' => fn($q) => $q->whereYear('tanggal', $tahun)
-                                     ->whereMonth('tanggal', $bulan),
+            // presensi
+            'absensi' => fn($q)=>$q->whereYear('tanggal',$tahun)
+                                   ->whereMonth('tanggal',$bulan),
 
-            // izin yg MENYENTUH bulan tsb
-            'izins'   => fn($q) => $q->where(function ($sub) use ($tahun, $bulan) {
-                $sub->whereYear('tanggal_awal',  $tahun)
-                    ->whereMonth('tanggal_awal', $bulan)
-                    ->orWhereYear('tanggal_akhir', $tahun)
-                    ->whereMonth('tanggal_akhir', $bulan);
-            })
+            // izin yg men-sentuh bulan
+            'izins'   => fn($q)=>$q->where(function($sub)use($tahun,$bulan){
+                $sub->whereYear('tanggal_awal', $tahun)->whereMonth('tanggal_awal', $bulan)
+                     ->orWhereYear('tanggal_akhir',$tahun)->whereMonth('tanggal_akhir',$bulan);
+            }),
         ]);
 
-        // filter nama jika ada
-        if ($request->filled('search')) {
-            $pegawaiQuery->where('nama', 'like', '%' . $request->search . '%');
+        if($r->filled('search')){
+            $pegawaiQuery->where('nama','like','%'.$r->search.'%');
         }
-
         $pegawaiList = $pegawaiQuery->paginate(10)->withQueryString();
 
-        /* ─── 4. Olah data per-pegawai ────────────────────────────── */
-        foreach ($pegawaiList as $pegawai) {
+        /* helper: time|datetime → Carbon|null */
+        $dt = fn(string $tgl, ?string $w)=>
+            $w ? (str_contains($w,' ') ? Carbon::parse($w)
+                                       : Carbon::parse("$tgl $w"))
+               : null;
 
-            /* 4a. Petakan presensi: [tgl => {jam_masuk, jam_pulang}] */
-            $presensiTgl = $pegawai->absensi->keyBy(fn($p) => $p->tanggal->toDateString());
+        /* 4. proses tiap pegawai */
+        foreach($pegawaiList as $peg){
 
-            /* 4b. Petakan izin: [tgl => label izin]  (rentang tanggal) */
-            $izinTgl = collect();
-            foreach ($pegawai->izins as $izin) {
-
+            /* 4-a. peta izin: tanggal => kode */
+            $mapIzin = [];
+            foreach($peg->izins as $iz){
                 $range = CarbonPeriod::create(
-                    $izin->tanggal_awal,
-                    $izin->tanggal_akhir ?? $izin->tanggal_awal
+                    $iz->tanggal_awal,
+                    $iz->tanggal_akhir ?? $iz->tanggal_awal
                 );
-
-                foreach ($range as $tgl) {
-                    // singkatan izin → "CB", "SAKIT", dsb
-                    $izinTgl[$tgl->toDateString()] = strtok($izin->jenis_ijin, ' ');
+                foreach($range as $d){
+                    $mapIzin[$d->toDateString()] = strtok($iz->jenis_ijin,' ');
                 }
             }
 
-            /* 4c. Susun kolom harian hanya utk segment aktif */
-            $absensiPerTanggal = [];
-            $totalMenitHadir   = 0;
+            /* 4-b. total menit 1-bulan penuh */
+            $total = 0;
+            foreach($peg->absensi as $row){
+                $tglStr = $row->tanggal->toDateString();
 
-            foreach ($tanggalList as $tgl) {
-                $date = Carbon::create($tahun, $bulan, $tgl)->toDateString();
+                if(isset($mapIzin[$tglStr])) continue; // skip jika ada izin
 
-                /* — prioritas izin */
-                if (isset($izinTgl[$date])) {
-                    $absensiPerTanggal[$tgl] = [
-                        'type'  => 'izin',
-                        'label' => $izinTgl[$date],
-                    ];
+                $in  = $dt($tglStr,$row->jam_masuk);
+                $out = $dt($tglStr,$row->jam_pulang);
+
+                if($in && $out && $out->gt($in)){
+                    $total += $in->diffInMinutes($out);        // normal
+                } elseif(($in && !$out) || (!$in && $out)){
+                    $total += $this->DEFAULT_MINUTES;          // default 7h30m
+                }
+            }
+
+            /* 4-c. kolom harian utk segment */
+            $daily = [];
+            $mapPres = $peg->absensi->keyBy(fn($p)=>$p->tanggal->toDateString());
+
+            foreach($tanggalList as $d){
+                $tglStr = sprintf('%04d-%02d-%02d',$tahun,$bulan,$d);
+
+                /* izin? */
+                if(isset($mapIzin[$tglStr])){
+                    $daily[$d] = ['type'=>'izin','label'=>$mapIzin[$tglStr]];
                     continue;
                 }
 
-                /* — presensi */
-                if ($p = $presensiTgl[$date] ?? null) {
-                    $jamMasuk  = Carbon::parse($p->jam_masuk);
-                    $jamPulang = Carbon::parse($p->jam_pulang);
-
-                    if ($jamPulang->greaterThan($jamMasuk)) {
-                        $menit = $jamMasuk->diffInMinutes($jamPulang);
-                        $totalMenitHadir += $menit;
-                    }
-
-                    $absensiPerTanggal[$tgl] = [
-                        'type'   => 'hadir',
-                        'label'  => $jamMasuk->format('H:i') . ' - ' . $jamPulang->format('H:i'),
-                    ];
+                /* presensi? */
+                $row = $mapPres[$tglStr] ?? null;
+                if($row){
+                    $inTxt  = $dt($tglStr,$row->jam_masuk)?->format('H:i') ?? '-';
+                    $outTxt = $dt($tglStr,$row->jam_pulang)?->format('H:i') ?? '-';
+                    $daily[$d] = ['type'=>'hadir','label'=>"$inTxt - $outTxt"];
                 } else {
-                    $absensiPerTanggal[$tgl] = [
-                        'type'  => 'kosong',
-                        'label' => '/',
-                    ];
+                    $daily[$d] = ['type'=>'kosong','label'=>'/'];
                 }
             }
 
-            /* 4d. Tambah properti ke model (untuk dipakai di Blade) */
-            $pegawai->absensi_harian = $absensiPerTanggal;
-            $pegawai->total_menit    = $totalMenitHadir;
+            $peg->absensi_harian = $daily;
+            $peg->total_menit    = $total;
         }
 
-        /* ─── 5. Kirim ke view ────────────────────────────────────── */
-        return view('absensi.rekap', [
-            'pegawaiList'  => $pegawaiList,
-            'tanggalList'  => $tanggalList,
-            'bulan'        => $bulan,
-            'tahun'        => $tahun,
-            'segment'      => $segment,
-            'jumlahHari'   => $jumlahHari,
-        ]);
+        return view('absensi.rekap', compact(
+            'pegawaiList','tanggalList','bulan','tahun','segment','daysInMonth'
+        ));
     }
 
+    /* ===========================================================
+    *  REKAP TAHUNAN  (kolom Jan-Des + total)
+    * =========================================================== */
     public function rekapTahunan(Request $request)
-{
-    $tahun = (int) $request->input('tahun', date('Y'));
+    {
+        $tahun = (int) $request->input('tahun', date('Y'));
 
-    // Ambil semua karyawan
-    $pegawaiList = Karyawan::with(['absensi' => function ($q) use ($tahun) {
-        $q->whereYear('tanggal', $tahun);
-    }])->get();
+        // eager-load presensi setahun
+        $pegawaiList = Karyawan::with([
+            'absensi' => fn ($q) => $q->whereYear('tanggal', $tahun)
+        ])->get();
 
-    // Hitung total menit kerja per bulan
-    foreach ($pegawaiList as $pegawai) {
-        $rekap = [];
+        // helper parse datetime (menerima string 'time' atau 'datetime')
+        $dt = fn (string $tgl, ?string $w) =>
+            $w
+                ? (str_contains($w, ' ')
+                    ? Carbon::parse($w)          // sudah YYYY-MM-DD HH:ii:ss
+                    : Carbon::parse("$tgl $w"))  // gabung tanggal + jam
+                : null;
 
-        for ($bulan = 1; $bulan <= 12; $bulan++) {
-            $total = $pegawai->absensi
-                ->filter(fn($absen) => $absen->tanggal->month == $bulan)
-                ->reduce(function ($carry, $item) {
-                    $masuk = \Carbon\Carbon::parse($item->jam_masuk);
-                    $pulang = \Carbon\Carbon::parse($item->jam_pulang);
-                    return $carry + ($pulang > $masuk ? $masuk->diffInMinutes($pulang) : 0);
-                }, 0);
+        foreach ($pegawaiList as $pegawai) {
 
-            $rekap[$bulan] = $total;
+            // menit per bulan 1-12
+            $menitPerBulan = array_fill(1, 12, 0);
+
+            foreach ($pegawai->absensi as $row) {
+                // pastikan bulan 1-12 selalu numeric
+                $tglStr   = $row->tanggal instanceof Carbon
+                            ? $row->tanggal->toDateString()
+                            : $row->tanggal;                 // string di DB
+                $bulanIdx = Carbon::parse($tglStr)->month;   // 1 … 12
+
+                $in  = $dt($tglStr, $row->jam_masuk);
+                $out = $dt($tglStr, $row->jam_pulang);
+
+                if ($in && $out && $out->gt($in)) {
+                    // presensi lengkap
+                    $menitPerBulan[$bulanIdx] += $in->diffInMinutes($out);
+                } elseif (($in && !$out) || (!$in && $out)) {
+                    // hanya masuk atau hanya pulang → +7h30m
+                    $menitPerBulan[$bulanIdx] += $this->DEFAULT_MINUTES;
+                }
+            }
+
+            /* format ke HH:MM */
+            $fmt = fn (int $m) =>
+                str_pad(intval($m / 60), 2, '0', STR_PAD_LEFT) . ':' .
+                str_pad($m % 60,        2, '0', STR_PAD_LEFT);
+
+            $pegawai->rekap_tahunan = array_map($fmt, $menitPerBulan);
+            $pegawai->total_tahun   = $fmt(array_sum($menitPerBulan));
         }
 
-        $pegawai->rekap_tahunan = $rekap;
+        return view('absensi.rekap-tahunan', compact('pegawaiList', 'tahun'));
     }
-
-    return view('absensi.rekap-tahunan', compact('pegawaiList', 'tahun'));
-}
 
 }

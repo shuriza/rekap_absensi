@@ -3,18 +3,18 @@
 @extends('layouts.app')
 
 @section('content')
-  <div class="min-h-screen flex flex-col px-6 py-4">
-    <div class="my-8 space-x-2">
-      <a href="{{ route('absensi.rekap') }}"
-        class="px-4 py-2 rounded {{ request()->is('absensi/rekap') ? 'bg-blue-600 text-white' : 'bg-gray-200' }}">
-        Rekap Bulanan
-      </a>
-      <a href="{{ route('absensi.rekap.tahunan') }}"
-        class="px-4 py-2 rounded {{ request()->is('absensi/rekap-tahunan') ? 'bg-blue-600 text-white' : 'bg-gray-200' }}">
-        Rekap Tahunan
-      </a>
-    </div>
+  <div class="mb-4 space-x-2">
+    <a href="{{ route('absensi.rekap') }}"
+      class="px-4 py-2 rounded {{ request()->is('absensi/rekap') ? 'bg-blue-600 text-white' : 'bg-gray-200' }}">
+      Rekap Bulanan
+    </a>
+    <a href="{{ route('absensi.rekap.tahunan') }}"
+      class="px-4 py-2 rounded {{ request()->is('absensi/rekap-tahunan') ? 'bg-blue-600 text-white' : 'bg-gray-200' }}">
+      Rekap Tahunan
+    </a>
+  </div>
 
+  <div class="min-h-screen flex flex-col px-6 py-4">
     {{-- =============================================
          HEADER & JUDUL
     ============================================= --}}
@@ -29,8 +29,7 @@
       {{-- Bulan --}}
       <div>
         <label class="block text-sm font-medium text-gray-700">Bulan</label>
-        <select name="bulan" class="mt-1 block w-40 rounded border-gray-300 shadow-sm text-sm"
-          onchange="this.form.submit()">
+        <select name="bulan" class="mt-1 block w-40 rounded border-gray-300 shadow-sm text-sm">
           @for ($i = 1; $i <= 12; $i++)
             <option value="{{ $i }}" {{ $bulan == $i ? 'selected' : '' }}>
               {{ \Carbon\Carbon::create()->month($i)->translatedFormat('F') }}
@@ -42,8 +41,7 @@
       {{-- Tahun --}}
       <div>
         <label class="block text-sm font-medium text-gray-700">Tahun</label>
-        <select name="tahun" class="mt-1 block w-28 rounded border-gray-300 shadow-sm text-sm"
-          onchange="this.form.submit()">
+        <select name="tahun" class="mt-1 block w-28 rounded border-gray-300 shadow-sm text-sm">
           @for ($y = 2022; $y <= now()->year; $y++)
             <option value="{{ $y }}" {{ $tahun == $y ? 'selected' : '' }}>
               {{ $y }}</option>

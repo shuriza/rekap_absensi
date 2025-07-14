@@ -9,53 +9,69 @@ use Carbon\Carbon;
 
 class RekapAbsensiBulananExport implements FromView
 {
-    protected $bulan, $tahun;
+    private int $DEFAULT_MINUTES = 7 * 60 + 30;   // 450 menit
 
-    public function __construct($bulan, $tahun)
+    public function __construct(private int $bulan, private int $tahun) {}
+
+    /** helper: time|datetime → Carbon|null */
+    private function dt(string $tgl, ?string $w): ?Carbon
     {
-        $this->bulan = $bulan;
-        $this->tahun = $tahun;
+        return $w
+            ? (str_contains($w, ' ') ? Carbon::parse($w)
+                                     : Carbon::parse("$tgl $w"))
+            : null;
     }
 
     public function view(): View
     {
-        $jumlahHari = Carbon::create($this->tahun, $this->bulan)->daysInMonth;
+        $jumlahHari  = Carbon::create($this->tahun, $this->bulan)->daysInMonth;
         $tanggalList = range(1, $jumlahHari);
 
-        $pegawaiList = Karyawan::with(['absensi' => function ($query) {
-            $query->whereYear('tanggal', $this->tahun)
-                  ->whereMonth('tanggal', $this->bulan);
-        }])->get();
+        $pegawaiList = Karyawan::with(['absensi'=>fn($q)=>
+            $q->whereYear('tanggal', $this->tahun)
+              ->whereMonth('tanggal',$this->bulan)
+        ])->get();
 
-        foreach ($pegawaiList as $pegawai) {
-            $absensiPerTanggal = [];
-            $totalMenit = 0;
+        foreach ($pegawaiList as $peg) {
 
-            foreach ($tanggalList as $tgl) {
-                $absensiPerTanggal[$tgl] = '-';
-            }
+            /* inisialisasi */
+            $harian = array_fill_keys($tanggalList, '-');
+            $total  = 0;
 
-            foreach ($pegawai->absensi as $absen) {
-                $day = (int) Carbon::parse($absen->tanggal)->format('d');
-                $jamMasuk = $absen->jam_masuk ? Carbon::parse($absen->jam_masuk) : null;
-                $jamPulang = $absen->jam_pulang ? Carbon::parse($absen->jam_pulang) : null;
+            foreach ($peg->absensi as $row) {
+                $tglStr = $row->tanggal->toDateString();
+                $d      = (int) Carbon::parse($tglStr)->day;
 
-                if ($jamMasuk && $jamPulang && $jamPulang > $jamMasuk) {
-                    $totalMenit += $jamMasuk->diffInMinutes($jamPulang);
+                $in  = $this->dt($tglStr, $row->jam_masuk);
+                $out = $this->dt($tglStr, $row->jam_pulang);
 
-                    $absensiPerTanggal[$day] = $jamMasuk->format('H:i') . ' - ' . $jamPulang->format('H:i');
+                /* --- hitung menit + label -------------------------------- */
+                if ($in && $out && $out->gt($in)) {
+                    // presensi lengkap
+                    $total        += $in->diffInMinutes($out);
+                    $harian[$d]    = $in->format('H:i').' - '.$out->format('H:i');
+                }
+                elseif ($in && !$out) {
+                    // hanya jam datang
+                    $total        += $this->DEFAULT_MINUTES;
+                    $harian[$d]    = $in->format('H:i').' - -';
+                }
+                elseif (!$in && $out) {
+                    // hanya jam pulang
+                    $total        += $this->DEFAULT_MINUTES;
+                    $harian[$d]    = '- - '.$out->format('H:i');
                 }
             }
 
-            $pegawai->absensi_harian = $absensiPerTanggal;
-            $pegawai->total_menit = $totalMenit;
+            $peg->absensi_harian = $harian;
+            $peg->total_menit    = $total;
         }
 
         return view('exports.rekap_bulanan_excel', [
             'pegawaiList' => $pegawaiList,
             'tanggalList' => $tanggalList,
-            'bulan' => $this->bulan,
-            'tahun' => $this->tahun,
+            'bulan'       => $this->bulan,
+            'tahun'       => $this->tahun,
         ]);
     }
 }
