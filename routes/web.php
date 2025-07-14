@@ -36,3 +36,6 @@ Route::resource('izin_presensi', IzinPresensiController::class);
 Route::get('/ajax/karyawan', [IzinPresensiController::class, 'searchKaryawan'])
      ->name('karyawan.search');
 
+Route::get('/izin-presensi/{izin}/berkas',
+    [IzinPresensiController::class, 'berkas'])
+     ->name('izin_presensi.berkas');
