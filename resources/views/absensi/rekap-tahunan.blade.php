@@ -20,7 +20,8 @@
     <form method="GET" class="flex flex-wrap items-end gap-4 mb-6">
       <div>
         <label class="block text-sm font-medium text-gray-700">Tahun</label>
-        <select name="tahun" class="mt-1 block w-28 rounded border-gray-300 shadow-sm text-sm">
+        <select name="tahun" class="mt-1 block w-28 rounded border-gray-300 shadow-sm text-sm"
+          onchange="this.form.submit()">
           @for ($y = 2022; $y <= now()->year; $y++)
             <option value="{{ $y }}" {{ $tahun == $y ? 'selected' : '' }}>
               {{ $y }}</option>
