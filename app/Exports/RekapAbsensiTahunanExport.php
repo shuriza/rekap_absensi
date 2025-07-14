@@ -2,49 +2,68 @@
 namespace App\Exports;
 
 use App\Models\Karyawan;
-use App\Models\Absensi;
 use Illuminate\Contracts\View\View;
 use Maatwebsite\Excel\Concerns\FromView;
 use Carbon\Carbon;
 
 class RekapAbsensiTahunanExport implements FromView
 {
-    protected $tahun;
+    protected int $tahun;
 
-    public function __construct($tahun)
+    public function __construct(int $tahun)
     {
         $this->tahun = $tahun;
     }
 
     public function view(): View
     {
-        $karyawans = Karyawan::with(['absensi' => function ($query) {
-            $query->whereYear('tanggal', $this->tahun);
-        }])->get();
+        // Ambil karyawan + absensi untuk tahun yang diminta
+        $karyawans = Karyawan::with([
+            'absensi' => function ($q) {
+                $q->whereYear('tanggal', $this->tahun);
+            },
+        ])->get();
 
-        // Siapkan tanggal untuk setiap bulan
-        $tanggalPerBulan = [];
-        for ($month = 1; $month <= 12; $month++) {
-            $tanggalPerBulan[$month] = range(1, Carbon::create($this->tahun, $month)->daysInMonth);
-        }
-
-        // Hitung total menit per karyawan
         foreach ($karyawans as $pegawai) {
-            $totalMenit = 0;
+            // Inisialisasi rekap 12 bulan & total
+            $rekapBulanan = array_fill(1, 12, 0);
+            $totalMenit   = 0;
+
             foreach ($pegawai->absensi as $absen) {
-                if ($absen->jam_masuk && $absen->jam_pulang) {
-                    $start = Carbon::parse($absen->jam_masuk);
-                    $end = Carbon::parse($absen->jam_pulang);
-                    $totalMenit += $end->diffInMinutes($start);
+                // Skip record jika data tidak lengkap
+                if (!$absen->jam_masuk || !$absen->jam_pulang) {
+                    continue;
                 }
+
+                $masuk  = Carbon::parse($absen->jam_masuk);
+                $pulang = Carbon::parse($absen->jam_pulang);
+
+                // Toleransi shift malam: kalau pulang <= masuk, anggap pulang esok hari
+                if ($pulang->lessThanOrEqualTo($masuk)) {
+                    $pulang->addDay();
+                }
+
+                // Selisih dalam menit (absolute = false untuk deteksi negatif)
+                $selisih = $masuk->diffInMinutes($pulang, false);
+
+                // Skip bila data anomali (negatif atau > 24 jam)
+                if ($selisih <= 0 || $selisih > 24 * 60) {
+                    continue;
+                }
+
+                $bulan = (int) Carbon::parse($absen->tanggal)->month;
+
+                $rekapBulanan[$bulan] += $selisih;
+                $totalMenit           += $selisih;
             }
-            $pegawai->total_menit = $totalMenit;
+
+            $pegawai->rekap_tahunan = $rekapBulanan;
+            $pegawai->total_menit   = $totalMenit;
         }
 
         return view('exports.rekap_tahunan', [
             'karyawans' => $karyawans,
-            'tahun' => $this->tahun,
-            'tanggalPerBulan' => $tanggalPerBulan,
+            'tahun'     => $this->tahun,
         ]);
     }
 }
