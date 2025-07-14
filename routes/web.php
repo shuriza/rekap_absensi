@@ -22,6 +22,7 @@ Route::post('/absensi/store', [AbsensiController::class, 'store'])->name('absens
 Route::get('/absensi/cetak', [AbsensiController::class, 'cetak'])->name('absensi.cetak');
 
 Route::get('/absensi/rekap', [RekapController::class, 'rekap'])->name('absensi.rekap');
+Route::get('/absensi/rekap-tahunan', [RekapController::class, 'rekapTahunan'])->name('absensi.rekap.tahunan');
 
 Route::get('izin-presensi', [IzinPresensiController::class,'index'])->name('izin_presensi.index');
 Route::get('izin-presensi/new', [IzinPresensiController::class,'create'])->name('izin_presensi.create');

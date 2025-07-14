@@ -59,6 +59,8 @@ class IzinPresensiController extends Controller
             compact('data', 'start', 'end', 'sortBy', 'order', 'q')
         );
     }
+
+    
     /** Form create */
     public function create()
     {
@@ -134,4 +136,6 @@ class IzinPresensiController extends Controller
             ]),
         ]);
     }
+
+    
 }

@@ -135,4 +135,36 @@ class RekapController extends Controller
             'jumlahHari'   => $jumlahHari,
         ]);
     }
+
+    public function rekapTahunan(Request $request)
+{
+    $tahun = (int) $request->input('tahun', date('Y'));
+
+    // Ambil semua karyawan
+    $pegawaiList = Karyawan::with(['absensi' => function ($q) use ($tahun) {
+        $q->whereYear('tanggal', $tahun);
+    }])->get();
+
+    // Hitung total menit kerja per bulan
+    foreach ($pegawaiList as $pegawai) {
+        $rekap = [];
+
+        for ($bulan = 1; $bulan <= 12; $bulan++) {
+            $total = $pegawai->absensi
+                ->filter(fn($absen) => $absen->tanggal->month == $bulan)
+                ->reduce(function ($carry, $item) {
+                    $masuk = \Carbon\Carbon::parse($item->jam_masuk);
+                    $pulang = \Carbon\Carbon::parse($item->jam_pulang);
+                    return $carry + ($pulang > $masuk ? $masuk->diffInMinutes($pulang) : 0);
+                }, 0);
+
+            $rekap[$bulan] = $total;
+        }
+
+        $pegawai->rekap_tahunan = $rekap;
+    }
+
+    return view('absensi.rekap-tahunan', compact('pegawaiList', 'tahun'));
+}
+
 }
