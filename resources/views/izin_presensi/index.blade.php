@@ -91,8 +91,8 @@
                         <!-- Kolom Berkas -->
                         <td class="px-4 py-3 text-center text-sm">
                             @if($izin->berkas)
-                                <a href="{{ Storage::url($izin->berkas) }}" target="_blank"
-                                   class="inline-block px-2 py-1 bg-blue-100 text-blue-600 rounded-full text-xs hover:bg-blue-200 transition">
+                                <a href="{{ route('izin_presensi.lampiran', $izin) }}" target="_blank"
+                                class="inline-block px-2 py-1 bg-blue-100 text-blue-600 rounded-full text-xs hover:bg-blue-200">
                                     Lihat Lampiran
                                 </a>
                             @else

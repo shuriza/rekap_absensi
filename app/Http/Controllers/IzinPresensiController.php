@@ -7,6 +7,7 @@ use App\Models\Karyawan;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\Response;
 
 class IzinPresensiController extends Controller
 {
@@ -138,4 +139,18 @@ class IzinPresensiController extends Controller
     }
 
     
+
+    public function lampiran(IzinPresensi $izin): Response
+    {
+        // boleh tambahkan pengecekan role/user di sini
+        if (!$izin->berkas || !Storage::disk('public')->exists($izin->berkas)) {
+            abort(404);
+        }
+
+        // tampilkan langsung di browser
+        return Storage::disk('public')->response($izin->berkas);
+        // atau ->download($izin->berkas) bila ingin force-download
+    }
+
+
 }
