@@ -199,10 +199,6 @@
         📤 Export Excel Bulanan ({{ \Carbon\Carbon::create()->month($bulan)->translatedFormat('F') }}
         {{ $tahun }})
       </a>
-      <a href="{{ route('rekap.export.tahunan', ['tahun' => $tahun]) }}"
-        class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm">
-        📁 Export Excel Tahunan ({{ $tahun }})
-      </a>
     </div>
 
     {{-- =============================================
@@ -213,11 +209,11 @@
         <thead class="bg-gray-800 text-white">
           <tr>
             <th class="border px-2 py-2">No</th>
-            <th class="border px-2 py-2">NIP</th>
+            {{-- <th>NIP</th>  ← dihilangkan --}}
             <th class="border px-2 py-2">Nama</th>
-            <th class="border px-2 py-2">Jenjang Jabatan</th>
+            {{-- <th>Jenjang Jabatan</th>  ← dihilangkan --}}
             @foreach ($tanggalList as $tgl)
-              <th class="border px-2 py-2">{{ $tgl }}</th>
+                <th class="border px-2 py-2">{{ $tgl }}</th>
             @endforeach
             <th class="border px-2 py-2">Total Akumulasi</th>
           </tr>
@@ -227,10 +223,7 @@
             <tr class="hover:bg-gray-50">
               <td class="border px-2 py-1">{{ $loop->iteration + ($pegawaiList->firstItem() - 1) }}
               </td>
-              <td class="border px-2 py-1">{{ $pegawai->nip }}</td>
               <td class="border px-2 py-1 text-left">{{ $pegawai->nama }}</td>
-              <td class="border px-2 py-1">{{ $pegawai->jabatan ?? '-' }}</td>
-
               {{-- Loop tanggal dalam segment --}}
               @foreach ($tanggalList as $tgl)
                 @php $sel = $pegawai->absensi_harian[$tgl]; @endphp
