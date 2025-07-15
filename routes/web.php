@@ -9,9 +9,9 @@ use App\Http\Controllers\IzinPresensiController;
 use App\Http\Controllers\ExportRekapController;
 
 
-// Route::get('/', function () {
-//     return view('welcome');
-// });
+ Route::get('/', function () {
+     return view('absensi.index');
+ });
 
 Route::get('/absensi', [AbsensiController::class, 'index'])->name('absensi.index');
 Route::get('/absensi/upload', [AbsensiController::class, 'formUpload'])->name('absensi.upload');

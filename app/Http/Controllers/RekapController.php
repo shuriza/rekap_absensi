@@ -167,10 +167,10 @@ class RekapController extends Controller
                 }
             }
 
-            $fmt = fn ($m) => str_pad($m / 60, 2, '0', STR_PAD_LEFT)
-                           . ':' . str_pad($m % 60, 2, '0', STR_PAD_LEFT);
+            $fmt = fn (int $m) => sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
 
             $peg->rekap_tahunan = array_map($fmt, $menitPerBulan);
+            $peg->total_menit   = array_sum($menitPerBulan);   // konsisten dgn rekap bulanan
             $peg->total_tahun   = $fmt(array_sum($menitPerBulan));
         }
 
