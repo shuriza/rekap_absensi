@@ -1,3 +1,7 @@
+@php
+    use Illuminate\Support\Str;   // NEW – utk pemotongan teks
+@endphp
+
 <table>
     <thead>
         <tr>
@@ -8,23 +12,34 @@
             @foreach ($tanggalList as $tgl)
                 <th>{{ $tgl }}</th>
             @endforeach
-            <th>Total Akumulasi (HH:MM)</th>
+            <th>Total&nbsp;Akumulasi&nbsp;(HH:MM)</th>
         </tr>
     </thead>
+
     <tbody>
         @foreach ($pegawaiList as $i => $pegawai)
             @php
-                $jam = str_pad(floor($pegawai->total_menit / 60), 2, '0', STR_PAD_LEFT);
-                $menit = str_pad($pegawai->total_menit % 60, 2, '0', STR_PAD_LEFT);
+                // format total menit → HH:MM
+                $jam   = str_pad(intdiv($pegawai->total_menit, 60), 2, '0', STR_PAD_LEFT);
+                $menit = str_pad($pegawai->total_menit % 60,      2, '0', STR_PAD_LEFT);
             @endphp
+
             <tr>
                 <td>{{ $i + 1 }}</td>
                 <td>{{ $pegawai->nip }}</td>
                 <td>{{ $pegawai->nama }}</td>
-                <td>{{ $pegawai->jabatan }}</td>
+                <td>{{ $pegawai->jabatan ?? '-' }}</td>
+
+                {{-- kolom per-tanggal --}}
                 @foreach ($tanggalList as $tgl)
-                    <td>{{ $pegawai->absensi_harian[$tgl] ?? '-' }}</td>
+                    @php
+                        $val = $pegawai->absensi_harian[$tgl] ?? '-';
+                        // jika string terlalu panjang (libur), potong 25 karakter
+                        $display = Str::limit($val, 25, '…');
+                    @endphp
+                    <td>{{ $display }}</td>
                 @endforeach
+
                 <td>{{ $jam }}:{{ $menit }}</td>
             </tr>
         @endforeach

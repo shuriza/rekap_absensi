@@ -8,6 +8,7 @@ use App\Http\Controllers\RekapController;
 use App\Http\Controllers\IzinPresensiController;
 use App\Http\Controllers\ExportRekapController;
 
+
 // Route::get('/', function () {
 //     return view('welcome');
 // });
@@ -39,3 +40,9 @@ Route::get('/ajax/karyawan', [IzinPresensiController::class, 'searchKaryawan'])
 
 Route::get('/izin-presensi/{izin}/lampiran',
     [IzinPresensiController::class, 'lampiran'])->name('izin_presensi.lampiran');
+
+Route::post('/rekap/holiday', [RekapController::class, 'storeHoliday'])
+     ->name('rekap.holiday.add');
+Route::delete('/rekap/holiday/{id}',   [RekapController::class, 'destroyHoliday'])
+     ->name('rekap.holiday.del');
+

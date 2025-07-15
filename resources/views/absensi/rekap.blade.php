@@ -85,6 +85,78 @@
         </select>
       </div>
     </form>
+      {{-- =============================================
+          FORM ➕ TANDAI TANGGAL MERAH / HARI PENTING
+      ============================================= --}}
+      @if (session('holiday_success'))
+        <div class="mb-4 px-4 py-2 rounded bg-green-100 text-green-800 text-sm">
+            {{ session('holiday_success') }}
+        </div>
+      @endif
+
+      <form action="{{ route('rekap.holiday.add') }}" method="POST"
+            class="flex flex-wrap items-end gap-4 mb-6 border p-4 rounded bg-slate-50">
+        @csrf
+
+        {{-- Tanggal --}}
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Tanggal</label>
+          <input type="date" name="tanggal" required
+                class="mt-1 block w-40 rounded border-gray-300 shadow-sm text-sm" />
+        </div>
+
+        {{-- Keterangan --}}
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Keterangan</label>
+          <input type="text" name="keterangan" required placeholder="Hari Besar / Cuti Bersama ..."
+                class="mt-1 block w-72 rounded border-gray-300 shadow-sm text-sm" />
+        </div>
+
+        <button type="submit"
+            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm">
+            ➕ Tandai Tanggal
+        </button>
+      </form>
+
+      {{-- =============================================
+          DAFTAR LIBUR BULAN INI  +  Tombol 🗑 Hapus
+      ============================================= --}}
+      @if ($holidayMap->isNotEmpty())
+        <table class="text-xs mb-6 border w-full max-w-md">
+          <thead class="bg-slate-200 text-left">
+            <tr>
+              <th class="p-2">Tanggal</th>
+              <th class="p-2">Keterangan</th>
+              <th class="p-2 w-8"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach ($holidayMap as $h)
+              <tr class="border-t">
+                <td class="p-2">
+                  {{ $h->tanggal->translatedFormat('d F Y') }}
+                </td>
+                <td class="p-2">{{ $h->keterangan }}</td>
+                <td class="p-2 text-right">
+                  <form action="{{ route('rekap.holiday.del', $h->id) }}"
+                        method="POST"
+                        onsubmit="return confirm('Hapus tanggal merah ini?')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit"
+                            class="text-red-600 hover:text-red-800 font-semibold"
+                            title="Hapus">
+                      🗑️
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            @endforeach
+          </tbody>
+        </table>
+      @endif
+
+
 
     {{-- =============================================
          STYLES & SCRIPTS UNTUK DATATABLES EXPORT
@@ -162,22 +234,33 @@
               {{-- Loop tanggal dalam segment --}}
               @foreach ($tanggalList as $tgl)
                 @php $sel = $pegawai->absensi_harian[$tgl]; @endphp
-                <td
-                  class="border px-1 py-1 text-xs text-center
-                                {{ $sel['type'] === 'izin' ? 'bg-yellow-100 font-semibold' : '' }}">
-                  @switch($sel['type'])
-                    @case('izin')
-                      {{ $sel['label'] }}
-                    @break
+                <td class="border px-1 py-1 text-xs text-center
+                      @if ($sel['type'] === 'libur') bg-red-100 text-red-600 font-semibold
+                      @elseif ($sel['type'] === 'izin') bg-yellow-100 font-semibold @endif">
 
-                    @case('hadir')
-                      {{ $sel['label'] }}
-                    @break
+                      @switch($sel['type'])
+                          @case('libur')
+                              {{-- Potong jadi 25 karakter & tampilkan tooltip --}}
+                              <span class="inline-block max-w-[140px] truncate"
+                                    title="{{ $sel['label'] }}">
+                                  {{ Str::limit($sel['label'], 25, '…') }}
+                              </span>
+                          @break
 
-                    @default
-                      /
-                  @endswitch
-                </td>
+                          @case('izin')
+                              {{ $sel['label'] }}
+                          @break
+
+                          @case('hadir')
+                              {{ $sel['label'] }}
+                          @break
+
+                          @default
+                              /
+                      @endswitch
+                  </td>
+
+
               @endforeach
 
               {{-- Total jam kerja --}}
