@@ -33,28 +33,71 @@
       <form method="POST" action="{{ route('absensi.preview') }}" enctype="multipart/form-data">
         @csrf
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium">Jam Masuk Minimal</label>
-            <input type="time" name="jam_masuk_min" value="{{ old('jam_masuk_min', '07:00') }}"
-              class="border p-2 rounded w-full">
+        <div class="mb-6">
+          {{-- Senin - Kamis --}}
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Jam Masuk Minimal
+                (Senin-Kamis)</label>
+              <input type="time" name="jam_masuk_min_senin"
+                value="{{ old('jam_masuk_min_senin', '07:00') }}"
+                class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Jam Masuk Maksimal
+                (Senin-Kamis)</label>
+              <input type="time" name="jam_masuk_max_senin"
+                value="{{ old('jam_masuk_max_senin', '07:30') }}"
+                class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Jam Pulang Minimal
+                (Senin-Kamis)</label>
+              <input type="time" name="jam_pulang_min_senin"
+                value="{{ old('jam_pulang_min_senin', '15:30') }}"
+                class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Jam Pulang Maksimal
+                (Senin-Kamis)</label>
+              <input type="time" name="jam_pulang_max_senin"
+                value="{{ old('jam_pulang_max_senin', '17:00') }}"
+                class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
+            </div>
           </div>
-          <div>
-            <label class="block text-sm font-medium">Jam Masuk Maksimal</label>
-            <input type="time" name="jam_masuk_max" value="{{ old('jam_masuk_max', '07:30') }}"
-              class="border p-2 rounded w-full">
-          </div>
-          <div>
-            <label class="block text-sm font-medium">Jam Pulang Minimal</label>
-            <input type="time" name="jam_pulang_min" value="{{ old('jam_pulang_min', '15:30') }}"
-              class="border p-2 rounded w-full">
-          </div>
-          <div>
-            <label class="block text-sm font-medium">Jam Pulang Maksimal</label>
-            <input type="time" name="jam_pulang_max" value="{{ old('jam_pulang_max', '17:00') }}"
-              class="border p-2 rounded w-full">
+          <hr class="border-t-4 border-blue-300 my-4">
+          {{-- Jumat --}}
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Jam Masuk Minimal (Jumat)</label>
+              <input type="time" name="jam_masuk_min_jumat"
+                value="{{ old('jam_masuk_min_jumat', '07:00') }}"
+                class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Jam Masuk Maksimal
+                (Jumat)</label>
+              <input type="time" name="jam_masuk_max_jumat"
+                value="{{ old('jam_masuk_max_jumat', '07:30') }}"
+                class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Jam Pulang Minimal
+                (Jumat)</label>
+              <input type="time" name="jam_pulang_min_jumat"
+                value="{{ old('jam_pulang_min_jumat', '15:00') }}"
+                class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700">Jam Pulang Maksimal
+                (Jumat)</label>
+              <input type="time" name="jam_pulang_max_jumat"
+                value="{{ old('jam_pulang_max_jumat', '17:00') }}"
+                class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
+            </div>
           </div>
         </div>
+
 
         <div class="mt-4">
           <input type="file" name="file_excel[]" multiple required
