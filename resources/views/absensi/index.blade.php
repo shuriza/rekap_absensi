@@ -71,28 +71,28 @@
             <div>
               <label class="block text-sm font-medium text-gray-700">Jam Masuk Minimal (Jumat)</label>
               <input type="time" name="jam_masuk_min_jumat"
-                value="{{ old('jam_masuk_min_jumat', '07:00') }}"
+                value="{{ old('jam_masuk_min_jumat', '06:30') }}"
                 class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700">Jam Masuk Maksimal
                 (Jumat)</label>
               <input type="time" name="jam_masuk_max_jumat"
-                value="{{ old('jam_masuk_max_jumat', '07:30') }}"
+                value="{{ old('jam_masuk_max_jumat', '07:00') }}"
                 class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700">Jam Pulang Minimal
                 (Jumat)</label>
               <input type="time" name="jam_pulang_min_jumat"
-                value="{{ old('jam_pulang_min_jumat', '15:00') }}"
+                value="{{ old('jam_pulang_min_jumat', '14:30') }}"
                 class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700">Jam Pulang Maksimal
                 (Jumat)</label>
               <input type="time" name="jam_pulang_max_jumat"
-                value="{{ old('jam_pulang_max_jumat', '17:00') }}"
+                value="{{ old('jam_pulang_max_jumat', '16:00') }}"
                 class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
             </div>
           </div>
