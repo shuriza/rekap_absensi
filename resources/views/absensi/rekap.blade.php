@@ -181,7 +181,7 @@
                     @csrf
                     @method('DELETE')
                     <button type="submit"
-                            class="text-red-600 hover:text-red-800 font-semibold"
+                            class="text-white-500 hover:text-red-800 font-semibold"
                             title="Hapus">
                       🗑️
                     </button>
@@ -290,8 +290,9 @@
 
                             /* warna latar  */
                             $bg = match ($sel['type']) {
-                                'libur', 'kosong' => 'bg-red-500',   // merah solid agar kontras
-                                'izin'            => 'bg-blue-200',
+                                'libur'           => 'bg-gray-300', 
+                                'kosong'          => 'bg-red-500',   // merah solid agar kontras
+                                'izin'            => 'bg-blue-300',
                                 'terlambat'       => 'bg-yellow-200',
                                 default           => '',             // hadir normal
                             };
@@ -316,6 +317,9 @@
                                         {{ \Illuminate\Support\Str::limit($sel['label'], 25, '…') }}
                                     </span>
                                     @break
+                                    @case('kosong')                 {{-- hanya in / out / kosong --}}
+                                        {{ $sel['label'] }}          {{-- tampilkan “07:12 – --:--” atau “--:-- – 16:10” / “-” --}}
+                                        @break
 
                                 @default
                                     -   {{-- kosong --}}
@@ -328,7 +332,9 @@
                         $jam   = str_pad(intdiv($pegawai->total_menit, 60), 2, '0', STR_PAD_LEFT);
                         $menit = str_pad($pegawai->total_menit % 60,  2, '0', STR_PAD_LEFT);
                     @endphp
-                    <td class="border px-2 py-1 text-xs font-semibold">{{ $jam }}:{{ $menit }}</td>
+                    <td class="border px-2 py-1 text-xs font-semibold">
+                      {{ $pegawai->total_fmt }}
+                    </td>
                 </tr>
             @endforeach
         </tbody>
