@@ -37,22 +37,58 @@
         <input type="date" name="end_date" value="{{ $end }}" class="border p-1">
 
         {{-- pilihan sortir --}}
-        <select name="sort_by" class="border p-1">
-            <option value="tanggal_awal"  {{ $sortBy=='tanggal_awal'  ? 'selected' : '' }}>Tanggal Awal</option>
-            <option value="tanggal_akhir" {{ $sortBy=='tanggal_akhir' ? 'selected' : '' }}>Tanggal Akhir</option>
-            <option value="tipe_ijin"     {{ $sortBy=='tipe_ijin'     ? 'selected' : '' }}>Tipe Ijin</option>
-            <option value="nama"          {{ $sortBy=='nama'          ? 'selected' : '' }}>Nama Karyawan</option>
-        </select>
+    @php
+        $sort = request('sort', 'tanggal_awal_desc');  // default
+    @endphp
 
-        <select name="order" class="border p-1">
-            <option value="asc"  {{ $order=='asc'  ? 'selected' : '' }}>A-Z / Lama-Baru</option>
-            <option value="desc" {{ $order=='desc' ? 'selected' : '' }}>Z-A / Baru-Lama</option>
-        </select>
+    <select name="sort" class="border p-1">
+        {{-- Tanggal Awal --}}
+        <option value="tanggal_awal_asc"  {{ $sort=='tanggal_awal_asc'  ? 'selected' : '' }}>
+            Tanggal Awal (Lama → Baru)
+        </option>
+        <option value="tanggal_awal_desc" {{ $sort=='tanggal_awal_desc' ? 'selected' : '' }}>
+            Tanggal Awal (Baru → Lama)
+        </option>
+
+        {{-- Tanggal Akhir --}}
+        <option value="tanggal_akhir_asc"  {{ $sort=='tanggal_akhir_asc'  ? 'selected' : '' }}>
+            Tanggal Akhir (Lama → Baru)
+        </option>
+        <option value="tanggal_akhir_desc" {{ $sort=='tanggal_akhir_desc' ? 'selected' : '' }}>
+            Tanggal Akhir (Baru → Lama)
+        </option>
+
+        {{-- Tipe Izin --}}
+        <option value="tipe_ijin_asc"  {{ $sort=='tipe_ijin_asc'  ? 'selected' : '' }}>
+            Tipe Izin (A → Z)
+        </option>
+        <option value="tipe_ijin_desc" {{ $sort=='tipe_ijin_desc' ? 'selected' : '' }}>
+            Tipe Izin (Z → A)
+        </option>
+
+        {{-- Nama Karyawan --}}
+        <option value="nama_asc"  {{ $sort=='nama_asc'  ? 'selected' : '' }}>
+            Nama (A → Z)
+        </option>
+        <option value="nama_desc" {{ $sort=='nama_desc' ? 'selected' : '' }}>
+            Nama (Z → A)
+        </option>
+    </select>
+
+        {{-- Tombol Terapkan & Export --}}
+
 
         <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded">
             Terapkan
         </button>
-        <a href="{{ route('izin_presensi.index') }}" class="text-sm underline">Reset</a>
+
+        <a href="{{ route('export.izin.bulanan', request()->only(['start_date','end_date'])) }}"
+        class="bg-green-600 text-white px-3 py-1 rounded">
+            Export XLSX
+        </a>
+
+
+        <a href="{{ route('izin_presensi.index') }}" class="bg-red-600 text-white px-3 py-1 rounded">Reset</a>
     </div>
 </form>
 
@@ -110,6 +146,7 @@
                                class="inline-block px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-xs hover:bg-emerald-200">
                                 Detail
                             </a>
+                            
                             <!-- Hapus -->
                             <form action="{{ route('izin_presensi.destroy', $izin) }}" method="POST" class="inline"
                                   onsubmit="return confirm('Yakin hapus?');">
@@ -135,7 +172,6 @@
         {{ $data->links('pagination::tailwind') }}
     </div>
 </div>
-```
 
 </div>
 @endsection

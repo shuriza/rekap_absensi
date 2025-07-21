@@ -46,3 +46,5 @@ Route::post('/rekap/holiday', [RekapController::class, 'storeHoliday'])
 Route::delete('/rekap/holiday/{id}',   [RekapController::class, 'destroyHoliday'])
      ->name('rekap.holiday.del');
 
+Route::get('/export/izin-bulanan', [ExportRekapController::class, 'exportIzinBulanan'])
+     ->name('export.izin.bulanan');
