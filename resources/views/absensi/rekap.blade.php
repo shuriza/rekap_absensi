@@ -84,6 +84,43 @@
             21–{{ \Carbon\Carbon::create($tahun, $bulan)->daysInMonth }}</option>
         </select>
       </div>
+
+      {{-- ============= SORTIR ============= --}}
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Urutkan</label>
+
+        <select name="sort"
+                class="mt-1 block w-56 rounded border-gray-300 shadow-sm text-sm"
+                onchange="this.form.submit()">
+
+          {{-- default: sesuai urutan query (No) --}}
+          <option value="" {{ request('sort')=='' ? 'selected' : '' }}>
+            — Tidak diurut —
+          </option>
+
+          {{-- 🔤 Nama A → Z  --}}
+          <option value="nama_asc" {{ request('sort')=='nama_asc' ? 'selected' : '' }}>
+            Nama&nbsp;A&nbsp;→&nbsp;Z
+          </option>
+
+          {{-- 🔤 Nama Z → A --}}
+          <option value="nama_desc" {{ request('sort')=='nama_desc' ? 'selected' : '' }}>
+            Nama&nbsp;Z&nbsp;→&nbsp;A
+          </option>
+
+          {{-- 🔽 Akumulasi terbanyak --}}
+          <option value="total_desc" {{ request('sort')=='total_desc' ? 'selected' : '' }}>
+            Akumulasi&nbsp;⇣&nbsp;Terbanyak
+          </option>
+
+          {{-- Akumulasi tersedikit --}}
+          <option value="total_asc" {{ request('sort')=='total_asc' ? 'selected' : '' }}>
+            Akumulasi&nbsp;⇡&nbsp;Tersedikit
+          </option>
+        </select>
+      </div>
+
+      
     </form>
       {{-- =============================================
           FORM ➕ TANDAI TANGGAL MERAH / HARI PENTING
@@ -187,6 +224,22 @@
             scrollX: true,
           });
         });
+         // ===================================================
+          //  tombol header manual
+          // ===================================================
+          $('.sorting').on('click', function () {
+              const col = $(this).data('col');   // "nama" / "total"
+              if (col === 'nama') {
+                  // kolom 1 (index 1) → toggle asc/desc
+                  table.order([1, table.order()[0]?.[1]==='asc'?'desc':'asc']).draw();
+              }
+              if (col === 'total') {
+                  // kolom terakhir → index = total kolom - 1
+                  const idx = table.columns().count() - 1;
+                  table.order([idx, table.order()[0]?.[1]==='desc'?'asc':'desc']).draw();
+              }
+          });
+
       </script>
     @endpush
 
@@ -219,70 +272,69 @@
           </tr>
         </thead>
         <tbody class="bg-white text-gray-800">
-          @foreach ($pegawaiList as $pegawai)
-            <tr class="hover:bg-gray-50">
-              <td class="border px-2 py-1">{{ $loop->iteration + ($pegawaiList->firstItem() - 1) }}
-              </td>
-              <td class="border px-2 py-1 text-left">{{ $pegawai->nama }}</td>
-              {{-- Loop tanggal dalam segment --}}
-              @foreach ($tanggalList as $tgl)
-                @php $sel = $pegawai->absensi_harian[$tgl]; @endphp
-                <td class="border px-1 py-1 text-xs text-center
-                      @if ($sel['type'] === 'libur') bg-red-100 text-red-600 font-semibold
-                      @elseif ($sel['type'] === 'izin') bg-yellow-100 font-semibold @endif">
 
-                      @switch($sel['type'])
-                          @case('libur')
-                              {{-- Potong jadi 25 karakter & tampilkan tooltip --}}
-                              <span class="inline-block max-w-[140px] truncate"
-                                    title="{{ $sel['label'] }}">
-                                  {{ Str::limit($sel['label'], 25, '…') }}
-                              </span>
-                          @break
+            {{-- import helper Str cukup sekali --}}
+            @php
+                use Illuminate\Support\Str;
+            @endphp
 
-                          @case('izin')
-                              {{ $sel['label'] }}
-                          @break
+            @foreach ($pegawaiList as $pegawai)
+                <tr class="hover:bg-gray-50">
+                    <td class="border px-2 py-1">{{ $loop->iteration }}</td>
+                    <td class="border px-2 py-1 text-left">{{ $pegawai->nama }}</td>
 
-                          @case('hadir')
-                              {{ $sel['label'] }}
-                          @break
+                    {{-- ------- Kolom tanggal ------- --}}
+                    @foreach ($tanggalList as $tgl)
+                        @php
+                            $sel = $pegawai->absensi_harian[$tgl];
 
-                          @default
-                              /
-                      @endswitch
-                  </td>
+                            /* warna latar  */
+                            $bg = match ($sel['type']) {
+                                'libur', 'kosong' => 'bg-red-500',   // merah solid agar kontras
+                                'izin'            => 'bg-blue-200',
+                                'terlambat'       => 'bg-yellow-200',
+                                default           => '',             // hadir normal
+                            };
+
+                            /* warna TEKS: putih jika latar merah, hitam jika selainnya */
+                            $txt = str_contains($bg, 'bg-red')
+                                    ? 'text-white'   // blok merah → teks putih
+                                    : 'text-black';  // lainnya → teks hitam
+                        @endphp
+
+                        <td class="border px-1 py-1 text-xs text-center {{ $bg }} {{ $txt }}">
+                            @switch($sel['type'])
+                                @case('hadir')
+                                @case('terlambat')
+                                    {{ $sel['label'] }}
+                                    @break
+
+                                @case('libur')
+                                @case('izin')
+                                    <span class="inline-block max-w-[140px] truncate"
+                                          title="{{ $sel['label'] }}">
+                                        {{ \Illuminate\Support\Str::limit($sel['label'], 25, '…') }}
+                                    </span>
+                                    @break
+
+                                @default
+                                    -   {{-- kosong --}}
+                            @endswitch
+                        </td>
+                      @endforeach
 
 
-              @endforeach
-
-              {{-- Total jam kerja --}}
-              <td class="border px-2 py-1 text-xs font-semibold">
-                @php
-                  $jam = str_pad(intdiv($pegawai->total_menit, 60), 2, '0', STR_PAD_LEFT);
-                  $menit = str_pad($pegawai->total_menit % 60, 2, '0', STR_PAD_LEFT);
-                @endphp
-                {{ $jam }}:{{ $menit }}
-              </td>
-            </tr>
-          @endforeach
+                    @php
+                        $jam   = str_pad(intdiv($pegawai->total_menit, 60), 2, '0', STR_PAD_LEFT);
+                        $menit = str_pad($pegawai->total_menit % 60,  2, '0', STR_PAD_LEFT);
+                    @endphp
+                    <td class="border px-2 py-1 text-xs font-semibold">{{ $jam }}:{{ $menit }}</td>
+                </tr>
+            @endforeach
         </tbody>
+
       </table>
     </div>
-
-    {{-- =============================================
-         PAGINATION
-    ============================================= --}}
-    <div class="flex justify-between items-center mt-4 text-sm text-gray-600">
-      <div>
-        Showing {{ $pegawaiList->firstItem() }} to {{ $pegawaiList->lastItem() }} of
-        {{ $pegawaiList->total() }} entries
-      </div>
-      <div>
-        {{ $pegawaiList->links() }}
-      </div>
-    </div>
-  </div>
 
   {{-- =============================================
      FOOTER
