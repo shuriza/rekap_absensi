@@ -10,7 +10,7 @@ class Absensi extends Model
     use HasFactory;
 
     protected $fillable = [
-        'karyawan_id', 'tanggal', 'jam_masuk', 'jam_pulang'
+        'karyawan_id', 'tanggal', 'jam_masuk', 'jam_pulang','keterangan'
     ];
 
     public function karyawan()
