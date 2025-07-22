@@ -13,6 +13,7 @@ class RekapController extends Controller
 {
     /** 7 jam 30 menit (450 menit) bila jam masuk / pulang tidak lengkap */
     private int $defaultMinutes = 7 * 60 + 30;
+    
 
     /* ==========================================================
      *  R E K A P   B U L A N A N
@@ -124,26 +125,41 @@ class RekapController extends Controller
                 }
 
                 /* presensi */
+                /* (#3) presensi → hadir / terlambat / kosong / di-luar-waktu */
                 if ($row = $mapPres[$tglStr] ?? null) {
-                    $in   = $row->jam_masuk  ? substr($row->jam_masuk , -8, 5) : null;
-                    $out  = $row->jam_pulang ? substr($row->jam_pulang, -8, 5) : null;
 
-                    if ($in && $out) {
-                        // presensi lengkap
-                        $late = $in > '07:30';
-                        $type = $late ? 'terlambat' : 'hadir';
-                    } else {
-                        // hanya jam masuk / hanya jam pulang  → dianggap kosong (merah)
-                        $type = 'terlambat';
+                    // ambil keterangan jika sudah dihitung sebelumnya di DB
+                    $keterangan = strtolower(trim($row->keterangan ?? ''));
+
+                    // mapping keterangan → type untuk pewarnaan
+                    $type = match ($keterangan) {
+                        'diluar waktu absen' => 'kosong',      // merah
+                        'terlambat'          => 'terlambat',   // kuning
+                        'tepat waktu'        => 'hadir',       // tidak berwarna
+                        default              => null,          // belum ada keterangan
+                    };
+
+                    // ─── kalau belum ada keterangan (type null) fallback ke hitung manual ───
+                    if ($type === null) {
+                        // ***logika lama Anda di sini***  (atau dibiarkan kosong)
+                        $in  = $row->jam_masuk  ? substr($row->jam_masuk , -8, 5) : null;
+                        $out = $row->jam_pulang ? substr($row->jam_pulang, -8, 5) : null;
+                        $late = $in && $in > '07:30';
+                        $type = $in || $out ? ($late ? 'terlambat' : 'hadir') : 'kosong';
                     }
+
+                    // label tetap jam-jam supaya masih terlihat
+                    $in  = $row->jam_masuk  ? substr($row->jam_masuk , -8, 5) : '--:--';
+                    $out = $row->jam_pulang ? substr($row->jam_pulang, -8, 5) : '--:--';
 
                     $daily[$d] = [
                         'type'  => $type,
-                        'label' => ($in ?: '--:--').' – '.($out ?: '--:--'),
+                        'label' => "$in – $out",
                     ];
-                } else {
-                    $daily[$d] = ['type'=>'kosong','label'=>'-'];
                 }
+                // kalau tidak masuk kondisi apa-pun, isi default
+                    $daily[$d] ??= ['type' => 'kosong', 'label' => '-'];
+
 
             }
 
@@ -185,8 +201,8 @@ class RekapController extends Controller
             // ⇩ kirim ke view
             'listJenis','tipeIjin'
         ));
-
     }
+
 
     private function fmtHariJamMenit(int $menit): string
     {
