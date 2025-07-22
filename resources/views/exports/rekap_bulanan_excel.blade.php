@@ -1,47 +1,73 @@
 @php
-    use Illuminate\Support\Str;   // NEW – utk pemotongan teks
+    use Illuminate\Support\Str;   // cukup sekali di bagian awal view
 @endphp
 
-<table>
-    <thead>
+<table class="min-w-full border-collapse text-sm text-center">
+    {{-- ================= T H E A D ================= --}}
+    <thead class="bg-gray-800 text-white">
         <tr>
-            <th>No</th>
-            <th>NIP</th>
-            <th>Nama</th>
-            <th>Jabatan</th>
+            <th class="border px-2 py-2">No</th>
+            <th class="border px-2 py-2">Nama</th>
+
             @foreach ($tanggalList as $tgl)
-                <th>{{ $tgl }}</th>
+                <th class="border px-2 py-2">{{ $tgl }}</th>
             @endforeach
-            <th>Total&nbsp;Akumulasi&nbsp;(HH:MM)</th>
+
+            <th class="border px-2 py-2">Total Akumulasi<br>(HH:MM)</th>
         </tr>
     </thead>
 
-    <tbody>
-        @foreach ($pegawaiList as $i => $pegawai)
-            @php
-                // format total menit → HH:MM
-                $jam   = str_pad(intdiv($pegawai->total_menit, 60), 2, '0', STR_PAD_LEFT);
-                $menit = str_pad($pegawai->total_menit % 60,      2, '0', STR_PAD_LEFT);
-            @endphp
+    {{-- ================= T B O D Y ================= --}}
+    <tbody class="bg-white text-gray-800">
 
-            <tr>
-                <td>{{ $i + 1 }}</td>
-                <td>{{ $pegawai->nip }}</td>
-                <td>{{ $pegawai->nama }}</td>
-                <td>{{ $pegawai->jabatan ?? '-' }}</td>
+    @foreach ($pegawaiList as $loopIdx => $pegawai)
+        {{-- ───── total menit → HH:MM ───── --}}
+        @php
+            $jam   = str_pad(intdiv($pegawai->total_menit, 60), 2, '0', STR_PAD_LEFT);
+            $menit = str_pad($pegawai->total_menit % 60,      2, '0', STR_PAD_LEFT);
+        @endphp
 
-                {{-- kolom per-tanggal --}}
-                @foreach ($tanggalList as $tgl)
-                    @php
-                        $val = $pegawai->absensi_harian[$tgl] ?? '-';
-                        // jika string terlalu panjang (libur), potong 25 karakter
-                        $display = Str::limit($val, 25, '…');
-                    @endphp
-                    <td>{{ $display }}</td>
-                @endforeach
+        <tr class="hover:bg-gray-50">
+            <td class="border px-2 py-1">{{ $loopIdx + 1 }}</td>
+            <td class="border px-2 py-1 text-left">{{ $pegawai->nama }}</td>
 
-                <td>{{ $jam }}:{{ $menit }}</td>
-            </tr>
-        @endforeach
+            {{-- ======= K O L O M   T A N G G A L ======= --}}
+            @foreach ($tanggalList as $tgl)
+                @php
+                    /* ----------------------------------------------------
+                     * $info = ['type' => ..., 'label' => ...]
+                     * fallback jika key tidak ada / format masih string
+                     * -------------------------------------------------- */
+                    $raw = $pegawai->absensi_harian[$tgl] ?? '-';
+                    $info = is_array($raw) ? $raw : ['type' => 'kosong', 'label' => $raw];
+
+                    /* warna latar */
+                    $bg = match ($info['type']) {
+                        'kosong'    => 'bg-red-500',     // tidak absen
+                        'terlambat' => 'bg-yellow-200',
+                        'izin'      => 'bg-blue-300',
+                        'libur'     => 'bg-gray-300',
+                        default     => '',                // hadir normal
+                    };
+
+                    /* warna teks */
+                    $txt = $bg === 'bg-red-500' ? 'text-white' : 'text-black';
+
+                    /* tampilan label (max 25 char jika string) */
+                    $label = is_string($info['label'])
+                                ? Str::limit($info['label'], 25, '…')
+                                : $info['label'];
+                @endphp
+
+                <td class="border px-1 py-1 {{ $bg }} {{ $txt }}">
+                    {{ $label }}
+                </td>
+            @endforeach
+
+            {{-- total akumulasi --}}
+            <td class="border px-2 py-1 font-semibold">{{ $jam }}:{{ $menit }}</td>
+        </tr>
+    @endforeach
+
     </tbody>
 </table>

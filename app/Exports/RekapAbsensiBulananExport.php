@@ -9,44 +9,55 @@ use Carbon\CarbonPeriod;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\FromView;
-use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
+use Maatwebsite\Excel\Concerns\WithEvents;
+use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
-use Maatwebsite\Excel\Events\AfterSheet;
+use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 
-class RekapAbsensiBulananExport implements FromView, WithEvents, ShouldAutoSize
+class RekapAbsensiBulananExport implements FromView, ShouldAutoSize, WithEvents
 {
-    /** jika jam masuk/pulang tidak lengkap → 450 menit */
-    private int $defaultMinutes = 7 * 60 + 30;
+    /** default 7 jam 30 menit (450 menit) */
+    private int $defaultMinutes = 450;
 
+    /* properti input */
     public function __construct(private int $bulan, private int $tahun) {}
 
-    /* helper: time|datetime → Carbon|null */
-    private function toCarbon(string $tgl, ?string $w): ?Carbon
+    /* dipakai ulang di AfterSheet */
+    private array $tanggalList   = [];
+    private $pegawaiList;               // Collection
+
+    /* ----------------------------------------------------------
+     * Helper string/datetime → Carbon|null
+     * -------------------------------------------------------- */
+    private function toCarbon(string $tgl, ?string $time): ?Carbon
     {
-        return $w
-            ? (str_contains($w, ' ') ? Carbon::parse($w)
-                                     : Carbon::parse("$tgl $w"))
-            : null;
+        if (!$time) return null;
+        $time = trim($time);
+
+        return str_contains($time, ' ')
+            ? Carbon::parse($time)                 // sudah full datetime
+            : Carbon::parse("$tgl ".substr($time, 0, 5)); // HH:mm
     }
 
+    /* =====================  VIEW  ===================== */
     public function view(): View
     {
-        /* 1. Deret tanggal 1..N */
-        $jumlahHari  = Carbon::create($this->tahun, $this->bulan)->daysInMonth;
-        $tanggalList = range(1, $jumlahHari);
+        /** ➊ daftar tanggal 1..N */
+        $daysInMonth  = Carbon::create($this->tahun, $this->bulan)->daysInMonth;
+        $this->tanggalList = range(1, $daysInMonth);
 
-        /* 2. Map libur bulan ini (YYYY-MM-DD ⇒ keterangan) */
+        /** ➋ libur bulan ini */
         $holidayMap = Holiday::whereYear('tanggal',  $this->tahun)
                              ->whereMonth('tanggal', $this->bulan)
                              ->get()
                              ->keyBy(fn ($h) => $h->tanggal->toDateString());
 
-        /* 3. Ambil karyawan + presensi + izin satu bulan */
-        $pegawaiList = Karyawan::with([
+        /** ➌ ambil data pegawai-absen-izin */
+        $this->pegawaiList = Karyawan::with([
             'absensi' => fn ($q) => $q->whereYear('tanggal', $this->tahun)
                                       ->whereMonth('tanggal', $this->bulan),
             'izins'   => fn ($q) => $q->where(function ($sub) {
@@ -57,71 +68,79 @@ class RekapAbsensiBulananExport implements FromView, WithEvents, ShouldAutoSize
             }),
         ])->get();
 
-        /* 4. Proses per-pegawai */
-        foreach ($pegawaiList as $peg) {
+        /** ➍ proses tiap pegawai */
+        foreach ($this->pegawaiList as $peg) {
 
-            /** a) Peta izin: YYYY-MM-DD ⇒ singkatan */
+            // peta izin per tanggal
             $mapIzin = [];
             foreach ($peg->izins as $iz) {
-                $period = CarbonPeriod::create(
-                    $iz->tanggal_awal,
-                    $iz->tanggal_akhir ?? $iz->tanggal_awal
-                );
-                foreach ($period as $d) {
+                foreach (CarbonPeriod::create(
+                        $iz->tanggal_awal,
+                        $iz->tanggal_akhir ?? $iz->tanggal_awal) as $d) {
                     $mapIzin[$d->toDateString()] = strtok($iz->jenis_ijin, ' ');
                 }
             }
 
-            /** b) Min & label per tanggal */
-            $harian = array_fill_keys($tanggalList, '-');
-            $total  = 0;
+            $mapPres   = $peg->absensi->keyBy(fn ($p) => $p->tanggal->toDateString());
+            $harian    = [];
+            $totalMnt  = 0;
 
-            $mapPres = $peg->absensi->keyBy(fn ($p) => $p->tanggal->toDateString());
+            foreach ($this->tanggalList as $d) {
+                $tglStr  = sprintf('%04d-%02d-%02d', $this->tahun, $this->bulan, $d);
+                $weekday = Carbon::parse($tglStr)->dayOfWeekIso; // 6=Sabtu 7=Minggu
 
-            foreach ($tanggalList as $d) {
-                $tglStr = sprintf('%04d-%02d-%02d', $this->tahun, $this->bulan, $d);
+                // sabtu / minggu
+                if ($weekday === 6 || $weekday === 7) {
+                    $harian[$d] = ['type'=>'libur','label'=> $weekday===6 ? 'Sabtu':'Minggu'];
+                    continue;
+                }
 
-                /* ───────── libur */
+                // hari libur
                 if ($h = $holidayMap[$tglStr] ?? null) {
-                    $harian[$d] = Str::limit($h->keterangan, 15, '…');   // optional singkat
+                    $harian[$d] = ['type'=>'libur','label'=>$h->keterangan];
                     continue;
                 }
 
-                /* ───────── izin */
+                // izin
                 if (isset($mapIzin[$tglStr])) {
-                    $harian[$d] = $mapIzin[$tglStr];
+                    $harian[$d] = ['type'=>'izin','label'=>$mapIzin[$tglStr]];
                     continue;
                 }
 
-                /* ───────── presensi */
+                // presensi
                 $row = $mapPres[$tglStr] ?? null;
                 if ($row) {
                     $in  = $this->toCarbon($tglStr, $row->jam_masuk);
                     $out = $this->toCarbon($tglStr, $row->jam_pulang);
 
                     if ($in && $out && $out->gt($in)) {
-                        $total       += $in->diffInMinutes($out);
-                        $harian[$d]   = $in->format('H:i').' - '.$out->format('H:i');
+                        $totalMnt += $in->diffInMinutes($out);
                     } elseif (($in && !$out) || (!$in && $out)) {
-                        $total       += $this->defaultMinutes;
-                        $harian[$d]   = ($in?->format('H:i') ?? '-').' - '.($out?->format('H:i') ?? '-');
+                        $totalMnt += $this->defaultMinutes;
                     }
+
+                    $harian[$d] = [
+                        'type'  => $in && $out ? ($in->format('H:i') > '07:30' ? 'terlambat':'hadir') : 'kosong',
+                        'label' => ($in?->format('H:i') ?? '--:--').' - '.($out?->format('H:i') ?? '--:--'),
+                    ];
+                } else {
+                    $harian[$d] = ['type'=>'kosong','label'=>'-'];
                 }
             }
 
-            /* simpan ke model utk view Excel */
             $peg->absensi_harian = $harian;
-            $peg->total_menit    = $total;
+            $peg->total_menit    = $totalMnt;
         }
 
         return view('exports.rekap_bulanan_excel', [
-            'pegawaiList' => $pegawaiList,
-            'tanggalList' => $tanggalList,
+            'pegawaiList' => $this->pegawaiList,
+            'tanggalList' => $this->tanggalList,
             'bulan'       => $this->bulan,
             'tahun'       => $this->tahun,
         ]);
     }
 
+    /* =====================  AFTER-SHEET  ===================== */
     public function registerEvents(): array
     {
         return [
@@ -129,17 +148,16 @@ class RekapAbsensiBulananExport implements FromView, WithEvents, ShouldAutoSize
 
                 $sheet = $event->sheet->getDelegate();
 
-                /* 1️⃣  Orientasi & ukuran kertas */
+                /* 1) orientasi & freeze header */
                 $sheet->getPageSetup()
                       ->setOrientation(PageSetup::ORIENTATION_LANDSCAPE)
                       ->setPaperSize(PageSetup::PAPERSIZE_A4);
 
-                /* 2️⃣  Freeze header baris 1 */
                 $sheet->freezePane('A2');
 
-                /* 3️⃣  Ratakan teks + bungkus */
-                $highestColumn = $sheet->getHighestColumn();
+                /* 2) style global */
                 $highestRow    = $sheet->getHighestRow();
+                $highestColumn = $sheet->getHighestColumn();
 
                 $sheet->getStyle("A1:{$highestColumn}{$highestRow}")
                       ->getAlignment()
@@ -147,28 +165,48 @@ class RekapAbsensiBulananExport implements FromView, WithEvents, ShouldAutoSize
                       ->setVertical(Alignment::VERTICAL_CENTER)
                       ->setWrapText(true);
 
-                /* 4️⃣  Tebal header + warna */
+                // header tebal + abu
                 $sheet->getStyle("A1:{$highestColumn}1")->applyFromArray([
                     'font' => ['bold' => true],
                     'fill' => [
-                        'fillType' => Fill::FILL_SOLID,
+                        'fillType'   => Fill::FILL_SOLID,
                         'startColor' => ['rgb' => 'D9D9D9'],
-                    ],
-                    'borders' => [
-                        'allBorders' => [
-                            'borderStyle' => Border::BORDER_THIN,
-                        ],
                     ],
                 ]);
 
-                /* 5️⃣  Border tipis seluruh tabel */
+                // border seluruh tabel
                 $sheet->getStyle("A1:{$highestColumn}{$highestRow}")
                       ->getBorders()
                       ->getAllBorders()
                       ->setBorderStyle(Border::BORDER_THIN);
 
-                /* 6️⃣  Skala agar muat A4 (opsional) */
-                $sheet->getPageSetup()->setFitToWidth(1)->setFitToHeight(0);
+                /* 3) Pewarnaan dinamis kolom tanggal */
+                // Kolom: A=No, B=Nama, maka tanggal 1 mulai kolom C (index 3)
+                $firstDateColIndex = 3; // 1-based
+                $startRowIndex     = 2; // data dimulai baris 2
+
+                foreach ($this->pegawaiList as $rowIdx => $peg) {
+                    $rowNum = $startRowIndex + $rowIdx; // baris aktual di sheet
+
+                    foreach ($peg->absensi_harian as $d => $info) {
+                        $colIdx  = $firstDateColIndex + $d - 1;           // index numerik
+                        $col     = Coordinate::stringFromColumnIndex($colIdx);
+                        $cell    = "{$col}{$rowNum}";
+
+                        $rgb = match ($info['type']) {
+                            'kosong'    => 'FF5252', // merah
+                            'terlambat' => 'FFF59D', // kuning
+                            'izin'      => '90CAF9', // biru
+                            'libur'     => 'E0E0E0', // abu
+                            default     => null,     // hadir → tanpa warna
+                        };
+
+                        if ($rgb) {
+                            $sheet->getStyle($cell)->getFill()->setFillType(Fill::FILL_SOLID)
+                                  ->getStartColor()->setRGB($rgb);
+                        }
+                    }
+                }
             },
         ];
     }
