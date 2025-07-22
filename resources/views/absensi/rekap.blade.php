@@ -1,4 +1,4 @@
-<?php /* resources/views/absensi/rekap.blade.php */ ?>
+<?php /* resources/views/absensi/rekap.blade.php (UPDATED with modal izin) */ ?>
 
 @extends('layouts.app')
 
@@ -214,32 +214,21 @@
       <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
       <script>
-        $(function() {
-          $('#tabel-rekap').DataTable({
-            dom: 'Bfrtip',
-            buttons: ['copy', 'csv', 'excel', 'pdf', 'print'],
-            paging: false,
-            ordering: false,
-            searching: false,
-            scrollX: true,
-          });
-        });
-         // ===================================================
-          //  tombol header manual
-          // ===================================================
-          $('.sorting').on('click', function () {
-              const col = $(this).data('col');   // "nama" / "total"
-              if (col === 'nama') {
-                  // kolom 1 (index 1) → toggle asc/desc
-                  table.order([1, table.order()[0]?.[1]==='asc'?'desc':'asc']).draw();
-              }
-              if (col === 'total') {
-                  // kolom terakhir → index = total kolom - 1
-                  const idx = table.columns().count() - 1;
-                  table.order([idx, table.order()[0]?.[1]==='desc'?'asc':'desc']).draw();
-              }
-          });
+        
 
+        /* ===================================================
+           Modal Izin (plain JS + Tailwind)
+        =================================================== */
+        function openIzin(td){
+          const modal   = document.getElementById('modal-overlay');
+          document.getElementById('izin-karyawan').value = td.dataset.karyawan;
+          document.getElementById('izin-awal').value     = td.dataset.date;
+          document.getElementById('izin-akhir').value    = td.dataset.date;
+          modal.classList.remove('hidden');
+        }
+        function closeIzin(){
+          document.getElementById('modal-overlay').classList.add('hidden');
+        }
       </script>
     @endpush
 
@@ -303,7 +292,10 @@
                                     : 'text-black';  // lainnya → teks hitam
                         @endphp
 
-                        <td class="border px-1 py-1 text-xs text-center {{ $bg }} {{ $txt }}">
+                        <td class="border px-1 py-1 text-xs text-center {{ $bg }} {{ $txt }}"
+                            data-karyawan="{{ $pegawai->id }}"
+                            data-date="{{ sprintf('%04d-%02d-%02d',$tahun,$bulan,$tgl) }}"
+                            onclick="openIzin(this)">
                             @switch($sel['type'])
                                 @case('hadir')
                                 @case('terlambat')
@@ -342,6 +334,22 @@
       </table>
     </div>
 
+    {{-- =============================================
+         MODAL IZIN (overlay)
+    ============================================= --}}
+    <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden z-50">
+      <div class="bg-white rounded-xl max-w-2xl w-full p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold">Input Izin Presensi</h3>
+          <button onclick="closeIzin()" class="text-xl font-bold text-gray-600 hover:text-red-600">&times;</button>
+        </div>
+        <form id="form-izin" action="{{ route('izin_presensi.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+          @csrf
+          @include('izin_presensi._form')
+        </form>
+      </div>
+    </div>
+
   {{-- =============================================
      FOOTER
 ============================================= --}}
@@ -350,4 +358,5 @@
     {{ $tahun }} &ndash;
     {{ \Carbon\Carbon::create()->month((int) $bulan)->translatedFormat('F') }}
   </footer>
+  </div>
 @endsection
