@@ -201,6 +201,11 @@ foreach ($jamList as $j) {
                 $minPulang = Carbon::createFromFormat('H:i', $range['pulang_min']);
                 $maxPulang = Carbon::createFromFormat('H:i', $range['pulang_max']);
 
+                if (! empty($row['jam_masuk']) && empty($row['jam_pulang'])) {
+                    $row['keterangan'] = 'terlambat';
+                    continue; 
+                }
+
                 $statusMasuk = null;
                 if ($row['jam_masuk']) {
                     $jm = Carbon::createFromFormat('H:i', $row['jam_masuk']);
