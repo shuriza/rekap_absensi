@@ -165,11 +165,27 @@ class RekapController extends Controller
             default      => $pegawaiList->values(),
         };
 
-        /* 7️⃣  kirim ke view -------------------------------------------------- */
+/* 7️⃣  kirim ke view -------------------------------------------------- */
+
+        $listJenis = [
+            'DL (DINAS LUAR) [TIDAK ADA PENGURANGAN]',
+            'CB (CUTI BERSALIN) [TIDAK ADA PENGURANGAN]',
+            'CM (CUTI MELAHIRKAN) [TIDAK ADA PENGURANGAN]',
+            'CT (CUTI TAHUNAN)',
+            'Sakit (Surat Dokter)',
+            'Sakit (Tanpa Surat Dokter)',
+            'Keperluan Keluarga',
+            'Keperluan Pribadi',
+        ];
+        $tipeIjin  = ['Ijin Penuh','Ijin Setengah','Terlambat','Pulang Cepat'];
+        // ⇩ kirim ke view
         return view('absensi.rekap', compact(
             'pegawaiList','tanggalList','bulan','tahun',
-            'segment','daysInMonth','holidayMap','sort'
+            'segment','daysInMonth','holidayMap','sort',
+            // ⇩ kirim ke view
+            'listJenis','tipeIjin'
         ));
+
     }
 
     private function fmtHariJamMenit(int $menit): string
