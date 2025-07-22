@@ -11,55 +11,80 @@ use Symfony\Component\HttpFoundation\Response;
 
 class IzinPresensiController extends Controller
 {
-    /** Tampil list izin */
-    public function index(Request $request)
-    {
-        // ────────── ambil parameter filter & sortir ──────────
-        $start  = $request->query('start_date');
-        $end    = $request->query('end_date');
-        $sortBy = $request->query('sort_by', 'tanggal_awal');   // default
-        $order  = $request->query('order',   'desc');           // asc | desc
-        $q      = $request->query('q');  
-        
-        
-        // ────────── query dasar ──────────
-        $query = IzinPresensi::with('karyawan');
 
-        // filter rentang tanggal (tanggal_awal)
-        if ($start && $end) {
-            $query->whereBetween('tanggal_awal', [$start, $end]);
-        }
+    /** Tampil list izin */
+public function index(Request $request)
+{
+    /* ─────────────────────────────
+     * 1. Ambil parameter filter
+     * ────────────────────────────*/
+    $bt        = $request->query('bulan_tahun');          // YYYY-MM (opsional)
+    $start     = $request->query('start_date');
+    $end       = $request->query('end_date');
+    $sortParam = $request->query('sort', 'tanggal_awal_desc');
+    $q         = $request->query('q');
 
-        // filter kata kunci: nama karyawan atau tipe_ijin
-        if ($q) {
-            $query->where(function ($qr) use ($q) {
-                $qr->whereHas('karyawan', fn($k) => $k->where('nama', 'like', "%{$q}%"))
-                ->orWhere('tipe_ijin', 'like', "%{$q}%");
-            });
-        }
+    /* ── Pecah sort menjadi kolom & arah ──*/
+    $parts  = explode('_', $sortParam);
+    $sortBy = $parts[0] ?? 'tanggal_awal';
+    $order  = $parts[1] ?? 'desc';               // default desc
+    $order  = $order === 'asc' ? 'asc' : 'desc'; // sanitasi
 
-        // sortir kolom yang di-izinkan
-        $allowedCols = ['tanggal_awal','tanggal_akhir','tipe_ijin','nama'];
-        $izinTable = (new IzinPresensi)->getTable();   // hasil: 'izin_presensi'
-
-
-
-        if ($sortBy === 'nama') {
-            $query->join('karyawans', 'karyawans.id', '=', $izinTable.'.karyawan_id')
-                ->orderBy('karyawans.nama', $order)
-                ->select($izinTable.'.*');           // hindari kolom ganda
-        } else { 
-            $query->orderBy($sortBy, $order);
-        }
-
-        // paginasi + pertahankan query string
-        $data = $query->paginate(5)->withQueryString();
-
-        return view(
-            'izin_presensi.index',
-            compact('data', 'start', 'end', 'sortBy', 'order', 'q')
-        );
+    /* ── Validasi kolom yang diizinkan ──*/
+    $validCols = ['tanggal_awal','tanggal_akhir','tipe_ijin','nama'];
+    if (!in_array($sortBy, $validCols)) {
+        $sortBy = 'tanggal_awal';
     }
+
+    /* ─────────────────────────────
+     * 2. Query dasar
+     * ────────────────────────────*/
+    $query = IzinPresensi::with('karyawan');
+
+    // Filter bulan_tahun
+    if ($bt) {
+        [$tahun, $bulan] = explode('-', $bt);
+        $query->whereYear('tanggal_awal',  $tahun)
+              ->whereMonth('tanggal_awal', $bulan);
+    }
+
+    // Filter rentang tanggal
+    if ($start && $end) {
+        $query->whereBetween('tanggal_awal', [$start, $end]);
+    }
+
+    // Pencarian kata kunci
+    if ($q) {
+        $query->where(function ($qr) use ($q) {
+            $qr->whereHas('karyawan', fn ($k) =>
+                    $k->where('nama', 'like', "%{$q}%"))
+               ->orWhere('tipe_ijin', 'like', "%{$q}%");
+        });
+    }
+
+    /* ─────────────────────────────
+     * 3. Sorting
+     * ────────────────────────────*/
+    $izinTable = (new IzinPresensi)->getTable();
+    if ($sortBy === 'nama') {
+        $query->join('karyawans', 'karyawans.id', '=', $izinTable.'.karyawan_id')
+              ->orderBy('karyawans.nama', $order)
+              ->select($izinTable.'.*');   // hindari kolom ganda
+    } else {
+        $query->orderBy($sortBy, $order);
+    }
+
+    /* ─────────────────────────────
+     * 4. Paginasi & kirim ke view
+     * ────────────────────────────*/
+    $data = $query->paginate(10)->withQueryString();
+
+    return view('izin_presensi.index', compact(
+        'data', 'bt', 'start', 'end', 'sortParam', 'q'
+    ));
+}
+
+
 
     
     /** Form create */

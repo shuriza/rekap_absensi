@@ -127,21 +127,34 @@ class RekapController extends Controller
                 if ($row = $mapPres[$tglStr] ?? null) {
                     $in   = $row->jam_masuk  ? substr($row->jam_masuk , -8, 5) : null;
                     $out  = $row->jam_pulang ? substr($row->jam_pulang, -8, 5) : null;
-                    $late = $in && $in > '07:30';
 
-                    $daily[$d]=[
-                        'type'  => $in||$out ? ($late ? 'terlambat':'hadir'):'kosong',
+                    if ($in && $out) {
+                        // presensi lengkap
+                        $late = $in > '07:30';
+                        $type = $late ? 'terlambat' : 'hadir';
+                    } else {
+                        // hanya jam masuk / hanya jam pulang  → dianggap kosong (merah)
+                        $type = 'terlambat';
+                    }
+
+                    $daily[$d] = [
+                        'type'  => $type,
                         'label' => ($in ?: '--:--').' – '.($out ?: '--:--'),
                     ];
                 } else {
-                    $daily[$d]=['type'=>'kosong','label'=>'-'];
+                    $daily[$d] = ['type'=>'kosong','label'=>'-'];
                 }
+
             }
 
             /* simpan ke model */
             $peg->absensi_harian = $daily;
-            $peg->total_menit    = $totalMenit;       // int!
-        }
+            $peg->total_menit    = $totalMenit;  
+            $peg->total_fmt = $this->fmtHariJamMenit($totalMenit);
+     // int!
+        }   
+    
+    
 
         /* 6️⃣  SORT sesudah semua menit terisi ------------------------------- */
         $pegawaiList = match ($sort) {
@@ -159,6 +172,23 @@ class RekapController extends Controller
         ));
     }
 
+    private function fmtHariJamMenit(int $menit): string
+    {
+        // —— kalau 1 hari = 24 jam ——  
+        // $hari = intdiv($menit, 60*24);
+        // $sisa = $menit % (60*24);
+
+        // —— kalau 1 hari kerja = 7 jam 30 menit ——  
+        $menitPerHariKerja = $this->defaultMinutes;   // 450
+        $hari = intdiv($menit, $menitPerHariKerja);
+        $sisa = $menit % $menitPerHariKerja;
+
+        $jam  = intdiv($sisa, 60);
+        $mnt  = $sisa % 60;
+
+        return sprintf('%d hari %d jam %d menit', $hari, $jam, $mnt);
+    }
+    
     /* ==========================================================
      *  R E K A P   T A H U N A N – tanpa perubahan berarti
      * ========================================================== */
