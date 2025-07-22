@@ -8,9 +8,6 @@
         </div>
 
         <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-          <x-nav-link :href="route('izin_presensi.index')" :active="request()->routeIs('izin_presensi.index')">
-            {{ __('izin') }}
-          </x-nav-link>
 
           <x-nav-link :href="route('absensi.index')" :active="request()->routeIs('absensi.index')">
             {{ __('Absensi') }}
@@ -19,6 +16,11 @@
           <x-nav-link :href="route('absensi.rekap')" :active="request()->routeIs('absensi.rekap')">
             {{ __('Rekap') }}
           </x-nav-link>
+
+          <x-nav-link :href="route('izin_presensi.index')" :active="request()->routeIs('izin_presensi.index')">
+            {{ __('izin') }}
+          </x-nav-link>
+
         </div>
       </div>
 

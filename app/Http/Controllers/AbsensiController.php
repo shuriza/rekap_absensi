@@ -34,6 +34,7 @@ class AbsensiController extends Controller
         }
 
         $preview = [];
+        $bulanTahunSet = [];
 
         $seninKamis = [
             'masuk_min'  => $request->input('jam_masuk_min_senin',  '07:00'),
@@ -53,8 +54,27 @@ class AbsensiController extends Controller
             foreach ($request->file('file_excel') as $file) {
                 $path  = $file->getRealPath();
                 $data  = Excel::toArray([], $path);
-                $sheet = $data[2] ?? [];            // sheet ke-3
-                $barisTanggal = $sheet[3] ?? [];   // row ke-4 sebagai header tanggal
+                $sheet = $data[2] ?? [];
+                $barisTanggal = $sheet[3] ?? [];
+
+                // Ambil tahun & bulan dari C3
+                $cellC3 = $sheet[2][2] ?? null;
+                if (!$cellC3) {
+                    return back()->with('error', 'Cell C3 tidak ditemukan.');
+                }
+
+                if (is_string($cellC3) && str_contains($cellC3, '~')) {
+                    $tanggalAwal = explode('~', $cellC3)[0];
+                    $baseDate = Carbon::parse(trim($tanggalAwal));
+                } elseif (is_numeric($cellC3)) {
+                    $baseDate = Date::excelToDateTimeObject($cellC3);
+                } else {
+                    $baseDate = Carbon::parse($cellC3);
+                }
+
+                $tahun = $baseDate->format('Y');
+                $bulan = $baseDate->format('m');
+                $bulanTahunSet[] = "$tahun-$bulan";
 
                 for ($i = 4; $i < count($sheet); $i += 2) {
                     $infoRow = $sheet[$i];
@@ -77,31 +97,25 @@ class AbsensiController extends Controller
                             continue;
                         }
 
-                        // parsing jam dari cell (numeric or string)
                         $jamList = [];
                         if (is_numeric($raw)) {
-                            try {
-                                $dt = Date::excelToDateTimeObject($raw);
-                                $jamList[] = $dt->format('H:i');
-                            } catch (\Exception $e) {
-                                continue;
-                            }
+                            $jamList[] = Date::excelToDateTimeObject($raw)->format('H:i');
                         } elseif (is_string($raw)) {
                             preg_match_all('/\d{1,2}:\d{2}/', $raw, $m);
                             $jamList = $m[0] ?? [];
                         } else {
                             continue;
                         }
-                        // end parsing
 
-                        $tanggal = sprintf('2025-04-%02d', (int) $tanggalKe);
+                        $tanggal = Carbon::createFromDate($tahun, $bulan, (int) $tanggalKe)->format('Y-m-d');
                         $dow     = Carbon::parse($tanggal)->dayOfWeekIso;
+
                         if ($dow >= 1 && $dow <= 4) {
                             $range = $seninKamis;
                         } elseif ($dow === 5) {
                             $range = $jumat;
                         } else {
-                            continue; // skip weekend
+                            continue;
                         }
 
                         $masukMin  = Carbon::createFromFormat('H:i', $range['masuk_min']);
@@ -110,12 +124,7 @@ class AbsensiController extends Controller
                         $pulangMax = Carbon::createFromFormat('H:i', $range['pulang_max']);
 
                         foreach ($jamList as $j) {
-                            try {
-                                $jamObj = Carbon::createFromFormat('H:i', trim($j));
-                            } catch (\Exception $e) {
-                                continue;
-                            }
-
+                            $jamObj = Carbon::createFromFormat('H:i', trim($j));
                             if ($jamObj->betweenIncluded($masukMin, $masukMax)) {
                                 $preview[] = [
                                     'nama'       => $nama,
@@ -140,6 +149,18 @@ class AbsensiController extends Controller
                 }
             }
 
+            // ✅ Validasi: semua file harus dari bulan yang sama
+            $bulanTahunUnik = array_unique($bulanTahunSet);
+            if (count($bulanTahunUnik) > 1) {
+                return back()->with('error', 'Bulan tidak sama antara file!');
+            }
+
+            // ✅ Hapus data lama dari bulan yang sama
+            [$tahunHapus, $bulanHapus] = explode('-', $bulanTahunUnik[0]);
+            Absensi::whereYear('tanggal', $tahunHapus)
+                ->whereMonth('tanggal', $bulanHapus)
+                ->delete();
+
             // --- MERGE jam_masuk & jam_pulang per (nama, departemen, tanggal) ---
             $merged = [];
             foreach ($preview as $row) {
@@ -161,7 +182,6 @@ class AbsensiController extends Controller
                 }
             }
             $preview = array_values($merged);
-            // --------------------------------------------------------------
 
             session(['preview_data' => $preview]);
         } else {
