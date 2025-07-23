@@ -3,6 +3,15 @@ import Alpine from "alpinejs";
 window.Alpine = Alpine;
 Alpine.start();
 
+import flatpickr from "flatpickr";
+import "flatpickr/dist/flatpickr.css";
+/*  Gunakan class .datepicker agar tak kena semua      */
+document.addEventListener('DOMContentLoaded', () => {
+  flatpickr('.datepicker', {
+    dateFormat: 'Y-m-d',
+  });
+});
+
 document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("canvas.sparkline").forEach((cnv) => {
         // 1. Parse data‐values menjadi array angka
@@ -39,4 +48,6 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.strokeStyle = cnv.dataset.color || "#a0aec0";
         ctx.stroke();
     });
+
+    
 });

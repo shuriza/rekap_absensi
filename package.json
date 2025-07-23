@@ -19,6 +19,7 @@
         "vite": "^6.2.4"
     },
     "dependencies": {
-        "chart.js": "^4.4.9"
+        "chart.js": "^4.4.9",
+        "flatpickr": "^4.6.13"
     }
 }

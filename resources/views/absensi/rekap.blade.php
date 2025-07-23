@@ -229,18 +229,23 @@
         /* ===================================================
                  Modal Izin (plain JS + Tailwind)
               =================================================== */
-        function openIzin(td) {
-          const modal = document.getElementById('modal-overlay');
-          document.getElementById('izin-karyawan').value = td.dataset.karyawan;
-          document.getElementById('izin-awal').value = td.dataset.date;
-          document.getElementById('izin-akhir').value = td.dataset.date;
-          modal.classList.remove('hidden');
-        }
 
-        function closeIzin() {
+      function openIzin(td){
+          // Prefill karyawan & tanggal
+          document.getElementById('izin-karyawan').value = td.dataset.karyawan;
+          flatpickr('#izin-awal',  { defaultDate: td.dataset.date });
+          flatpickr('#izin-akhir', { defaultDate: td.dataset.date });
+          flatpickr('#tanggal', { defaultDate: td.dataset.date });
+          
+
+          // Tampilkan modal
+          document.getElementById('modal-overlay').classList.remove('hidden');
+      }
+      function closeIzin(){
           document.getElementById('modal-overlay').classList.add('hidden');
-        }
+      }
       </script>
+
     @endpush
 
     {{-- =============================================
@@ -271,84 +276,78 @@
             <th class="border px-2 py-2">Total Akumulasi</th>
           </tr>
         </thead>
-          <tbody class="bg-white text-gray-800">
+        <tbody class="bg-white text-gray-800">
 
-          {{-- helper Str cukup sekali --}}
+          {{-- import helper Str cukup sekali --}}
           @php
-              use Illuminate\Support\Str;
+            use Illuminate\Support\Str;
           @endphp
 
           @foreach ($pegawaiList as $pegawai)
-              <tr class="hover:bg-gray-50">
-                  {{-- ── No & Nama ───────────── --}}
-                  <td class="border px-2 py-1">{{ $loop->iteration }}</td>
-                  <td class="border px-2 py-1 text-left">{{ $pegawai->nama }}</td>
+            <tr class="hover:bg-gray-50">
+              <td class="border px-2 py-1">{{ $loop->iteration }}</td>
+              <td class="border px-2 py-1 text-left">{{ $pegawai->nama }}</td>
 
-                  {{-- ── Kolom tanggal ───────── --}}
-                  @foreach ($tanggalList as $tgl)
-                      @php
-                          // fallback jika key tak ada
-                          $sel = $pegawai->absensi_harian[$tgl] ?? [
-                              'type'  => 'kosong',
-                              'label' => '-',
-                          ];
+              {{-- ------- Kolom tanggal ------- --}}
+              @foreach ($tanggalList as $tgl)
+                @php
+                  $sel = $pegawai->absensi_harian[$tgl];
 
-                          /* warna latar */
-                          $bg = match ($sel['type']) {
-                              'libur'     => 'bg-gray-300',
-                              'kosong'    => 'bg-red-500',     // tidak absen
-                              'izin'      => 'bg-blue-300',
-                              'terlambat' => 'bg-yellow-200',
-                              default     => '',               // hadir normal
-                          };
+                  /* warna latar  */
+                  $bg = match ($sel['type']) {
+                      'libur' => 'bg-gray-300',
+                      'kosong' => 'bg-red-500', // merah solid agar kontras
+                      'izin' => 'bg-blue-300',
+                      'terlambat' => 'bg-yellow-200',
+                      default => '', // hadir normal
+                  };
 
-                          /* warna teks */
-                          $txt = $bg === 'bg-red-500' ? 'text-white' : 'text-black';
-                      @endphp
+                  /* warna TEKS: putih jika latar merah, hitam jika selainnya */
+                  $txt = str_contains($bg, 'bg-red')
+                      ? 'text-white' // blok merah → teks putih
+                      : 'text-black'; // lainnya → teks hitam
+                @endphp
 
-                      <td class="border px-1 py-1 text-xs text-center {{ $bg }} {{ $txt }}"
-                          data-karyawan="{{ $pegawai->id }}"
-                          data-date="{{ sprintf('%04d-%02d-%02d', $tahun, $bulan, $tgl) }}"
-                          onclick="openIzin(this)">
+                <td
+                  class="border px-1 py-1 text-xs text-center {{ $bg }} {{ $txt }}"
+                  data-karyawan="{{ $pegawai->id }}"
+                  data-date="{{ sprintf('%04d-%02d-%02d', $tahun, $bulan, $tgl) }}"
+                  onclick="openIzin(this)">
+                  @switch($sel['type'])
+                    @case('hadir')
+                    @case('terlambat')
+                      {{ $sel['label'] }}
+                    @break
 
-                          @switch($sel['type'])
+                    @case('libur')
+                    @case('izin')
+                      <span class="inline-block max-w-[140px] truncate" title="{{ $sel['label'] }}">
+                        {{ \Illuminate\Support\Str::limit($sel['label'], 25, '…') }}
+                      </span>
+                    @break
 
-                              @case('hadir')
-                              @case('terlambat')   {{-- jam masuk–pulang tetap tampil --}}
-                                  {{ $sel['label'] }}
-                                  @break
+                    @case('kosong')
+                      {{-- hanya in / out / kosong --}}
+                      {{ $sel['label'] }} {{-- tampilkan “07:12 – --:--” atau “--:-- – 16:10” / “-” --}}
+                    @break
 
-                              @case('libur')
-                              @case('izin')
-                                  <span class="inline-block max-w-[140px] truncate"
-                                        title="{{ $sel['label'] }}">
-                                      {{ Str::limit($sel['label'], 25, '…') }}
-                                  </span>
-                                  @break
+                    @default
+                      - {{-- kosong --}}
+                  @endswitch
+                </td>
+              @endforeach
 
-                              @default              {{-- type kosong --}}
-                                  {{ $sel['label'] }}
-                          @endswitch
-                      </td>
-                  @endforeach
 
-                  {{-- ── Total akumulasi (hari : jam : menit) ─────────────────────── --}}
-                  @php
-                      // total_menit → hari jam menit
-                      $hari  = intdiv($pegawai->total_menit, 1440);
-                      $sisa  = $pegawai->total_menit % 1440;
-                      $jam   = str_pad(intdiv($sisa, 60), 2, '0', STR_PAD_LEFT);
-                      $menit = str_pad($sisa % 60      , 2, '0', STR_PAD_LEFT);
-                  @endphp
-                  <td class="border px-2 py-1 text-xs font-semibold">
-                      {{ $hari }}h {{ $jam }}j {{ $menit }}m
-                  </td>
-              </tr>
+              @php
+                $jam = str_pad(intdiv($pegawai->total_menit, 60), 2, '0', STR_PAD_LEFT);
+                $menit = str_pad($pegawai->total_menit % 60, 2, '0', STR_PAD_LEFT);
+              @endphp
+              <td class="border px-2 py-1 text-xs font-semibold">
+                {{ $pegawai->total_fmt }}
+              </td>
+            </tr>
           @endforeach
-
-      </tbody>
-
-
+        </tbody>
 
       </table>
     </div>

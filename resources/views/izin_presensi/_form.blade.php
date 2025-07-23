@@ -1,9 +1,25 @@
 {{-- resources/views/izin_presensi/_form.blade.php --}}
 {{-- ========================== --}}
 {{-- Field tersembunyi: diisi otomatis ketika modal dibuka --}}
+{{-- Ganti input tersembunyi ➜ jadi input date yang terlihat --}}
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div>
+        <label class="block mb-2 font-medium text-gray-700">Tanggal Awal</label>
+        <input  type="date"  id="izin-awal"  name="tanggal_awal"  required
+                class="w-full rounded-lg border-gray-300">
+        @error('tanggal_awal') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+    </div>
+
+    <div>
+        <label class="block mb-2 font-medium text-gray-700">Tanggal Akhir</label>
+        <input  type="date"  id="izin-akhir" name="tanggal_akhir"
+                class="w-full rounded-lg border-gray-300">
+        @error('tanggal_akhir') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+    </div>
+</div>
+
+{{-- “Nama Karyawan” tetap tersembunyi --}}
 <input type="hidden" id="izin-karyawan" name="karyawan_id">
-<input type="hidden" id="izin-awal"     name="tanggal_awal">
-<input type="hidden" id="izin-akhir"    name="tanggal_akhir">
 
 {{-- ========================== --}}
 {{-- Tipe & Jenis Izin --}}
