@@ -71,11 +71,7 @@
 {{-- Tombol aksi --}}
 <div class="flex justify-end">
     {{-- Tombol batal: dipakai di modal, dispatch event untuk menutup --}}
-    <button type="button"
-            class="inline-block px-4 py-2 mr-3 rounded-lg border text-gray-700 hover:bg-gray-50 transition"
-            @click="$dispatch('close-izin-modal')">
-        Batal
-    </button>
+ 
 
     <button type="submit"
             class="inline-block px-6 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">

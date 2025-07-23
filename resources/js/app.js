@@ -8,7 +8,7 @@ import "flatpickr/dist/flatpickr.css";
 /*  Gunakan class .datepicker agar tak kena semua      */
 document.addEventListener('DOMContentLoaded', () => {
   flatpickr('.datepicker', {
-    dateFormat: 'd-m-Y',
+    dateFormat: 'Y-m-d',
   });
 });
 

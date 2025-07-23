@@ -119,6 +119,20 @@ public function index(Request $request)
             // simpan di storage/app/public/izin_presensi
             $data['berkas'] = $request->file('berkas')->store('izin_presensi', 'public');
         }
+            /* jika tanggal_akhir kosong, set = tanggal_awal */
+            $data['tanggal_akhir'] = $data['tanggal_akhir'] ?: $data['tanggal_awal'];
+
+            /* 2️⃣  Hapus izin lama yg rentangnya bentrok */
+            IzinPresensi::where('karyawan_id', $data['karyawan_id'])
+                ->where(function($q) use ($data) {
+                    // Tiga kemungkinan overlap
+                    $q->whereBetween('tanggal_awal',  [$data['tanggal_awal'], $data['tanggal_akhir']])
+                    ->orWhereBetween('tanggal_akhir',[$data['tanggal_awal'], $data['tanggal_akhir']])
+                    ->orWhere(function($x) use ($data){
+                            $x->where('tanggal_awal',  '<=', $data['tanggal_awal'])
+                            ->where('tanggal_akhir', '>=', $data['tanggal_akhir']);
+                    });
+                })->delete();
 
         IzinPresensi::create($data);
 
