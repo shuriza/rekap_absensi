@@ -109,11 +109,14 @@
             value="{{ request('search') }}" class="border p-2 rounded w-full md:w-1/3" />
           <select name="sort_by" class="border p-2 rounded w-12 md:w-auto">
             <option value="">Urutkan</option>
-            <option value="nama_asc" {{ request('sort_by') == 'nama_asc' ? 'selected' : '' }}>Nama A-Z
+            <option value="nama_asc" {{ request('sort_by') == 'nama_asc' ? 'selected' : '' }}>Nama
+              A-Z
             </option>
-            <option value="nama_desc"{{ request('sort_by') == 'nama_desc' ? 'selected' : '' }}>Nama Z-A
+            <option value="nama_desc"{{ request('sort_by') == 'nama_desc' ? 'selected' : '' }}>Nama
+              Z-A
             </option>
-            <option value="tanggal_asc"{{ request('sort_by') == 'tanggal_asc' ? 'selected' : '' }}>Tanggal
+            <option value="tanggal_asc"{{ request('sort_by') == 'tanggal_asc' ? 'selected' : '' }}>
+              Tanggal
               Terlama</option>
             <option value="tanggal_desc"{{ request('sort_by') == 'tanggal_desc' ? 'selected' : '' }}>
               Tanggal Terbaru</option>
@@ -128,6 +131,7 @@
           <table class="w-full text-sm border mb-4 mt-4">
             <thead class="bg-gray-100">
               <tr>
+                <th class="border px-2 py-1">No</th>
                 <th class="border px-2 py-1">Nama</th>
                 <th class="border px-2 py-1">Departemen</th>
                 <th class="border px-2 py-1">Tanggal</th>
@@ -139,6 +143,9 @@
             <tbody>
               @foreach ($preview as $i => $row)
                 <tr>
+                  <td class="border px-2 py-1">
+                    {{ $loop->iteration }}
+                  </td>
                   <td class="border px-2 py-1">
                     <input type="hidden" name="data[{{ $i }}][nama]"
                       value="{{ $row['nama'] }}">

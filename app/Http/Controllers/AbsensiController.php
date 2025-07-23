@@ -109,33 +109,59 @@ class AbsensiController extends Controller
                         $pulangMin = Carbon::createFromFormat('H:i', $range['pulang_min']);
                         $pulangMax = Carbon::createFromFormat('H:i', $range['pulang_max']);
 
-                        foreach ($jamList as $j) {
-                            try {
-                                $jamObj = Carbon::createFromFormat('H:i', trim($j));
-                            } catch (\Exception $e) {
-                                continue;
-                            }
+foreach ($jamList as $j) {
+    $j      = trim($j);
+    $jamObj = Carbon::createFromFormat('H:i', $j);
+    $pushed = false;
 
-                            if ($jamObj->betweenIncluded($masukMin, $masukMax)) {
-                                $preview[] = [
-                                    'nama'       => $nama,
-                                    'departemen' => $departemen,
-                                    'tanggal'    => $tanggal,
-                                    'jam_masuk'  => trim($j),
-                                    'jam_pulang' => null,
-                                ];
-                            }
+    // 1) Masuk kalau dalam window masuk
+    if ($jamObj->betweenIncluded($masukMin, $masukMax)) {
+        $preview[] = [
+            'nama'       => $nama,
+            'departemen' => $departemen,
+            'tanggal'    => $tanggal,
+            'jam_masuk'  => $j,
+            'jam_pulang' => null,
+        ];
+        $pushed = true;
+    }
 
-                            if ($jamObj->betweenIncluded($pulangMin, $pulangMax)) {
-                                $preview[] = [
-                                    'nama'       => $nama,
-                                    'departemen' => $departemen,
-                                    'tanggal'    => $tanggal,
-                                    'jam_masuk'  => null,
-                                    'jam_pulang' => trim($j),
-                                ];
-                            }
-                        }
+    // 2) Pulang kalau dalam window pulang
+    if ($jamObj->betweenIncluded($pulangMin, $pulangMax)) {
+        $preview[] = [
+            'nama'       => $nama,
+            'departemen' => $departemen,
+            'tanggal'    => $tanggal,
+            'jam_masuk'  => null,
+            'jam_pulang' => $j,
+        ];
+        $pushed = true;
+    }
+
+    // 3) Kalau tidak masuk kedua window, tetapkan sendiri:
+    //    sebelum jam pulang_min → anggap masuk, 
+    //    sesudahnya → anggap pulang
+    if (! $pushed) {
+        if ($jamObj->lt($pulangMin)) {
+            $preview[] = [
+                'nama'       => $nama,
+                'departemen' => $departemen,
+                'tanggal'    => $tanggal,
+                'jam_masuk'  => $j,
+                'jam_pulang' => null,
+            ];
+        } else {
+            $preview[] = [
+                'nama'       => $nama,
+                'departemen' => $departemen,
+                'tanggal'    => $tanggal,
+                'jam_masuk'  => null,
+                'jam_pulang' => $j,
+            ];
+        }
+    }
+}
+
                     }
                 }
             }
@@ -161,52 +187,64 @@ class AbsensiController extends Controller
                 }
             }
 
-            foreach ($merged as &$row) {
-                $dow   = Carbon::parse($row['tanggal'])->dayOfWeekIso;
-                $range = ($dow >= 1 && $dow <= 4) ? $seninKamis : $jumat;
-                $minMasuk  = Carbon::createFromFormat('H:i', $range['masuk_min']);
-                $maxMasuk  = Carbon::createFromFormat('H:i', $range['masuk_max']);
-                $minPulang = Carbon::createFromFormat('H:i', $range['pulang_min']);
-                $maxPulang = Carbon::createFromFormat('H:i', $range['pulang_max']);
+// HITUNG KETERANGAN gabungan
+foreach ($merged as &$row) {
+    // 1. Ambil hari & range lagi
+    $dow   = Carbon::parse($row['tanggal'])->dayOfWeekIso;
+    $range = ($dow >= 1 && $dow <= 4) ? $seninKamis : $jumat;
 
-                if (! empty($row['jam_masuk']) && empty($row['jam_pulang'])) {
-                    $row['keterangan'] = 'terlambat';
-                    continue; 
-                }
+    $minMasuk  = Carbon::createFromFormat('H:i', $range['masuk_min']);
+    $maxMasuk  = Carbon::createFromFormat('H:i', $range['masuk_max']);
+    $minPulang = Carbon::createFromFormat('H:i', $range['pulang_min']);
+    $maxPulang = Carbon::createFromFormat('H:i', $range['pulang_max']);
 
-                $statusMasuk = null;
-                if ($row['jam_masuk']) {
-                    $jm = Carbon::createFromFormat('H:i', $row['jam_masuk']);
-                    if ($jm->lt($minMasuk)) {
-                        $statusMasuk = 'diluar waktu absen';
-                    } elseif ($jm->gt($maxMasuk)) {
-                        $statusMasuk = 'terlambat';
-                    } else {
-                        $statusMasuk = 'tepat waktu';
-                    }
-                }
-                $statusPulang = null;
-                if ($row['jam_pulang']) {
-                    $jp = Carbon::createFromFormat('H:i', $row['jam_pulang']);
-                    if ($jp->gt($maxPulang)) {
-                        $statusPulang = 'diluar waktu absen';
-                    } elseif ($jp->lt($minPulang)) {
-                        $statusPulang = 'terlambat';
-                    } else {
-                        $statusPulang = 'tepat waktu';
-                    }
-                }
+    // OVERRIDE: kalau **tidak ada jam masuk** → terlambat
+    if (empty($row['jam_masuk'])) {
+        $row['keterangan'] = 'terlambat';
+        continue;
+    }
 
-                $all = array_filter([$statusMasuk, $statusPulang]);
-                if (in_array('diluar waktu absen', $all)) {
-                    $row['keterangan'] = 'diluar waktu absen';
-                } elseif (in_array('terlambat', $all)) {
-                    $row['keterangan'] = 'terlambat';
-                } else {
-                    $row['keterangan'] = 'tepat waktu';
-                }
-            }
-            unset($row);
+    // OVERRIDE: kalau ada jam masuk tapi **tidak ada jam pulang** → terlambat
+    if (! empty($row['jam_masuk']) && empty($row['jam_pulang'])) {
+        $row['keterangan'] = 'terlambat';
+        continue;
+    }
+
+    // 2. Hitung status masuk
+    $statusMasuk = null;
+    $jm = Carbon::createFromFormat('H:i', $row['jam_masuk']);
+    if ($jm->lt($minMasuk)) {
+        $statusMasuk = 'diluar waktu absen';
+    } elseif ($jm->gt($maxMasuk)) {
+        $statusMasuk = 'terlambat';
+    } else {
+        $statusMasuk = 'tepat waktu';
+    }
+
+    // 3. Hitung status pulang (jika ada)
+    $statusPulang = null;
+    if (! empty($row['jam_pulang'])) {
+        $jp = Carbon::createFromFormat('H:i', $row['jam_pulang']);
+        if ($jp->gt($maxPulang)) {
+            $statusPulang = 'diluar waktu absen';
+        } elseif ($jp->lt($minPulang)) {
+            $statusPulang = 'terlambat';
+        } else {
+            $statusPulang = 'tepat waktu';
+        }
+    }
+
+    // 4. Gabungkan prioritas
+    $all = array_filter([$statusMasuk, $statusPulang]);
+    if (in_array('diluar waktu absen', $all)) {
+        $row['keterangan'] = 'diluar waktu absen';
+    } elseif (in_array('terlambat', $all)) {
+        $row['keterangan'] = 'terlambat';
+    } else {
+        $row['keterangan'] = 'tepat waktu';
+    }
+}
+unset($row);
 
             $preview = array_values($merged);
             // --------------------------------------------------------------
@@ -259,40 +297,39 @@ class AbsensiController extends Controller
         ]);
     }
 
-    public function store(Request $request)
-    {
-        $data = session('preview_data');
+public function store(Request $request)
+{
+    $data = session('preview_data');
 
-        if (!$data || !is_array($data)) {
-            return back()->with('error', 'Tidak ada data yang bisa disimpan.');
-        }
-
-        foreach ($data as $row) {
-            $karyawan = Karyawan::firstOrCreate([
-                'nama'       => $row['nama'],
-                'departemen' => $row['departemen'],
-            ]);
-
-            $exists = Absensi::where('karyawan_id', $karyawan->id)
-                ->where('tanggal', $row['tanggal'])
-                ->where(function($q) use ($row) {
-                    $q->where('jam_masuk',  $row['jam_masuk'])
-                      ->orWhere('jam_pulang', $row['jam_pulang']);
-                })->exists();
-
-            if (! $exists) {
-                Absensi::create([
-                    'karyawan_id' => $karyawan->id,
-                    'tanggal'     => $row['tanggal'],
-                    'jam_masuk'   => $row['jam_masuk'],
-                    'jam_pulang'  => $row['jam_pulang'],
-                ]);
-            }
-        }
-
-        session()->forget('preview_data');
-
-        return redirect()->route('absensi.index')
-                         ->with('success', 'Semua data absensi berhasil disimpan!');
+    if (! is_array($data) || empty($data)) {
+        return back()->with('error', 'Tidak ada data yang bisa disimpan.');
     }
+
+    foreach ($data as $row) {
+        // 1) Ambil atau buat karyawan
+        $karyawan = Karyawan::firstOrCreate([
+            'nama'       => $row['nama'],
+            'departemen' => $row['departemen'],
+        ]);
+
+        // 2) Replace/insert Absensi per karyawan + tanggal
+        Absensi::updateOrCreate(
+            [
+                'karyawan_id' => $karyawan->id,
+                'tanggal'     => $row['tanggal'],
+            ],
+            [
+                'jam_masuk'  => $row['jam_masuk'],
+                'jam_pulang' => $row['jam_pulang'],
+                'keterangan' => $row['keterangan'] ?? null,
+            ]
+        );
+    }
+
+    // 3) Clear session dan redirect
+    session()->forget('preview_data');
+
+    return redirect()->route('absensi.index')
+                     ->with('success', 'Semua data absensi berhasil disimpan!');
+}
 }
