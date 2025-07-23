@@ -124,6 +124,17 @@
     {{-- =============================================
           FORM ➕ TANDAI TANGGAL MERAH / HARI PENTING
       ============================================= --}}
+      @php
+          // tanggal pertama & terakhir bulan yang sedang difilter
+          $firstDay = sprintf('%04d-%02d-01',   $tahun, $bulan);
+          $lastDay  = sprintf(
+              '%04d-%02d-%02d',
+              $tahun,
+              $bulan,
+              \Carbon\Carbon::create($tahun, $bulan)->daysInMonth
+          );
+      @endphp
+      
     @if (session('holiday_success'))
       <div class="mb-4 px-4 py-2 rounded bg-green-100 text-green-800 text-sm">
         {{ session('holiday_success') }}
@@ -137,8 +148,13 @@
       {{-- Tanggal --}}
       <div>
         <label class="block text-sm font-medium text-gray-700">Tanggal</label>
-        <input type="date" name="tanggal" required
-          class="mt-1 block w-40 rounded border-gray-300 shadow-sm text-sm" />
+        <input  type="date"
+            name="tanggal"
+            required
+            value="{{ old('tanggal', $firstDay) }}"   {{-- posisi awal di bulan terpilih --}}
+            min="{{ $firstDay }}"                     {{-- tak bisa pilih sebelum bulan ini --}}
+            max="{{ $lastDay }}"                      {{-- tak bisa pilih sesudah bulan ini --}}
+            class="mt-1 block w-40 rounded border-gray-300 shadow-sm text-sm" />
       </div>
 
       {{-- Keterangan --}}
