@@ -150,11 +150,12 @@
         <label class="block text-sm font-medium text-gray-700">Tanggal</label>
         <input  type="date"
             name="tanggal"
+            id="input-holiday-date"
             required
             value="{{ old('tanggal', $firstDay) }}"   {{-- posisi awal di bulan terpilih --}}
             min="{{ $firstDay }}"                     {{-- tak bisa pilih sebelum bulan ini --}}
             max="{{ $lastDay }}"                      {{-- tak bisa pilih sesudah bulan ini --}}
-            class="mt-1 block w-40 rounded border-gray-300 shadow-sm text-sm" />
+            class="datepicker mt-1 block w-40 rounded border-gray-300 shadow-sm text-sm" />
       </div>
 
       {{-- Keterangan --}}
