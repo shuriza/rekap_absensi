@@ -1,177 +1,148 @@
 @extends('layouts.app')
 
-@push('styles') <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.4/dist/tailwind.min.css" rel="stylesheet">
+{{-- ­──────── ASSET ­──────── --}}
+@push('styles')
+
+    {{-- Flatpickr & monthSelect --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
+
+    {{-- DataTables Tailwind theme --}}
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.tailwindcss.css" />
 @endpush
 
-@section('content')
+@push('scripts')
+    {{-- Flatpickr --}}
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
 
+    {{-- jQuery + DataTables --}}
+    <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
+    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.js"></script>
+    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.tailwindcss.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            /* Bulan–Tahun picker */
+            flatpickr('#bulanPick', {
+                plugins: [new monthSelectPlugin({
+                    shorthand : true,
+                    dateFormat: 'Y-m',   // value = 2025-04
+                    altFormat : 'F Y'    // tampilan = April 2025
+                })],
+                onChange() { document.getElementById('filterForm').submit(); }
+            });
+
+            /* DataTables init */
+            const dt = $('#izinTable').DataTable({
+                pageLength : 10,
+                lengthMenu : [10,25,50,100],
+                order      : [[3,'desc']],   // default ke kolom Periode desc
+                columnDefs : [ { targets: -1, orderable:false } ], // kolom Aksi non-sort
+                language: {
+                    search           : '',        // kosongkan label default
+                    searchPlaceholder: 'Cari karyawan / tipe…'
+                }
+            });
+
+            // Tailwind‐ify search input & length select setelah inisialisasi
+            $(dt.table().container()).find('input[type="search"]').addClass('border px-3 py-2 rounded-lg border-gray-200 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 bg-white text-gray-700 dark:bg-white');
+            $(dt.table().container()).find('select[name="izinTable_length"]').addClass('border px-3 py-2 rounded-lg border-gray-200 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 bg-white text-gray-700 dark:bg-white');
+        });
+    </script>
+@endpush
+{{-- ­──────────────────────── --}}
+
+@section('content')
 <div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-        <h2 class="text-2xl font-semibold text-gray-800 mb-4 sm:mb-0">Daftar Izin Presensi</h2>
-        <div class="flex space-x-2">
-            <!-- Tombol Buat -->
-            <a href="{{ route('izin_presensi.create') }}"
-               class="inline-flex items-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg shadow-md transition">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-                Buat Pesan Baru
-            </a>
-            <!-- Search Input (opsional Livewire) -->
-            <form method="GET" action="{{ route('izin_presensi.index') }}" class="relative">
-                <input type="search" name="q" value="{{ $q }}"
-                    placeholder="Cari karyawan atau tipe…"
-                    class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 text-sm" />
-                <svg … class="absolute left-3 top-1/2 …"></svg>
+
+    {{-- ­──────── Header & Aksi Global ­──────── --}}
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
+        <h2 class="text-2xl font-semibold text-gray-800">Daftar Izin Presensi</h2>
+
+        <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+            {{-- Pencarian (DataTables akan mengganti input ini, tapi tetap disediakan untuk fallback) --}}
+            <input type="search" placeholder="Cari karyawan / tipe…" class="hidden" />
+
+            {{-- Picker Bulan (inline) --}}
+            <form id="filterForm" method="GET" action="{{ route('izin_presensi.index') }}" class="flex items-end gap-2">
+                @php $bt = request('bulan_tahun', now()->format('Y-m')); @endphp
+                <label class="flex flex-col text-sm">
+                    <span class="mb-1 font-medium">Bulan</span>
+                    <input id="bulanPick" name="bulan_tahun" type="text" value="{{ $bt }}" class="border border-gray-300 p-2 rounded w-40 bg-white" placeholder="Pilih Bulan" />
+                </label>
             </form>
 
+            {{-- Tombol Buat --}}
+            <a href="{{ route('izin_presensi.create') }}" class="flex items-center gap-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                Buat Izin
+            </a>
+
+            {{-- Export & Reset --}}
+            <a href="{{ route('export.izin.bulanan', ['bulan_tahun'=>$bt]) }}" class="inline-flex items-center gap-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded shadow text-sm transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m7-7H5"/></svg>
+                Export XLSX
+            </a>
+            <a href="{{ route('izin_presensi.index') }}" class="inline-flex items-center gap-1 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded shadow text-sm transition">Reset</a>
         </div>
     </div>
 
-<form method="GET" action="{{ route('izin_presensi.index') }}" class="mb-4 space-y-2">
-    <div class="flex flex-wrap items-center gap-2">
-        <label>Dari:</label>
-        <input type="date" name="start_date" value="{{ $start }}" class="border p-1">
-        <label>Sampai:</label>
-        <input type="date" name="end_date" value="{{ $end }}" class="border p-1">
-
-        {{-- pilihan sortir --}}
-    @php
-        $sort = request('sort', 'tanggal_awal_desc');  // default
-    @endphp
-
-    <select name="sort" class="border p-1">
-        {{-- Tanggal Awal --}}
-        <option value="tanggal_awal_asc"  {{ $sort=='tanggal_awal_asc'  ? 'selected' : '' }}>
-            Tanggal Awal (Lama → Baru)
-        </option>
-        <option value="tanggal_awal_desc" {{ $sort=='tanggal_awal_desc' ? 'selected' : '' }}>
-            Tanggal Awal (Baru → Lama)
-        </option>
-
-        {{-- Tanggal Akhir --}}
-        <option value="tanggal_akhir_asc"  {{ $sort=='tanggal_akhir_asc'  ? 'selected' : '' }}>
-            Tanggal Akhir (Lama → Baru)
-        </option>
-        <option value="tanggal_akhir_desc" {{ $sort=='tanggal_akhir_desc' ? 'selected' : '' }}>
-            Tanggal Akhir (Baru → Lama)
-        </option>
-
-        {{-- Tipe Izin --}}
-        <option value="tipe_ijin_asc"  {{ $sort=='tipe_ijin_asc'  ? 'selected' : '' }}>
-            Tipe Izin (A → Z)
-        </option>
-        <option value="tipe_ijin_desc" {{ $sort=='tipe_ijin_desc' ? 'selected' : '' }}>
-            Tipe Izin (Z → A)
-        </option>
-
-        {{-- Nama Karyawan --}}
-        <option value="nama_asc"  {{ $sort=='nama_asc'  ? 'selected' : '' }}>
-            Nama (A → Z)
-        </option>
-        <option value="nama_desc" {{ $sort=='nama_desc' ? 'selected' : '' }}>
-            Nama (Z → A)
-        </option>
-    </select>
-
-        {{-- Tombol Terapkan & Export --}}
-
-
-        <button type="submit" class="bg-blue-600 text-white px-3 py-1 rounded">
-            Terapkan
-        </button>
-
-        <a href="{{ route('export.izin.bulanan', request()->only(['start_date','end_date'])) }}"
-        class="bg-green-600 text-white px-3 py-1 rounded">
-            Export XLSX
-        </a>
-
-
-        <a href="{{ route('izin_presensi.index') }}" class="bg-red-600 text-white px-3 py-1 rounded">Reset</a>
-    </div>
-</form>
-
-<!-- Table Card -->
-<div class="bg-white shadow-lg rounded-lg overflow-hidden">
-    <div class="overflow-x-auto">
-        <table class="min-w-full table-auto">
-            <thead class="bg-gray-100">
-                <tr>
-                    <th class="w-12 px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">No</th>
-                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Karyawan</th>
-                    <th class="w-24 px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">Tipe</th>
-                    <th class="w-36 px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">Periode</th>
-                    <th class="w-28 px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">Jenis</th>
-                    <th class="w-24 px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">Berkas</th>
-                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">Keterangan</th>
-                    <th class="w-32 px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">Aksi</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-                @forelse($data as $i => $izin)
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-sm text-gray-700">{{ $data->firstItem() + $i }}</td>
-                        <td class="px-4 py-3 text-sm text-gray-700">
-                            <div class="font-medium">{{ $izin->karyawan->nama }}</div>
-                            <div class="text-xs text-gray-500">{{ $izin->karyawan->departemen }}</div>
-                        </td>
-                        <td class="px-4 py-3 text-sm text-center text-gray-700">{{ $izin->tipe_ijin }}</td>
-                        <td class="px-4 py-3 text-sm text-center text-gray-700">
-                            {{ $izin->tanggal_awal->format('d-m-Y') }}
-                            @if($izin->tanggal_akhir)
-                                – {{ $izin->tanggal_akhir->format('d-m-Y') }}
-                            @endif
-                        </td>
-                        <td class="px-4 py-3 text-sm text-center text-gray-700">{{ $izin->jenis_ijin }}</td>
-                        <!-- Kolom Berkas -->
-                        <td class="px-4 py-3 text-center text-sm">
-                            @if($izin->berkas)
-                                <a href="{{ route('izin_presensi.lampiran', $izin) }}" target="_blank"
-                                class="inline-block px-2 py-1 bg-blue-100 text-blue-600 rounded-full text-xs hover:bg-blue-200">
-                                    Lihat Lampiran
-                                </a>
-                            @else
-                                <span class="text-gray-400">-</span>
-                            @endif
-                        </td>
-                        <!-- Kolom Keterangan -->
-                        <td class="px-4 py-3 text-sm text-center text-gray-700 whitespace-pre-line">
-                            {{ $izin->keterangan ?: '-' }}
-                        </td>
-                        <!-- Kolom Aksi -->
-                        <td class="px-4 py-3 text-sm text-center space-x-1">
-                            <!-- Detail -->
-                            <a href="{{ route('izin_presensi.show', $izin) }}"
-                               class="inline-block px-2 py-1 bg-emerald-100 text-emerald-700 rounded text-xs hover:bg-emerald-200">
-                                Detail
-                            </a>
-                            
-                            <!-- Hapus -->
-                            <form action="{{ route('izin_presensi.destroy', $izin) }}" method="POST" class="inline"
-                                  onsubmit="return confirm('Yakin hapus?');">
-                                @csrf @method('DELETE')
-                                <button type="submit"
-                                        class="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200">
-                                    Hapus
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                @empty
+    {{-- ­──────── TABEL IZIN ­──────── --}}
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table id="izinTable" class="min-w-full text-sm">
+                <thead class="bg-gray-100">
                     <tr>
-                        <td colspan="8" class="px-4 py-6 text-center text-gray-500">Belum ada data.</td>
+                        <th class="w-12 px-4 py-3 text-left font-semibold text-gray-600 uppercase">No</th>
+                        <th class="px-4 py-3 text-left font-semibold text-gray-600 uppercase">Karyawan</th>
+                        <th class="w-24 px-4 py-3 text-center font-semibold text-gray-600 uppercase">Tipe</th>
+                        <th class="w-36 px-4 py-3 text-center font-semibold text-gray-600 uppercase">Periode</th>
+                        <th class="w-28 px-4 py-3 text-center font-semibold text-gray-600 uppercase">Jenis</th>
+                        <th class="w-24 px-4 py-3 text-center font-semibold text-gray-600 uppercase">Berkas</th>
+                        <th class="px-4 py-3 text-center font-semibold text-gray-600 uppercase">Keterangan</th>
+                        <th class="w-32 px-4 py-3 text-center font-semibold text-gray-600 uppercase">Aksi</th>
                     </tr>
-                @endforelse
-            </tbody>
-        </table>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    @foreach($data as $i => $izin)
+                        <tr class="hover:bg-green-50 odd:bg-white even:bg-gray-50">
+                            <td class="px-4 py-3 text-gray-700">{{ $i+1 }}</td>
+                            <td class="px-4 py-3 text-gray-700 whitespace-nowrap">
+                                <div class="font-medium">{{ $izin->karyawan->nama }}</div>
+                                <div class="text-xs text-gray-500">{{ $izin->karyawan->departemen }}</div>
+                            </td>
+                            <td class="px-4 py-3 text-center text-gray-700">{{ $izin->tipe_ijin }}</td>
+                            <td class="px-4 py-3 text-center text-gray-700">
+                                {{ $izin->tanggal_awal->format('d-m-Y') }}
+                                @if($izin->tanggal_akhir)
+                                    <span class="mx-0.5">–</span> {{ $izin->tanggal_akhir->format('d-m-Y') }}
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-center text-gray-700">{{ $izin->jenis_ijin }}</td>
+                            <td class="px-4 py-3 text-center">
+                                @if($izin->berkas)
+                                    <a href="{{ route('izin_presensi.lampiran', $izin) }}" target="_blank" class="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        Lampiran
+                                    </a>
+                                @else
+                                    <span class="text-gray-400">—</span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 text-center text-gray-700 whitespace-pre-line">{{ $izin->keterangan ?: '—' }}</td>
+                            <td class="px-4 py-3 text-center space-x-1">
+                                <a href="{{ route('izin_presensi.show', $izin) }}" class="inline-block px-2 py-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 text-xs transition">Detail</a>
+                                <form action="{{ route('izin_presensi.destroy', $izin) }}" method="POST" class="inline" onsubmit="return confirm('Yakin hapus?');">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-xs transition">Hapus</button>
+                                </form>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
     </div>
-    <!-- Pagination -->
-     
-    <div class="px-4 py-4 bg-gray-50">
-        {{ $data->links('pagination::tailwind') }}
-    </div>
-</div>
-
 </div>
 @endsection

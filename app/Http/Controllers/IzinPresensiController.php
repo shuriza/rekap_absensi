@@ -15,75 +15,34 @@ class IzinPresensiController extends Controller
     /** Tampil list izin */
 public function index(Request $request)
 {
-    /* ─────────────────────────────
-     * 1. Ambil parameter filter
-     * ────────────────────────────*/
-    $bt        = $request->query('bulan_tahun');          // YYYY-MM (opsional)
-    $start     = $request->query('start_date');
-    $end       = $request->query('end_date');
-    $sortParam = $request->query('sort', 'tanggal_awal_desc');
-    $q         = $request->query('q');
+    $bt     = $request->query('bulan_tahun');          // YYYY‑MM
+    $sort   = $request->query('sort', 'tanggal_awal_desc');
+    $q      = $request->query('q');
 
-    /* ── Pecah sort menjadi kolom & arah ──*/
-    $parts  = explode('_', $sortParam);
-    $sortBy = $parts[0] ?? 'tanggal_awal';
-    $order  = $parts[1] ?? 'desc';               // default desc
-    $order  = $order === 'asc' ? 'asc' : 'desc'; // sanitasi
+    /* Urai sort -> kolom & arah */
+    [$kolom,$arah] = array_pad(explode('_',$sort),2,'desc');
+    $arah  = $arah==='asc'?'asc':'desc';
+    $valid = ['tanggal_awal','tanggal_akhir','tipe_ijin','nama'];
+    $kolom = in_array($kolom,$valid) ? $kolom : 'tanggal_awal';
 
-    /* ── Validasi kolom yang diizinkan ──*/
-    $validCols = ['tanggal_awal','tanggal_akhir','tipe_ijin','nama'];
-    if (!in_array($sortBy, $validCols)) {
-        $sortBy = 'tanggal_awal';
-    }
-
-    /* ─────────────────────────────
-     * 2. Query dasar
-     * ────────────────────────────*/
     $query = IzinPresensi::with('karyawan');
 
-    // Filter bulan_tahun
-    if ($bt) {
-        [$tahun, $bulan] = explode('-', $bt);
-        $query->whereYear('tanggal_awal',  $tahun)
-              ->whereMonth('tanggal_awal', $bulan);
+    if($bt){ [$y,$m] = explode('-',$bt); $query->whereYear('tanggal_awal',$y)->whereMonth('tanggal_awal',$m); }
+
+    if($q){ $query->where(function($qr)use($q){ $qr->whereHas('karyawan',fn($k)=>$k->where('nama','like',"%$q%"))->orWhere('tipe_ijin','like',"%$q%" ); }); }
+
+    $izinTbl = (new IzinPresensi)->getTable();
+    if($kolom==='nama'){
+        $query->join('karyawans','karyawans.id','=',$izinTbl.'.karyawan_id')
+              ->orderBy('karyawans.nama',$arah)
+              ->select($izinTbl.'.*');
+    }else{
+        $query->orderBy($kolom,$arah);
     }
 
-    // Filter rentang tanggal
-    if ($start && $end) {
-        $query->whereBetween('tanggal_awal', [$start, $end]);
-    }
-
-    // Pencarian kata kunci
-    if ($q) {
-        $query->where(function ($qr) use ($q) {
-            $qr->whereHas('karyawan', fn ($k) =>
-                    $k->where('nama', 'like', "%{$q}%"))
-               ->orWhere('tipe_ijin', 'like', "%{$q}%");
-        });
-    }
-
-    /* ─────────────────────────────
-     * 3. Sorting
-     * ────────────────────────────*/
-    $izinTable = (new IzinPresensi)->getTable();
-    if ($sortBy === 'nama') {
-        $query->join('karyawans', 'karyawans.id', '=', $izinTable.'.karyawan_id')
-              ->orderBy('karyawans.nama', $order)
-              ->select($izinTable.'.*');   // hindari kolom ganda
-    } else {
-        $query->orderBy($sortBy, $order);
-    }
-
-    /* ─────────────────────────────
-     * 4. Paginasi & kirim ke view
-     * ────────────────────────────*/
     $data = $query->paginate(10)->withQueryString();
-
-    return view('izin_presensi.index', compact(
-        'data', 'bt', 'start', 'end', 'sortParam', 'q'
-    ));
+    return view('izin_presensi.index', compact('data','bt','sort','q'));
 }
-
 
 
     
@@ -119,20 +78,6 @@ public function index(Request $request)
             // simpan di storage/app/public/izin_presensi
             $data['berkas'] = $request->file('berkas')->store('izin_presensi', 'public');
         }
-            /* jika tanggal_akhir kosong, set = tanggal_awal */
-            $data['tanggal_akhir'] = $data['tanggal_akhir'] ?: $data['tanggal_awal'];
-
-            /* 2️⃣  Hapus izin lama yg rentangnya bentrok */
-            IzinPresensi::where('karyawan_id', $data['karyawan_id'])
-                ->where(function($q) use ($data) {
-                    // Tiga kemungkinan overlap
-                    $q->whereBetween('tanggal_awal',  [$data['tanggal_awal'], $data['tanggal_akhir']])
-                    ->orWhereBetween('tanggal_akhir',[$data['tanggal_awal'], $data['tanggal_akhir']])
-                    ->orWhere(function($x) use ($data){
-                            $x->where('tanggal_awal',  '<=', $data['tanggal_awal'])
-                            ->where('tanggal_akhir', '>=', $data['tanggal_akhir']);
-                    });
-                })->delete();
 
         IzinPresensi::create($data);
 

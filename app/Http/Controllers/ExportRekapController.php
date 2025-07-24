@@ -33,21 +33,14 @@ class ExportRekapController extends Controller
             "Rekap_Absensi_Tahunan_{$tahun}.xlsx"
         );
     }
-    public function exportIzinBulanan(Request $request)
-    {
-        // pakai tanggal awal sebagai penentu bulan‑tahun
-        $start = $request->input('start_date');
-        if (!$start) {
-            return back()->withErrors('Silakan pilih kolom "Dari" terlebih dahulu.');
-        }
-
-        [$tahun, $bulan] = [Carbon::parse($start)->year, Carbon::parse($start)->month];
-
-        return Excel::download(
-            new IzinBulananExport($bulan, $tahun),
-            "Izin_Bulanan_{$tahun}_{$bulan}.xlsx"
-        );
-    }
-
+public function exportIzinBulanan(Request $request)
+{
+    $bt = $request->query('bulan_tahun', now()->format('Y-m'));
+    [$tahun,$bulan] = explode('-',$bt);
+    return \Maatwebsite\Excel\Facades\Excel::download(
+        new \App\Exports\IzinBulananExport((int)$bulan,(int)$tahun),
+        "Izin_Bulanan_{$tahun}_{$bulan}.xlsx"
+    );
+}
 
 }
