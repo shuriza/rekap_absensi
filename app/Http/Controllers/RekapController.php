@@ -224,41 +224,41 @@ class RekapController extends Controller
     /* ==========================================================
     *  R E K A P   T A H U N A N  (dengan SEARCH & SORT)
     * ========================================================== */
-    public function rekapTahunan(Request $r)
+public function rekapTahunan(Request $r)
     {
-        $tahun = (int) $r->input('tahun', date('Y'));
-        $sort  = $r->input('sort');          // '' | nama_asc | nama_desc | total_asc | total_desc
-        $search= $r->input('search');        // filter nama
+        $tahun  = (int) $r->input('tahun', date('Y'));
+        $sort   = $r->input('sort');   // '' | nama_asc | nama_desc | total_asc | total_desc
+        $search = $r->input('search'); // filter nama
 
         /* ---------- query karyawan + absensi setahun ----------- */
         $pegawaiQuery = Karyawan::with([
-            'absensi' => fn ($q) => $q->whereYear('tanggal', $tahun)
+            'absensi' => fn($q) => $q->whereYear('tanggal', $tahun)
         ]);
 
         if ($search) {
             $pegawaiQuery->where('nama', 'like', "%{$search}%");
         }
 
-        /** @var \Illuminate\Support\Collection $pegawaiList */
-        $pegawaiList = $pegawaiQuery->get();      // tanpa paginasi
+        $pegawaiList = $pegawaiQuery->get(); // tanpa paginasi
 
         /* ---------- helper parse jam --------------------------- */
         $toCarbon = function (string $tgl, ?string $time): ?Carbon {
             if (!$time) return null;
             return str_contains($time, ' ')
-                ? Carbon::parse($time)                    // full datetime
-                : Carbon::parse("$tgl ".substr($time,0,5)); // HH:mm
+                ? Carbon::parse($time)                      // full datetime
+                : Carbon::parse("$tgl " . substr($time, 0, 5)); // HH:mm
         };
 
         /* ---------- hitung menit & format ---------------------- */
         foreach ($pegawaiList as $peg) {
+            // array menit per bulan 1..12
             $menitPerBulan = array_fill(1, 12, 0);
 
             foreach ($peg->absensi as $row) {
                 $tglStr = $row->tanggal instanceof Carbon
-                        ? $row->tanggal->toDateString()
-                        : $row->tanggal;
-                $idx = Carbon::parse($tglStr)->month;       // 1-12
+                    ? $row->tanggal->toDateString()
+                    : $row->tanggal;
+                $idx = Carbon::parse($tglStr)->month; // 1-12
 
                 $in  = $toCarbon($tglStr, $row->jam_masuk);
                 $out = $toCarbon($tglStr, $row->jam_pulang);
@@ -270,18 +270,21 @@ class RekapController extends Controller
                 }
             }
 
-            /* kolom Jan-Des tetap HH:MM */
-            $HHMM = fn (int $m) => sprintf('%02d:%02d', intdiv($m,60), $m%60);
+            // simpan juga menit raw agar bisa dipakai di view
+            $peg->menitPerBulan = $menitPerBulan;
+
+            // format ke HH:MM
+            $HHMM = fn(int $m) => sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
             $peg->rekap_tahunan = array_map($HHMM, $menitPerBulan);
 
-            /* total tahunan dalam hari-jam-menit */
+            // total tahunan dalam menit & format
             $totMenit = array_sum($menitPerBulan);
             $peg->total_menit = $totMenit;
 
             $hari  = intdiv($totMenit, 1440);
             $sisa  = $totMenit % 1440;
             $jam   = str_pad(intdiv($sisa, 60), 2, '0', STR_PAD_LEFT);
-            $menit = str_pad($sisa % 60     , 2, '0', STR_PAD_LEFT);
+            $menit = str_pad($sisa % 60, 2, '0', STR_PAD_LEFT);
             $peg->total_fmt = "{$hari}h {$jam}j {$menit}m";
         }
 
@@ -290,13 +293,12 @@ class RekapController extends Controller
             'total_desc' => $pegawaiList->sortByDesc('total_menit')->values(),
             'total_asc'  => $pegawaiList->sortBy('total_menit')->values(),
             'nama_desc'  => $pegawaiList->sortByDesc('nama', SORT_NATURAL|SORT_FLAG_CASE)->values(),
-            'nama_asc',  '' => $pegawaiList->sortBy('nama', SORT_NATURAL|SORT_FLAG_CASE)->values(),
+            'nama_asc', ''=> $pegawaiList->sortBy('nama', SORT_NATURAL|SORT_FLAG_CASE)->values(),
             default      => $pegawaiList->values(),
         };
 
         return view('absensi.rekap-tahunan', compact('pegawaiList', 'tahun', 'search', 'sort'));
     }
-
 
 
     /* ==========================================================
