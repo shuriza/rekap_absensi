@@ -26,7 +26,7 @@
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div>
         <label class="block mb-2 font-medium text-gray-700">Tipe Izin</label>
-        <select name="tipe_ijin" required class="w-full rounded-lg border-gray-300">
+        <select name="tipe_ijin" id="tipe-ijin" required class="w-full rounded-lg border-gray-300">
             <option value="">– Pilih tipe –</option>
             @foreach($tipeIjin as $tipe)
                 <option value="{{ $tipe }}">{{ $tipe }}</option>
@@ -37,7 +37,7 @@
 
     <div>
         <label class="block mb-2 font-medium text-gray-700">Jenis Izin</label>
-        <select name="jenis_ijin" required class="w-full rounded-lg border-gray-300">
+        <select name="jenis_ijin" id="jenis-ijin" required class="w-full rounded-lg border-gray-300">
             <option value="">– Pilih jenis –</option>
             @foreach($listJenis as $jenis)
                 <option value="{{ $jenis }}">{{ $jenis }}</option>
