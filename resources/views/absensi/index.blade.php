@@ -2,7 +2,7 @@
 @extends('layouts.app')
 
 @section('content')
-  <div class="max-w-4xl mx-auto mt-10 space-y-6">
+  <div class="w-full mx-auto mt-10 space-y-6">
     {{-- Filter Jam & Upload --}}
     <div class="bg-white p-6 rounded-xl shadow border">
       <h2 class="text-lg font-semibold mb-2">⏰ Filter Jam Masuk & Pulang</h2>
@@ -183,9 +183,13 @@
 
           <div class="flex items-center justify-between flex-col">
             <button type="submit"
-              class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+              class="bg-green-600 text-white px-4 py-2 my-4 rounded hover:bg-green-700">
               Simpan ke Database
             </button>
+            <p class="text-sm text-gray-600 my-4">
+              Showing {{ $preview->firstItem() }} to {{ $preview->lastItem() }} of
+              {{ $preview->total() }} results
+            </p>
             <div class="mt-2">{{ $preview->links() }}</div>
           </div>
         </form>
