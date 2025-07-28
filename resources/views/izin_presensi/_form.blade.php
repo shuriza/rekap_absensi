@@ -68,13 +68,28 @@
 </div>
 
 {{-- ========================== --}}
+{{-- Hidden ID izin (mode edit) --}}
+<input type="hidden" id="izin-id" name="id">
+
 {{-- Tombol aksi --}}
-<div class="flex justify-end">
-    {{-- Tombol batal: dipakai di modal, dispatch event untuk menutup --}}
- 
+<div class="flex justify-end items-center space-x-2">
+    {{-- Tombol Hapus ditampilkan hanya di mode edit --}}
+    @if(isset($edit) && $edit)
+        <form id="form-delete-izin"
+              method="POST"
+              action="{{ route('izin_presensi.destroy', ['izin_presensi' => $izin->id ?? 0]) }}"
+              onsubmit="return confirm('Yakin ingin menghapus izin ini?')">
+            @csrf
+            @method('DELETE')
+            <button type="submit"
+                    class="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition">
+                Hapus
+            </button>
+        </form>
+    @endif
 
     <button type="submit"
-            class="inline-block px-6 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
+            class="px-6 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
         Simpan
     </button>
 </div>
