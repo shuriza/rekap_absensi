@@ -49,6 +49,10 @@
                   onclick="event.preventDefault(); this.closest('form').submit();">
                   {{ __('Logout') }}
                 </x-dropdown-link>
+                <x-dropdown-link href="#"
+                  onclick="event.preventDefault(); document.getElementById('passwordModal').classList.remove('hidden')">
+                  {{ __('Ganti Password') }}
+                </x-dropdown-link>
               </form>
             </x-slot>
           </x-dropdown>

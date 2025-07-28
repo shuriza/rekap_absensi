@@ -16,14 +16,12 @@ class RegisterController extends Controller
     public function register(Request $request)
     {
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'email' => ['required', 'email', 'unique:users'],
+            'username' => ['required', 'string', 'max:50', 'unique:users,username'],
             'password' => ['required', 'min:6', 'confirmed'],
         ]);
 
         $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
+            'username' => $validated['username'],
             'password' => Hash::make($validated['password']),
         ]);
 

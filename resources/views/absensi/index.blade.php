@@ -26,74 +26,179 @@
       <form method="POST" action="{{ route('absensi.preview') }}" enctype="multipart/form-data">
         @csrf
         {{-- Senin – Kamis --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Jam Masuk Minimal
-              (Senin-Kamis)</label>
-            <input type="time" name="jam_masuk_min_senin"
-              value="{{ old('jam_masuk_min_senin', '07:00') }}"
-              class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Jam Masuk Maksimal
-              (Senin-Kamis)</label>
-            <input type="time" name="jam_masuk_max_senin"
-              value="{{ old('jam_masuk_max_senin', '07:30') }}"
-              class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Jam Pulang Minimal
-              (Senin-Kamis)</label>
-            <input type="time" name="jam_pulang_min_senin"
-              value="{{ old('jam_pulang_min_senin', '15:30') }}"
-              class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Jam Pulang Maksimal
-              (Senin-Kamis)</label>
-            <input type="time" name="jam_pulang_max_senin"
-              value="{{ old('jam_pulang_max_senin', '17:00') }}"
-              class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
-          </div>
-        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">{{-- resources/views/absensi/index.blade.php --}}
 
-        <hr class="border-t-4 border-blue-300 my-4">
+          {{-- Senin – Kamis --}}
+          <div class="bg-white shadow rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Filter Jam Absensi: Senin – Kamis</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {{-- Masuk Minimal --}}
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Masuk Minimal</label>
+                <div class="mt-1 relative">
+                  <input type="time" name="jam_masuk_min_senin"
+                    value="{{ old('jam_masuk_min_senin', '07:00') }}"
+                    class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm
+                 focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+                  <div
+                    class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                      viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
 
-        {{-- Jumat --}}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Jam Masuk Minimal (Jumat)</label>
-            <input type="time" name="jam_masuk_min_jumat"
-              value="{{ old('jam_masuk_min_jumat', '07:00') }}"
-              class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Jam Masuk Maksimal (Jumat)</label>
-            <input type="time" name="jam_masuk_max_jumat"
-              value="{{ old('jam_masuk_max_jumat', '07:30') }}"
-              class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Jam Pulang Minimal (Jumat)</label>
-            <input type="time" name="jam_pulang_min_jumat"
-              value="{{ old('jam_pulang_min_jumat', '15:00') }}"
-              class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Jam Pulang Maksimal (Jumat)</label>
-            <input type="time" name="jam_pulang_max_jumat"
-              value="{{ old('jam_pulang_max_jumat', '17:00') }}"
-              class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm">
-          </div>
-        </div>
+              {{-- Masuk Maksimal --}}
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Masuk Maksimal</label>
+                <div class="mt-1 relative">
+                  <input type="time" name="jam_masuk_max_senin"
+                    value="{{ old('jam_masuk_max_senin', '07:30') }}"
+                    class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm
+                 focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+                  <div
+                    class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                      viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
 
-        <div class="mt-4">
-          <input type="file" name="file_excel[]" multiple required
-            class="border p-2 rounded w-full mb-4">
-          <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-            Preview Data
-          </button>
-        </div>
+              {{-- Pulang Minimal --}}
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Pulang Minimal</label>
+                <div class="mt-1 relative">
+                  <input type="time" name="jam_pulang_min_senin"
+                    value="{{ old('jam_pulang_min_senin', '15:30') }}"
+                    class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm
+                 focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+                  <div
+                    class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                      viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {{-- Pulang Maksimal --}}
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Pulang Maksimal</label>
+                <div class="mt-1 relative">
+                  <input type="time" name="jam_pulang_max_senin"
+                    value="{{ old('jam_pulang_max_senin', '17:00') }}"
+                    class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm
+                 focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+                  <div
+                    class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                      viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {{-- Jumat --}}
+          <div class="bg-white shadow rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Filter Jam Absensi: Jumat</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {{-- Masuk Minimal --}}
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Masuk Minimal</label>
+                <div class="mt-1 relative">
+                  <input type="time" name="jam_masuk_min_jumat"
+                    value="{{ old('jam_masuk_min_jumat', '07:00') }}"
+                    class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm
+                 focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+                  <div
+                    class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                      viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {{-- Masuk Maksimal --}}
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Masuk Maksimal</label>
+                <div class="mt-1 relative">
+                  <input type="time" name="jam_masuk_max_jumat"
+                    value="{{ old('jam_masuk_max_jumat', '07:30') }}"
+                    class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm
+                 focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+                  <div
+                    class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                      viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {{-- Pulang Minimal --}}
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Pulang Minimal</label>
+                <div class="mt-1 relative">
+                  <input type="time" name="jam_pulang_min_jumat"
+                    value="{{ old('jam_pulang_min_jumat', '15:00') }}"
+                    class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm
+                 focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+                  <div
+                    class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                      viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {{-- Pulang Maksimal --}}
+              <div>
+                <label class="block text-sm font-medium text-gray-700">Pulang Maksimal</label>
+                <div class="mt-1 relative">
+                  <input type="time" name="jam_pulang_max_jumat"
+                    value="{{ old('jam_pulang_max_jumat', '17:00') }}"
+                    class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm
+                 focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
+                  <div
+                    class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                      viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <input type="file" name="file_excel[]" multiple required
+              class="border p-2 rounded w-full mb-4">
+            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+              Preview Data
+            </button>
+          </div>
       </form>
     </div>
 
@@ -118,7 +223,8 @@
             <option value="tanggal_asc"{{ request('sort_by') == 'tanggal_asc' ? 'selected' : '' }}>
               Tanggal
               Terlama</option>
-            <option value="tanggal_desc"{{ request('sort_by') == 'tanggal_desc' ? 'selected' : '' }}>
+            <option
+              value="tanggal_desc"{{ request('sort_by') == 'tanggal_desc' ? 'selected' : '' }}>
               Tanggal Terbaru</option>
           </select>
           <button type="submit" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
