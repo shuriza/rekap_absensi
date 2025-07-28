@@ -85,40 +85,6 @@
         </select>
       </div>
 
-      {{-- ============= SORTIR ============= --}}
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Urutkan</label>
-
-        <select name="sort" class="mt-1 block w-56 rounded border-gray-300 shadow-sm text-sm"
-          onchange="this.form.submit()">
-
-          {{-- default: sesuai urutan query (No) --}}
-          <option value="" {{ request('sort') == '' ? 'selected' : '' }}>
-            — Tidak diurut —
-          </option>
-
-          {{-- 🔤 Nama A → Z  --}}
-          <option value="nama_asc" {{ request('sort') == 'nama_asc' ? 'selected' : '' }}>
-            Nama&nbsp;A&nbsp;→&nbsp;Z
-          </option>
-
-          {{-- 🔤 Nama Z → A --}}
-          <option value="nama_desc" {{ request('sort') == 'nama_desc' ? 'selected' : '' }}>
-            Nama&nbsp;Z&nbsp;→&nbsp;A
-          </option>
-
-          {{-- 🔽 Akumulasi terbanyak --}}
-          <option value="total_desc" {{ request('sort') == 'total_desc' ? 'selected' : '' }}>
-            Akumulasi&nbsp;⇣&nbsp;Terbanyak
-          </option>
-
-          {{-- Akumulasi tersedikit --}}
-          <option value="total_asc" {{ request('sort') == 'total_asc' ? 'selected' : '' }}>
-            Akumulasi&nbsp;⇡&nbsp;Tersedikit
-          </option>
-        </select>
-      </div>
-
 
     </form>
     {{-- =============================================
@@ -244,6 +210,28 @@
       function closeIzin(){
           document.getElementById('modal-overlay').classList.add('hidden');
       }
+      $(function () {
+        $('#tabel-rekap').DataTable({
+          paging: false,
+          searching: false,
+          scrollX: true,
+
+          /* >>> aktifkan ordering: */
+          ordering: true,
+
+          /* kolom ‘No’ & tanggal dijadikan non‑orderable */
+          columnDefs: [
+            { targets: 0,  orderable: false },               // No
+            { targets: Array.from({length: {{ count($tanggalList) }}},
+                      (_,i)=>2+i), orderable: false },        // semua kolom tanggal
+            { targets: 'no-sort', orderable: false }         // cadangan bila pakai class
+          ],
+
+          /* default order: Nama ASC */
+          order: [[1, 'asc']]
+        });
+      });
+
       </script>
 
     @endpush
@@ -259,91 +247,90 @@
       </a>
     </div>
 
-    {{-- =============================================
-         TABEL REKAP
-    ============================================= --}}
+    {{-- =========================================================
+        TABEL REKAP
+    ========================================================= --}}
     <div class="overflow-x-auto border border-gray-300 rounded">
-      <table id="tabel-rekap" class="min-w-full text-sm text-center border-collapse display nowrap">
-        <thead class="bg-gray-800 text-white">
+      <table id="tabel-rekap"
+            class="min-w-full table-fixed text-sm text-center border-collapse display nowrap">
+        <thead class="bg-zinc-400 text-black">
           <tr>
             <th class="border px-2 py-2">No</th>
-            {{-- <th>NIP</th>  ← dihilangkan --}}
             <th class="border px-2 py-2">Nama</th>
-            {{-- <th>Jenjang Jabatan</th>  ← dihilangkan --}}
+
+            {{-- kolom tanggal ─────────────── --}}
             @foreach ($tanggalList as $tgl)
-              <th class="border px-2 py-2">{{ $tgl }}</th>
+              <th class="border px-2 py-2 no-sort">{{ $tgl }}</th>
             @endforeach
+
             <th class="border px-2 py-2">Total Akumulasi</th>
           </tr>
         </thead>
-        <tbody class="bg-white text-gray-800">
 
-          {{-- import helper Str cukup sekali --}}
-          @php
-            use Illuminate\Support\Str;
-          @endphp
+        <tbody class="bg-white text-gray-800">
+          @php  use Illuminate\Support\Str;  @endphp
 
           @foreach ($pegawaiList as $pegawai)
             <tr class="hover:bg-gray-50">
+              {{-- No & Nama --}}
               <td class="border px-2 py-1">{{ $loop->iteration }}</td>
               <td class="border px-2 py-1 text-left">{{ $pegawai->nama }}</td>
 
-              {{-- ------- Kolom tanggal ------- --}}
+              {{-- ───── Kolom tanggal ───── --}}
               @foreach ($tanggalList as $tgl)
                 @php
-                  $sel = $pegawai->absensi_harian[$tgl];
+                  $sel = $pegawai->absensi_harian[$tgl]
+                        ?? ['type' => 'kosong', 'label' => '-'];
 
-                  /* warna latar  */
+                  /* warna latar */
                   $bg = match ($sel['type']) {
-                      'libur' => 'bg-gray-300',
-                      'kosong' => 'bg-red-500', // merah solid agar kontras
-                      'izin' => 'bg-blue-300',
+                      'libur'     => 'bg-gray-300',
+                      'kosong'    => 'bg-red-500',
+                      'izin'      => 'bg-blue-300',
                       'terlambat' => 'bg-yellow-200',
-                      default => '', // hadir normal
+                      default     => '',
                   };
 
-                  /* warna TEKS: putih jika latar merah, hitam jika selainnya */
-                  $txt = str_contains($bg, 'bg-red')
-                      ? 'text-white' // blok merah → teks putih
-                      : 'text-black'; // lainnya → teks hitam
+                  /* warna teks */
+                  $txt = $bg === 'bg-red-500' ? 'text-white' : 'text-black';
                 @endphp
 
-                <td
-                  class="border px-1 py-1 text-xs text-center {{ $bg }} {{ $txt }}"
-                  data-karyawan="{{ $pegawai->id }}"
-                  data-date="{{ sprintf('%04d-%02d-%02d', $tahun, $bulan, $tgl) }}"
-                  onclick="openIzin(this)">
+                <td class="border px-1 py-1 text-xs text-center {{ $bg }} {{ $txt }}"
+                    data-karyawan="{{ $pegawai->id }}"
+                    data-date="{{ sprintf('%04d-%02d-%02d', $tahun, $bulan, $tgl) }}"
+                    onclick="openIzin(this)">
+
                   @switch($sel['type'])
-                    @case('hadir')
-                    @case('terlambat')
-                      {{ $sel['label'] }}
-                    @break
+                      @case('hadir')
+                      @case('terlambat')
+                          {{ $sel['label'] }}
+                          @break
 
-                    @case('libur')
-                    @case('izin')
-                      <span class="inline-block max-w-[140px] truncate" title="{{ $sel['label'] }}">
-                        {{ \Illuminate\Support\Str::limit($sel['label'], 25, '…') }}
-                      </span>
-                    @break
+                      @case('libur')
+                      @case('izin')
+                          <span class="inline-block max-w-[140px] truncate"
+                                title="{{ $sel['label'] }}">
+                            {{ Str::limit($sel['label'], 25, '…') }}
+                          </span>
+                          @break
 
-                    @case('kosong')
-                      {{-- hanya in / out / kosong --}}
-                      {{ $sel['label'] }} {{-- tampilkan “07:12 – --:--” atau “--:-- – 16:10” / “-” --}}
-                    @break
-
-                    @default
-                      - {{-- kosong --}}
+                      @default      {{-- kosong --}}
+                          {{ $sel['label'] }}
                   @endswitch
                 </td>
               @endforeach
 
-
+              {{-- ───── Total akumulasi (hari jam menit) + nilai mentah utk sort ───── --}}
               @php
-                $jam = str_pad(intdiv($pegawai->total_menit, 60), 2, '0', STR_PAD_LEFT);
-                $menit = str_pad($pegawai->total_menit % 60, 2, '0', STR_PAD_LEFT);
+                  $hari  = intdiv($pegawai->total_menit, 1440);
+                  $sisa  = $pegawai->total_menit % 1440;
+                  $jam   = intdiv($sisa, 60);
+                  $menit = $sisa % 60;
+                  $tampil = "{$hari}h {$jam}j {$menit}m";
               @endphp
               <td class="border px-2 py-1 text-xs font-semibold">
-                {{ $pegawai->total_fmt }}
+                  <span class="sr-only">{{ $pegawai->total_menit }}</span>
+                  {{ $tampil }}
               </td>
             </tr>
           @endforeach
