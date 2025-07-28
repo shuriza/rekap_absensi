@@ -7,9 +7,7 @@ use App\Models\Holiday;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\FromView;
-use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -18,96 +16,76 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 
-class RekapAbsensiBulananExport implements FromView, ShouldAutoSize, WithEvents
+class RekapAbsensiBulananExport implements FromView, WithEvents
 {
-    /** default 7 jam 30 menit (450 menit) */
     private int $defaultMinutes = 450;
 
-    /* properti input */
     public function __construct(private int $bulan, private int $tahun) {}
 
-    /* dipakai ulang di AfterSheet */
-    private array $tanggalList   = [];
-    private $pegawaiList;               // Collection
+    private array $tanggalList = [];
+    private $pegawaiList;
 
-    /* ----------------------------------------------------------
-     * Helper string/datetime → Carbon|null
-     * -------------------------------------------------------- */
     private function toCarbon(string $tgl, ?string $time): ?Carbon
     {
         if (!$time) return null;
         $time = trim($time);
-
         return str_contains($time, ' ')
-            ? Carbon::parse($time)                 // sudah full datetime
-            : Carbon::parse("$tgl ".substr($time, 0, 5)); // HH:mm
+            ? Carbon::parse($time)
+            : Carbon::parse("$tgl ".substr($time, 0, 5));
     }
 
-    /* =====================  VIEW  ===================== */
     public function view(): View
     {
-        /** ➊ daftar tanggal 1..N */
-        $daysInMonth  = Carbon::create($this->tahun, $this->bulan)->daysInMonth;
+        $daysInMonth = Carbon::create($this->tahun, $this->bulan)->daysInMonth;
         $this->tanggalList = range(1, $daysInMonth);
 
-        /** ➋ libur bulan ini */
-        $holidayMap = Holiday::whereYear('tanggal',  $this->tahun)
-                             ->whereMonth('tanggal', $this->bulan)
-                             ->get()
-                             ->keyBy(fn ($h) => $h->tanggal->toDateString());
+        $holidayMap = Holiday::whereYear('tanggal', $this->tahun)
+            ->whereMonth('tanggal', $this->bulan)
+            ->get()
+            ->keyBy(fn($h) => $h->tanggal->toDateString());
 
-        /** ➌ ambil data pegawai-absen-izin */
         $this->pegawaiList = Karyawan::with([
-            'absensi' => fn ($q) => $q->whereYear('tanggal', $this->tahun)
+            'absensi' => fn($q) => $q->whereYear('tanggal', $this->tahun)
                                       ->whereMonth('tanggal', $this->bulan),
-            'izins'   => fn ($q) => $q->where(function ($sub) {
-                $sub->whereYear('tanggal_awal',  $this->tahun)
-                    ->whereMonth('tanggal_awal',  $this->bulan)
+            'izins' => fn($q) => $q->where(function ($sub) {
+                $sub->whereYear('tanggal_awal', $this->tahun)
+                    ->whereMonth('tanggal_awal', $this->bulan)
                     ->orWhereYear('tanggal_akhir', $this->tahun)
                     ->whereMonth('tanggal_akhir', $this->bulan);
             }),
         ])->get();
 
-        /** ➍ proses tiap pegawai */
         foreach ($this->pegawaiList as $peg) {
-
-            // peta izin per tanggal
             $mapIzin = [];
             foreach ($peg->izins as $iz) {
-                foreach (CarbonPeriod::create(
-                        $iz->tanggal_awal,
-                        $iz->tanggal_akhir ?? $iz->tanggal_awal) as $d) {
+                foreach (CarbonPeriod::create($iz->tanggal_awal, $iz->tanggal_akhir ?? $iz->tanggal_awal) as $d) {
                     $mapIzin[$d->toDateString()] = strtok($iz->jenis_ijin, ' ');
                 }
             }
 
-            $mapPres   = $peg->absensi->keyBy(fn ($p) => $p->tanggal->toDateString());
-            $harian    = [];
-            $totalMnt  = 0;
+            $mapPres = $peg->absensi->keyBy(fn($p) => $p->tanggal->toDateString());
+            $harian = [];
+            $totalMnt = 0;
 
             foreach ($this->tanggalList as $d) {
-                $tglStr  = sprintf('%04d-%02d-%02d', $this->tahun, $this->bulan, $d);
-                $weekday = Carbon::parse($tglStr)->dayOfWeekIso; // 6=Sabtu 7=Minggu
+                $tglStr = sprintf('%04d-%02d-%02d', $this->tahun, $this->bulan, $d);
+                $weekday = Carbon::parse($tglStr)->dayOfWeekIso;
 
-                // sabtu / minggu
                 if ($weekday === 6 || $weekday === 7) {
-                    $harian[$d] = ['type'=>'libur','label'=> $weekday===6 ? 'Sabtu':'Minggu'];
+                    $harian[$d] = ['type' => 'libur', 'label' => $weekday === 6 ? 'Sabtu' : 'Minggu'];
                     continue;
                 }
 
-                // hari libur
                 if ($h = $holidayMap[$tglStr] ?? null) {
-                    $harian[$d] = ['type'=>'libur','label'=>$h->keterangan];
+                    $harian[$d] = ['type' => 'libur', 'label' => $h->keterangan];
                     continue;
                 }
 
-                // izin
                 if (isset($mapIzin[$tglStr])) {
-                    $harian[$d] = ['type'=>'izin','label'=>$mapIzin[$tglStr]];
+                    $harian[$d] = ['type' => 'izin', 'label' => $mapIzin[$tglStr]];
                     continue;
                 }
 
-                // presensi
                 $row = $mapPres[$tglStr] ?? null;
                 if ($row) {
                     $in  = $this->toCarbon($tglStr, $row->jam_masuk);
@@ -120,16 +98,16 @@ class RekapAbsensiBulananExport implements FromView, ShouldAutoSize, WithEvents
                     }
 
                     $harian[$d] = [
-                        'type'  => $in && $out ? ($in->format('H:i') > '07:30' ? 'terlambat':'hadir') : 'kosong',
+                        'type' => $in && $out ? ($in->format('H:i') > '07:30' ? 'terlambat' : 'hadir') : 'kosong',
                         'label' => ($in?->format('H:i') ?? '--:--').' - '.($out?->format('H:i') ?? '--:--'),
                     ];
                 } else {
-                    $harian[$d] = ['type'=>'kosong','label'=>'-'];
+                    $harian[$d] = ['type' => 'kosong', 'label' => '-'];
                 }
             }
 
             $peg->absensi_harian = $harian;
-            $peg->total_menit    = $totalMnt;
+            $peg->total_menit = $totalMnt;
         }
 
         return view('exports.rekap_bulanan_excel', [
@@ -140,74 +118,105 @@ class RekapAbsensiBulananExport implements FromView, ShouldAutoSize, WithEvents
         ]);
     }
 
-    /* =====================  AFTER-SHEET  ===================== */
     public function registerEvents(): array
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
-
                 $sheet = $event->sheet->getDelegate();
 
-                /* 1) orientasi & freeze header */
                 $sheet->getPageSetup()
-                      ->setOrientation(PageSetup::ORIENTATION_LANDSCAPE)
-                      ->setPaperSize(PageSetup::PAPERSIZE_A4);
+                    ->setOrientation(PageSetup::ORIENTATION_LANDSCAPE)
+                    ->setPaperSize(PageSetup::PAPERSIZE_A4)
+                    ->setFitToWidth(4)  // ❗ bagi horizontal jadi 4 halaman
+                    ->setFitToHeight(1) // ❗ tetap 1 halaman vertikal
 
-                $sheet->freezePane('A2');
+                    // ❗ kolom tetap diulang: No & Nama
+                    ->setColumnsToRepeatAtLeftByStartAndEnd('A', 'B');
 
-                /* 2) style global */
-                $highestRow    = $sheet->getHighestRow();
-                $highestColumn = $sheet->getHighestColumn();
+                // ❗ Freeze agar saat scroll juga tetap
+                $sheet->freezePane('C2');
 
-                $sheet->getStyle("A1:{$highestColumn}{$highestRow}")
-                      ->getAlignment()
-                      ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-                      ->setVertical(Alignment::VERTICAL_CENTER)
-                      ->setWrapText(true);
+                // ❗ Pengaturan margin cetak yang baik
+                $sheet->getPageMargins()->setTop(0.4)->setBottom(0.4)->setLeft(0.2)->setRight(0.2);
 
-                // header tebal + abu
-                $sheet->getStyle("A1:{$highestColumn}1")->applyFromArray([
+                // ❗ Supaya header (baris 1) muncul di tiap halaman cetak
+                $sheet->getPageSetup()->setRowsToRepeatAtTopByStartAndEnd(1, 1);
+
+                // ✅ OPTIONAL: Print Area — batasi sesuai tabel
+                $lastColIndex = 2 + count($this->tanggalList) + 1;
+                $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($lastColIndex);
+                $lastRow = $sheet->getHighestRow();
+                $sheet->getPageSetup()->setPrintArea("A1:{$lastCol}{$lastRow}");
+
+                // ❗ Gaya umum
+                $highestCol = $sheet->getHighestColumn();
+                $highestRow = $sheet->getHighestRow();
+                $sheet->getStyle("A1:{$highestCol}{$highestRow}")
+                    ->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                    ->setVertical(Alignment::VERTICAL_CENTER)
+                    ->setWrapText(true);
+
+                $sheet->getStyle("A1:{$highestCol}1")->applyFromArray([
                     'font' => ['bold' => true],
                     'fill' => [
-                        'fillType'   => Fill::FILL_SOLID,
+                        'fillType' => Fill::FILL_SOLID,
                         'startColor' => ['rgb' => 'D9D9D9'],
                     ],
                 ]);
 
-                // border seluruh tabel
-                $sheet->getStyle("A1:{$highestColumn}{$highestRow}")
-                      ->getBorders()
-                      ->getAllBorders()
-                      ->setBorderStyle(Border::BORDER_THIN);
+                $sheet->getStyle("A1:{$highestCol}{$highestRow}")
+                    ->getBorders()
+                    ->getAllBorders()
+                    ->setBorderStyle(Border::BORDER_THIN);
 
-                /* 3) Pewarnaan dinamis kolom tanggal */
-                // Kolom: A=No, B=Nama, maka tanggal 1 mulai kolom C (index 3)
-                $firstDateColIndex = 3; // 1-based
-                $startRowIndex     = 2; // data dimulai baris 2
+                // Pewarnaan sel berdasarkan tipe
+                $firstDateColIndex = 3;
+                $startRowIndex = 2;
 
                 foreach ($this->pegawaiList as $rowIdx => $peg) {
-                    $rowNum = $startRowIndex + $rowIdx; // baris aktual di sheet
+                    $rowNum = $startRowIndex + $rowIdx;
 
                     foreach ($peg->absensi_harian as $d => $info) {
-                        $colIdx  = $firstDateColIndex + $d - 1;           // index numerik
-                        $col     = Coordinate::stringFromColumnIndex($colIdx);
-                        $cell    = "{$col}{$rowNum}";
+                        $colIdx = $firstDateColIndex + $d - 1;
+                        $col = Coordinate::stringFromColumnIndex($colIdx);
+                        $cell = "{$col}{$rowNum}";
 
                         $rgb = match ($info['type']) {
-                            'kosong'    => 'FF5252', // merah
-                            'terlambat' => 'FFF59D', // kuning
-                            'izin'      => '90CAF9', // biru
-                            'libur'     => 'E0E0E0', // abu
-                            default     => null,     // hadir → tanpa warna
+                            'kosong'    => 'FF5252',
+                            'terlambat' => 'FFF59D',
+                            'izin'      => '90CAF9',
+                            'libur'     => 'E0E0E0',
+                            default     => null,
                         };
 
                         if ($rgb) {
-                            $sheet->getStyle($cell)->getFill()->setFillType(Fill::FILL_SOLID)
-                                  ->getStartColor()->setRGB($rgb);
+                            $sheet->getStyle($cell)->getFill()
+                                ->setFillType(Fill::FILL_SOLID)
+                                ->getStartColor()->setRGB($rgb);
                         }
                     }
+                }
+
+                // ❗ Lebar kolom
+                $columnWidths = [
+                    'A' => 5,
+                    'B' => 18,
+                ];
+
+                for ($i = 0; $i < count($this->tanggalList); $i++) {
+                    $col = Coordinate::stringFromColumnIndex($i + 3);
+                    $columnWidths[$col] = 12;
+                }
+
+                $lastCol = Coordinate::stringFromColumnIndex(2 + count($this->tanggalList) + 1);
+                $columnWidths[$lastCol] = 15;
+
+                foreach ($columnWidths as $col => $width) {
+                    $sheet->getColumnDimension($col)->setWidth($width);
                 }
             },
         ];
     }
+
 }
