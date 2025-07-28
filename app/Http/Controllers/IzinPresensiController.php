@@ -126,9 +126,12 @@ class IzinPresensiController extends Controller
 
     /* ------------------------------------------------------------------
        4. SHOW
-    ------------------------------------------------------------------*/
-    public function show(IzinPresensi $izinPresensi)
+        ------------------------------------------------------------------*/
+    public function show(IzinPresensi $izinPresensi, Request $r)
     {
+        /* bila dipanggil via fetch() */
+        if ($r->expectsJson()) return $izinPresensi;
+
         return view('izin_presensi.show', compact('izinPresensi'));
     }
 

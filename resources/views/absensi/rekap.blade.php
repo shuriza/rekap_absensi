@@ -215,22 +215,27 @@
           paging: false,
           searching: false,
           scrollX: true,
+      
 
           /* >>> aktifkan ordering: */
           ordering: true,
 
           /* kolom ‘No’ & tanggal dijadikan non‑orderable */
           columnDefs: [
-            { targets: 0,  orderable: false },               // No
             { targets: Array.from({length: {{ count($tanggalList) }}},
                       (_,i)=>2+i), orderable: false },        // semua kolom tanggal
             { targets: 'no-sort', orderable: false }         // cadangan bila pakai class
           ],
 
           /* default order: Nama ASC */
-          order: [[1, 'asc']]
+          order: [] 
         });
       });
+
+      function resetUrutan() {
+        dt.order([]).draw(); // Reset ke urutan DOM awal (loop->iteration)
+      }
+
 
       </script>
 
@@ -255,7 +260,7 @@
             class="min-w-full table-fixed text-sm text-center border-collapse display nowrap">
         <thead class="bg-zinc-400 text-black">
           <tr>
-            <th class="border px-2 py-2">No</th>
+            <th class="border px-2 py-2 cursor-pointer text-black" onclick="resetUrutan()">No</th>
             <th class="border px-2 py-2">Nama</th>
 
             {{-- kolom tanggal ─────────────── --}}
