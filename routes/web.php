@@ -8,6 +8,18 @@ use App\Http\Controllers\RekapController;
 use App\Http\Controllers\IzinPresensiController;
 use App\Http\Controllers\ExportRekapController;
 
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterController;
+
+// Route login dan register (tanpa middleware auth)
+Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [LoginController::class, 'login']);
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+Route::get('/register', [RegisterController::class, 'showRegisterForm'])->name('register');
+Route::post('/register', [RegisterController::class, 'register']);
+
+Route::middleware('auth')->group(function () {
 
  Route::get('/', function () {
      return view('absensi.index');
@@ -48,3 +60,5 @@ Route::delete('/rekap/holiday/{id}',   [RekapController::class, 'destroyHoliday'
 
 Route::get('/export/izin-bulanan', [ExportRekapController::class, 'exportIzinBulanan'])
      ->name('export.izin.bulanan');
+
+     });
