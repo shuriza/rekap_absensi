@@ -76,15 +76,17 @@ class RekapController extends Controller
         /* 5️⃣  Hitung total menit + jadwal harian untuk tiap pegawai ---------- */
         foreach ($pegawaiList as $peg) {
 
-            /* 5-a. peta izin (YYYY-MM-DD ⇒ kode) */
-            $mapIzin = [];
-            foreach ($peg->izins as $iz) {
-                foreach (CarbonPeriod::create(
-                        $iz->tanggal_awal,
-                        $iz->tanggal_akhir ?? $iz->tanggal_awal) as $d) {
-                    $mapIzin[$d->toDateString()] = strtok($iz->jenis_ijin,' ');
+                /* 5-a. BUAT map izin: simpan OBJEK, bukan string */
+                $mapIzin = [];
+                foreach ($peg->izins as $iz) {
+                    foreach (CarbonPeriod::create(
+                            $iz->tanggal_awal,
+                            $iz->tanggal_akhir ?? $iz->tanggal_awal) as $d) {
+                        $mapIzin[$d->toDateString()] = $iz;     // ⟵ simpan objek
+                    }
                 }
-            }
+
+
 
             /* 5-b. total menit satu bulan (skip libur + izin) */
             $totalMenit = 0;
@@ -119,10 +121,24 @@ class RekapController extends Controller
                     $daily[$d]=['type'=>'libur','label'=>$h->keterangan]; continue;
                 }
 
-                /* izin */
+                /* 5-c. Saat isi $daily untuk type ‘izin’ */
                 if (isset($mapIzin[$tglStr])) {
-                    $daily[$d]=['type'=>'izin','label'=>$mapIzin[$tglStr]]; continue;
-                }
+                    $iz = $mapIzin[$tglStr];                   // instansi IzinPresensi
+                    $daily[$d] = [
+                        'type'  => 'izin',
+                        'label' => strtok($iz->jenis_ijin,' '),
+                        /* extra untuk modal */
+                        'id'    => $iz->id,
+                        'tipe'  => $iz->tipe_ijin,
+                        'jenis' => $iz->jenis_ijin,
+                        'ket'   => $iz->keterangan,
+                        'file'  => $iz->berkas,
+                        'awal'  => $iz->tanggal_awal->toDateString(),
+                        'akhir' => ($iz->tanggal_akhir ?? $iz->tanggal_awal)->toDateString(),
+                    ];
+                    continue;
+}
+
 
                 /* presensi */
                 /* (#3) presensi → hadir / terlambat / kosong / di-luar-waktu */

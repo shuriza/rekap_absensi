@@ -1,95 +1,54 @@
-{{-- resources/views/izin_presensi/_form.blade.php --}}
-{{-- ========================== --}}
-{{-- Field tersembunyi: diisi otomatis ketika modal dibuka --}}
-{{-- Ganti input tersembunyi ➜ jadi input date yang terlihat --}}
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-    <div>
-        <label class="block mb-2 font-medium text-gray-700">Tanggal Awal</label>
-        <input  type="date"  id="izin-awal"  name="tanggal_awal"  required
-                class="w-full rounded-lg border-gray-300">
-        @error('tanggal_awal') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
-    </div>
-
-    <div>
-        <label class="block mb-2 font-medium text-gray-700">Tanggal Akhir</label>
-        <input  type="date"  id="izin-akhir" name="tanggal_akhir"
-                class="w-full rounded-lg border-gray-300">
-        @error('tanggal_akhir') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
-    </div>
-</div>
-
-{{-- “Nama Karyawan” tetap tersembunyi --}}
 <input type="hidden" id="izin-karyawan" name="karyawan_id">
 
-{{-- ========================== --}}
-{{-- Tipe & Jenis Izin --}}
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-    <div>
-        <label class="block mb-2 font-medium text-gray-700">Tipe Izin</label>
-        <select name="tipe_ijin" id="tipe-ijin" required class="w-full rounded-lg border-gray-300">
-            <option value="">– Pilih tipe –</option>
-            @foreach($tipeIjin as $tipe)
-                <option value="{{ $tipe }}">{{ $tipe }}</option>
-            @endforeach
-        </select>
-        @error('tipe_ijin') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
-    </div>
-
-    <div>
-        <label class="block mb-2 font-medium text-gray-700">Jenis Izin</label>
-        <select name="jenis_ijin" id="jenis-ijin" required class="w-full rounded-lg border-gray-300">
-            <option value="">– Pilih jenis –</option>
-            @foreach($listJenis as $jenis)
-                <option value="{{ $jenis }}">{{ $jenis }}</option>
-            @endforeach
-        </select>
-        @error('jenis_ijin') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
-    </div>
+<div class="grid sm:grid-cols-2 gap-4">
+  <div>
+    <label class="block text-sm">Tanggal Awal</label>
+    <input id="izin-awal" type="date" name="tanggal_awal" required class="w-full border rounded">
+  </div>
+  <div>
+    <label class="block text-sm">Tanggal Akhir</label>
+    <input id="izin-akhir" type="date" name="tanggal_akhir" class="w-full border rounded">
+  </div>
 </div>
 
-{{-- ========================== --}}
-{{-- Lampiran (optional) --}}
-<div>
-    <label class="block mb-2 font-medium text-gray-700">
-        Lampiran (opsional, PDF/JPG/PNG)
-    </label>
-    <input type="file" name="berkas" accept="application/pdf,image/*"
-           class="w-full rounded-lg border-gray-300">
-    @error('berkas') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+<div class="grid sm:grid-cols-2 gap-4 mt-4">
+  <div>
+    <label class="block text-sm">Tipe Izin</label>
+    <select id="tipe-ijin" name="tipe_ijin" required class="w-full border rounded">
+      <option value="">– pilih –</option>
+      @foreach($tipeIjin as $t) <option>{{ $t }}</option> @endforeach
+    </select>
+  </div>
+  <div>
+    <label class="block text-sm">Jenis Izin</label>
+    <select id="jenis-ijin" name="jenis_ijin" required class="w-full border rounded">
+      <option value="">– pilih –</option>
+      @foreach($listJenis as $j) <option>{{ $j }}</option> @endforeach
+    </select>
+  </div>
 </div>
 
-{{-- ========================== --}}
-{{-- Keterangan --}}
-<div>
-    <label class="block mb-2 font-medium text-gray-700">Keterangan</label>
-    <textarea name="keterangan" rows="3"
-              class="w-full rounded-lg border-gray-300"></textarea>
-    @error('keterangan') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+<div class="mt-4">
+  <label class="block text-sm">Keterangan</label>
+  <textarea id="keterangan-izin" name="keterangan" rows="3" class="w-full border rounded"></textarea>
 </div>
 
-{{-- ========================== --}}
-{{-- Hidden ID izin (mode edit) --}}
-<input type="hidden" id="izin-id" name="id">
+<div id="preview-lampiran" class="text-sm text-blue-600 mt-2"></div>
 
-{{-- Tombol aksi --}}
-<div class="flex justify-end items-center space-x-2">
-    {{-- Tombol Hapus ditampilkan hanya di mode edit --}}
-    @if(isset($edit) && $edit)
-        <form id="form-delete-izin"
-              method="POST"
-              action="{{ route('izin_presensi.destroy', ['izin_presensi' => $izin->id ?? 0]) }}"
-              onsubmit="return confirm('Yakin ingin menghapus izin ini?')">
-            @csrf
-            @method('DELETE')
-            <button type="submit"
-                    class="px-4 py-2 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-700 transition">
-                Hapus
-            </button>
-        </form>
-    @endif
+<div class="mt-4">
+  <label class="block text-sm">Lampiran</label>
+  <input type="file" name="berkas" class="w-full border rounded">
+</div>
 
-    <button type="submit"
-            class="px-6 py-2 rounded-lg bg-emerald-600 text-white font-semibold hover:bg-emerald-700 transition">
-        Simpan
-    </button>
+<div class="flex justify-end gap-3 pt-4">
+  <button id="btn-hapus" type="button"
+          class="hidden px-4 py-2 bg-red-600 text-white rounded"
+          onclick="hapusIzin()">
+      Hapus
+  </button>
+
+  <button id="btn-simpan" type="submit"
+          class="px-6 py-2 bg-emerald-600 text-white rounded">
+      Simpan
+  </button>
 </div>

@@ -191,53 +191,78 @@
       <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
       <script>
-        /* ===================================================
-                 Modal Izin (plain JS + Tailwind)
-              =================================================== */
+      const fpAwal  = flatpickr('#izin-awal',{dateFormat:'Y-m-d'});
+      const fpAkhir = flatpickr('#izin-akhir',{dateFormat:'Y-m-d'});
 
       function openIzin(td){
-          // Prefill karyawan & tanggal
-          document.getElementById('izin-karyawan').value = td.dataset.karyawan;
-          flatpickr('#izin-awal',  { defaultDate: td.dataset.date });
-          flatpickr('#izin-akhir', { defaultDate: td.dataset.date });
-          flatpickr('#tanggal', { defaultDate: td.dataset.date });
-          
+        const form = document.getElementById('form-izin');
 
-          // Tampilkan modal
-          document.getElementById('modal-overlay').classList.remove('hidden');
+        /* mode BARU default */
+        form.action = "{{ route('izin_presensi.store') }}";
+        form.querySelector('input[name=\"_method\"]')?.remove();
+        document.getElementById('btn-hapus').classList.add('hidden');
+        document.getElementById('btn-simpan').textContent='Simpan';
+
+        /* isi field dasar */
+        document.getElementById('izin-karyawan').value = td.dataset.karyawan;
+        fpAwal.setDate(td.dataset.date,true);
+        fpAkhir.setDate(td.dataset.date,true);
+
+        if(td.dataset.awal){
+              fpAwal.setDate(td.dataset.awal,true);
+              fpAkhir.setDate(td.dataset.akhir,true);
+          }
+
+        document.getElementById('tipe-ijin').value  = '';
+        document.getElementById('jenis-ijin').value = '';
+        document.getElementById('keterangan-izin').value = '';
+        document.getElementById('preview-lampiran').innerHTML = '';
+
+        /* jika sel memang izin → mode EDIT */
+        if(td.dataset.id){
+          document.getElementById('tipe-ijin').value  = td.dataset.tipe || '';
+          document.getElementById('jenis-ijin').value = td.dataset.jenis|| '';
+          document.getElementById('keterangan-izin').value = td.dataset.ket|| '';
+
+          if(td.dataset.file){
+              const link = `{{ asset('storage') }}/${td.dataset.file}`;
+              document.getElementById('preview-lampiran').innerHTML =
+                  `<a href=\"${link}\" target=\"_blank\" class=\"underline\">Lampiran sebelumnya</a>`;
+          }
+
+          /* spoof PUT */
+          const m=document.createElement('input');
+          m.type='hidden'; m.name='_method'; m.value='PUT';
+          form.prepend(m);
+          form.action = `/izin_presensi/${td.dataset.id}`;
+
+          document.getElementById('btn-hapus').classList.remove('hidden');
+          document.getElementById('btn-hapus').dataset.id = td.dataset.id;
+          document.getElementById('btn-simpan').textContent='Perbarui';
+        }
+        document.getElementById('modal-overlay').classList.remove('hidden');
       }
+
+      function hapusIzin(){
+        if(!confirm('Hapus izin ini?')) return;
+        const form=document.getElementById('form-izin');
+        const id  = document.getElementById('btn-hapus').dataset.id;
+
+        form.action = `/izin_presensi/${id}`;
+        form.querySelector('input[name=\"_method\"]')?.remove();
+        const d=document.createElement('input');
+        d.type='hidden'; d.name='_method'; d.value='DELETE';
+        form.prepend(d);
+        form.submit();
+      }
+
       function closeIzin(){
-          document.getElementById('modal-overlay').classList.add('hidden');
+        document.getElementById('modal-overlay').classList.add('hidden');
       }
-      $(function () {
-        $('#tabel-rekap').DataTable({
-          paging: false,
-          searching: false,
-          scrollX: true,
-      
-
-          /* >>> aktifkan ordering: */
-          ordering: true,
-
-          /* kolom ‘No’ & tanggal dijadikan non‑orderable */
-          columnDefs: [
-            { targets: Array.from({length: {{ count($tanggalList) }}},
-                      (_,i)=>2+i), orderable: false },        // semua kolom tanggal
-            { targets: 'no-sort', orderable: false }         // cadangan bila pakai class
-          ],
-
-          /* default order: Nama ASC */
-          order: [] 
-        });
-      });
-
-      function resetUrutan() {
-        dt.order([]).draw(); // Reset ke urutan DOM awal (loop->iteration)
-      }
-
-
       </script>
+
 
     @endpush
 
@@ -300,11 +325,19 @@
                   $txt = $bg === 'bg-red-500' ? 'text-white' : 'text-black';
                 @endphp
 
-                <td class="border px-1 py-1 text-xs text-center {{ $bg }} {{ $txt }}"
-                    data-karyawan="{{ $pegawai->id }}"
-                    data-date="{{ sprintf('%04d-%02d-%02d', $tahun, $bulan, $tgl) }}"
-                    onclick="openIzin(this)">
-
+              <td class="border px-1 py-1 text-xs {{ $bg }} {{ $txt }}"
+                  data-karyawan="{{ $pegawai->id }}"
+                  data-date="{{ sprintf('%04d-%02d-%02d',$tahun,$bulan,$tgl) }}"
+                  @if($sel['type']==='izin')
+                      data-id="{{ $sel['id'] }}"
+                      data-tipe="{{ $sel['tipe'] }}"
+                      data-jenis="{{ $sel['jenis'] }}"
+                      data-ket="{{ $sel['ket'] }}"
+                      data-file="{{ $sel['file'] }}"
+                      data-awal="{{ $sel['awal'] }}"
+                     data-akhir="{{ $sel['akhir'] }}"
+                  @endif
+                  onclick="openIzin(this)">
                   @switch($sel['type'])
                       @case('hadir')
                       @case('terlambat')
@@ -373,3 +406,4 @@
     </footer>
   </div>
 @endsection
+

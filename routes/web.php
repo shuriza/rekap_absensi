@@ -49,6 +49,9 @@ Route::get('/rekap/export-bulanan', [ExportRekapController::class, 'exportBulana
 Route::get('/rekap/export-tahunan', [ExportRekapController::class, 'exportTahunan'])->name('rekap.export.tahunan');
 
 Route::resource('izin_presensi', IzinPresensiController::class);
+Route::get('/izin/{karyawan}/{tgl}', [IzinPresensiController::class, 'byDate'])
+     ->where('tgl', '\\d{4}-\\d{2}-\\d{2}')
+     ->name('izin.byDate');
 // AJAX untuk Tom Select
 Route::get('/ajax/karyawan', [IzinPresensiController::class, 'searchKaryawan'])
      ->name('karyawan.search');
