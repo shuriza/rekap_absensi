@@ -192,47 +192,37 @@
       <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
       <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+     
       <script>
+      /* ===========================================================
+        1)  Modal Izin – openIzin() tetap seperti semula
+      =========================================================== */
       const fpAwal  = flatpickr('#izin-awal',{dateFormat:'Y-m-d'});
       const fpAkhir = flatpickr('#izin-akhir',{dateFormat:'Y-m-d'});
 
       function openIzin(td){
         const form = document.getElementById('form-izin');
 
-        /* mode BARU default */
+        /* default: mode baru */
         form.action = "{{ route('izin_presensi.store') }}";
-        form.querySelector('input[name=\"_method\"]')?.remove();
+        form.querySelector('input[name="_method"]')?.remove();
         document.getElementById('btn-hapus').classList.add('hidden');
         document.getElementById('btn-simpan').textContent='Simpan';
 
         /* isi field dasar */
         document.getElementById('izin-karyawan').value = td.dataset.karyawan;
-        fpAwal.setDate(td.dataset.date,true);
-        fpAkhir.setDate(td.dataset.date,true);
+        fpAwal.setDate(td.dataset.awal ?? td.dataset.date,true);
+        fpAkhir.setDate(td.dataset.akhir?? td.dataset.date,true);
 
-        if(td.dataset.awal){
-              fpAwal.setDate(td.dataset.awal,true);
-              fpAkhir.setDate(td.dataset.akhir,true);
-          }
+        document.getElementById('tipe-ijin').value  = td.dataset.tipe  || '';
+        document.getElementById('jenis-ijin').value = td.dataset.jenis || '';
+        document.getElementById('keterangan-izin').value = td.dataset.ket || '';
+        document.getElementById('preview-lampiran').innerHTML = td.dataset.file
+              ? `<a href="{{ asset('storage') }}/${td.dataset.file}" target="_blank" class="underline">Lampiran sebelumnya</a>`
+              : '';
 
-        document.getElementById('tipe-ijin').value  = '';
-        document.getElementById('jenis-ijin').value = '';
-        document.getElementById('keterangan-izin').value = '';
-        document.getElementById('preview-lampiran').innerHTML = '';
-
-        /* jika sel memang izin → mode EDIT */
+        /* mode edit */
         if(td.dataset.id){
-          document.getElementById('tipe-ijin').value  = td.dataset.tipe || '';
-          document.getElementById('jenis-ijin').value = td.dataset.jenis|| '';
-          document.getElementById('keterangan-izin').value = td.dataset.ket|| '';
-
-          if(td.dataset.file){
-              const link = `{{ asset('storage') }}/${td.dataset.file}`;
-              document.getElementById('preview-lampiran').innerHTML =
-                  `<a href=\"${link}\" target=\"_blank\" class=\"underline\">Lampiran sebelumnya</a>`;
-          }
-
-          /* spoof PUT */
           const m=document.createElement('input');
           m.type='hidden'; m.name='_method'; m.value='PUT';
           form.prepend(m);
@@ -245,23 +235,51 @@
         document.getElementById('modal-overlay').classList.remove('hidden');
       }
 
-      function hapusIzin(){
-        if(!confirm('Hapus izin ini?')) return;
-        const form=document.getElementById('form-izin');
-        const id  = document.getElementById('btn-hapus').dataset.id;
-
-        form.action = `/izin_presensi/${id}`;
-        form.querySelector('input[name=\"_method\"]')?.remove();
-        const d=document.createElement('input');
-        d.type='hidden'; d.name='_method'; d.value='DELETE';
-        form.prepend(d);
-        form.submit();
-      }
-
       function closeIzin(){
         document.getElementById('modal-overlay').classList.add('hidden');
       }
+
+      /* ===========================================================
+        2) Modal Konfirmasi Hapus
+      =========================================================== */
+      let pendingDeleteId = null;
+
+      function showDeleteConfirm(btn){
+        /* btn-hapus di form izin memanggil showDeleteConfirm(this) */
+        pendingDeleteId = btn.dataset.id;
+        openModal('modalConfirm');
+      }
+
+      function deleteConfirmed(){
+        if(!pendingDeleteId) return;
+        const form = document.getElementById('form-izin');
+
+        form.action = `/izin_presensi/${pendingDeleteId}`;
+        form.querySelector('input[name="_method"]')?.remove();
+        const d=document.createElement('input');
+        d.type='hidden'; d.name='_method'; d.value='DELETE';
+        form.prepend(d);
+
+        form.submit();
+      }
+
+      /* helper open / close modal overlay */
+      function openModal(id){
+        document.getElementById(id).classList.remove('hidden');
+        document.body.classList.add('overflow-y-hidden');
+      }
+      function closeModal(id){
+        document.getElementById(id).classList.add('hidden');
+        document.body.classList.remove('overflow-y-hidden');
+      }
+      document.addEventListener('keydown',e=>{
+        if(e.key==='Escape'){
+          document.querySelectorAll('.modal').forEach(m=>m.classList.add('hidden'));
+          document.body.classList.remove('overflow-y-hidden');
+        }
+      });
       </script>
+
 
 
     @endpush
@@ -395,6 +413,46 @@
         </form>
       </div>
     </div>
+
+    {{-- ========= MODAL KONFIRMASI HAPUS ========= --}}
+    <div id="modalConfirm"
+        class="fixed inset-0 z-50 hidden bg-gray-900 bg-opacity-60 modal">
+      <div class="relative top-40 mx-auto shadow-xl rounded-md bg-white max-w-md">
+        <div class="flex justify-end p-2">
+          <button onclick="closeModal('modalConfirm')" type="button"
+                  class="text-gray-400 hover:bg-gray-200 rounded-lg p-1.5">
+            &times;
+          </button>
+        </div>
+
+        <div class="p-6 pt-0 text-center">
+          <svg class="w-20 h-20 text-red-600 mx-auto" fill="none" stroke="currentColor"
+              viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+
+          <h3 class="text-xl font-normal text-gray-500 mt-5 mb-6">
+            Yakin ingin menghapus izin ini?
+          </h3>
+
+          <button onclick="deleteConfirmed()"
+                  class="text-white bg-red-600 hover:bg-red-800 rounded-lg px-3 py-2.5 mr-2">
+              Ya, hapus
+          </button>
+
+          <button onclick="closeModal('modalConfirm')"
+                  class="text-gray-900 bg-white hover:bg-gray-100 border border-gray-200
+                        rounded-lg px-3 py-2.5">
+            Batal
+          </button>
+        </div>
+      </div>
+    </div>
+    {{-- ========= END MODAL KONFIRMASI ========= --}}
+
+    {{-- =============================================
+         SCRIPT UNTUK DATATABLES
 
     {{-- =============================================
      FOOTER
