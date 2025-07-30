@@ -280,6 +280,42 @@
       });
       </script>
 
+      <script>
+      let dt;
+
+      $(function () {
+        const jumlahTanggal = {{ count($tanggalList) }};
+        const kolomTanggal = Array.from({ length: jumlahTanggal }, (_, i) => i + 2);
+
+        dt = $('#tabel-rekap').DataTable({
+          paging: false,
+          searching: false,
+          scrollX: true,
+          ordering: true,
+          order: [],
+
+          // Konfigurasi kolom
+          columns: [
+            { data: null, title: "No", render: (data, type, row, meta) => meta.row + 1 }, // ✅ kolom No dinamis & sortable
+            null, // Nama
+            ...kolomTanggal.map(() => null), // Tanggal
+            null // Total akumulasi
+          ],
+
+          columnDefs: [
+            { targets: kolomTanggal, orderable: false },
+            { targets: 'no-sort', orderable: false }
+          ],
+        });
+      });
+
+      // ✅ Tombol Reset
+      function resetUrutan() {
+        dt.order([]).draw();
+      }
+      </script>
+
+
 
 
     @endpush
@@ -321,7 +357,7 @@
           @foreach ($pegawaiList as $pegawai)
             <tr class="hover:bg-gray-50">
               {{-- No & Nama --}}
-              <td class="border px-2 py-1">{{ $loop->iteration }}</td>
+              <td class="border px-2 py-1"></td>
               <td class="border px-2 py-1 text-left">{{ $pegawai->nama }}</td>
 
               {{-- ───── Kolom tanggal ───── --}}
