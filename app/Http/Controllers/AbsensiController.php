@@ -294,7 +294,7 @@ public function preview(Request $request)
 
     // 11. Paginasi
     $currentPage  = LengthAwarePaginator::resolveCurrentPage();
-    $perPage      = 40;
+    $perPage      = 25;
     $currentItems = $collection->slice(($currentPage - 1) * $perPage, $perPage)->values();
     $paginatedPreview = new LengthAwarePaginator(
         $currentItems,
