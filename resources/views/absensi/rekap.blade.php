@@ -52,16 +52,6 @@
         </select>
       </div>
 
-      {{-- Unit Kerja (optional, contoh satu opsi) --}}
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Unit Kerja</label>
-        <select name="unit" class="mt-1 block w-80 rounded border-gray-300 shadow-sm text-sm">
-          <option value="">-- Semua Unit --</option>
-          <option value="DPMPTSP" {{ request('unit') == 'DPMPTSP' ? 'selected' : '' }}>
-            Dinas Penanaman Modal &amp; Pelayanan Terpadu Satu Pintu
-          </option>
-        </select>
-      </div>
 
       {{-- Cari Nama (auto submit) --}}
       <div>
