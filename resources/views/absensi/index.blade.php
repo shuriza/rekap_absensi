@@ -1,5 +1,33 @@
 {{-- resources/views/absensi/index.blade.php --}}
 @extends('layouts.app')
+@push('styles')
+  <!-- Flatpickr sudah bisa dihilangkan kalau tidak dipakai -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.tailwindcss.css" />
+@endpush
+
+@push('scripts')
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <!-- DataTables & Tailwind integration -->
+  <script src="https://cdn.datatables.net/2.3.2/js/dataTables.js"></script>
+  <script src="https://cdn.datatables.net/2.3.2/js/dataTables.tailwindcss.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      $('#absensiTable').DataTable({
+        dom: 't',
+        ordering: true,
+        stateSave: true,
+        pageLength: 40,
+        columnDefs: [{
+          targets: [0, 4, 5, 6],
+          orderable: false
+        }],
+        responsive: true
+      });
+    });
+  </script>
+@endpush
 
 @section('content')
   <div class="w-full mx-auto mt-10 space-y-6">
@@ -192,13 +220,90 @@
             </div>
           </div>
 
-          <div class="mt-4">
-            <input type="file" name="file_excel[]" multiple required
-              class="border p-2 rounded w-full mb-4">
-            <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          {{-- UPLOAD FILE --}}
+          <div class="mb-8">
+            <label class="block text-sm font-medium text-gray-700">Pilih File Excel</label>
+            <div class="mt-2 flex items-center space-x-4">
+              {{-- Tombol Tambah File --}}
+              <button type="button" onclick="document.getElementById('file_input').click()"
+                class="inline-flex items-center px-4 py-2 bg-white border-2 border-indigo-500 rounded-lg
+               text-indigo-600 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="-ml-1 mr-2 h-5 w-5" fill="none"
+                  viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 4v16m8-8H4" />
+                </svg>
+                Tambah File
+              </button>
+
+              {{-- Jumlah file --}}
+              <span id="file_count" class="text-gray-600 text-sm">0 file</span>
+            </div>
+
+            {{-- real input, disembunyikan --}}
+            <input id="file_input" type="file" name="file_excel[]" multiple class="hidden" />
+
+            {{-- Daftar file --}}
+            <ul id="file_list"
+              class="mt-4 border border-gray-200 rounded-lg divide-y divide-gray-200 bg-white">
+              {{-- JS akan render <li> di sini --}}
+            </ul>
+
+            {{-- Tombol Preview di bawah --}}
+            <button type="submit"
+              class="mt-6 w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold
+             rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-blue-400">
               Preview Data
             </button>
           </div>
+      </form>
+
+      @push('scripts')
+        <script>
+          document.addEventListener('DOMContentLoaded', () => {
+            const fileInput = document.getElementById('file_input');
+            const fileList = document.getElementById('file_list');
+            const fileCount = document.getElementById('file_count');
+            const dt = new DataTransfer();
+
+            function render() {
+              // update count
+              fileCount.textContent = `${dt.files.length} file`;
+              // rebuild list
+              fileList.innerHTML = '';
+              Array.from(dt.files).forEach((file, i) => {
+                const li = document.createElement('li');
+                li.className = 'flex justify-between items-center px-4 py-2';
+                li.innerHTML = `
+        <span class="text-gray-800 text-sm">${file.name}</span>
+        <button type="button" class="text-red-500 hover:text-red-700" data-idx="${i}">
+          &times;
+        </button>
+      `;
+                fileList.appendChild(li);
+              });
+            }
+
+            fileInput.addEventListener('change', () => {
+              // tambahkan file baru ke DataTransfer
+              for (const f of fileInput.files) {
+                dt.items.add(f);
+              }
+              fileInput.files = dt.files;
+              render();
+            });
+
+            fileList.addEventListener('click', e => {
+              if (e.target.matches('button[data-idx]')) {
+                const idx = Number(e.target.dataset.idx);
+                dt.items.remove(idx);
+                fileInput.files = dt.files;
+                render();
+              }
+            });
+          });
+        </script>
+      @endpush
       </form>
     </div>
 
@@ -209,79 +314,40 @@
         <p class="text-sm text-gray-600 mb-2">Menampilkan {{ $preview->total() }} data absensi.</p>
 
         <form method="GET" action="{{ route('absensi.preview') }}"
-          class="mb-4 flex flex-col md:flex-row gap-2 md:items-center justify-between">
+          class="mb-4 md:flex-row gap-2 md:items-center justify-between">
           <input type="text" name="search" placeholder="Cari nama..."
             value="{{ request('search') }}" class="border p-2 rounded w-full md:w-1/3" />
-          <select name="sort_by" class="border p-2 rounded w-12 md:w-auto">
-            <option value="">Urutkan</option>
-            <option value="nama_asc" {{ request('sort_by') == 'nama_asc' ? 'selected' : '' }}>Nama
-              A-Z
-            </option>
-            <option value="nama_desc"{{ request('sort_by') == 'nama_desc' ? 'selected' : '' }}>Nama
-              Z-A
-            </option>
-            <option value="tanggal_asc"{{ request('sort_by') == 'tanggal_asc' ? 'selected' : '' }}>
-              Tanggal
-              Terlama</option>
-            <option
-              value="tanggal_desc"{{ request('sort_by') == 'tanggal_desc' ? 'selected' : '' }}>
-              Tanggal Terbaru</option>
-          </select>
           <button type="submit" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
-            Terapkan
+            Cari
           </button>
         </form>
 
         <form method="POST" action="{{ route('absensi.store') }}">
           @csrf
-          <table class="w-full text-sm border mb-4 mt-4">
+          <table id="absensiTable" class="min-w-full text-sm">
             <thead class="bg-gray-100">
               <tr>
-                <th class="border px-2 py-1">No</th>
-                <th class="border px-2 py-1">Nama</th>
-                <th class="border px-2 py-1">Departemen</th>
-                <th class="border px-2 py-1">Tanggal</th>
-                <th class="border px-2 py-1">Jam Masuk</th>
-                <th class="border px-2 py-1">Jam Pulang</th>
-                <th class="border px-2 py-1">Keterangan</th>
+                <th class="px-2 py-1 text-left">No</th>
+                <th class="px-2 py-1 text-left">Nama</th>
+                <th class="px-2 py-1 text-left">Departemen</th>
+                <th class="px-2 py-1 text-left">Tanggal</th>
+                <th class="px-2 py-1 text-left">Jam Masuk</th>
+                <th class="px-2 py-1 text-left">Jam Pulang</th>
+                <th class="px-2 py-1 text-left">Keterangan</th>
               </tr>
             </thead>
-            <tbody>
-              @foreach ($preview as $i => $row)
+            <tbody class="divide-y divide-gray-200">
+              @foreach ($preview as $row)
                 <tr>
-                  <td class="border px-2 py-1">
-                    {{ $loop->iteration }}
+                  <td class="px-2 py-1">
+                    {{ ($preview->currentPage() - 1) * $preview->perPage() + $loop->iteration }}
                   </td>
-                  <td class="border px-2 py-1">
-                    <input type="hidden" name="data[{{ $i }}][nama]"
-                      value="{{ $row['nama'] }}">
-                    {{ $row['nama'] }}
-                  </td>
-                  <td class="border px-2 py-1">
-                    <input type="hidden" name="data[{{ $i }}][departemen]"
-                      value="{{ $row['departemen'] }}">
-                    {{ $row['departemen'] }}
-                  </td>
-                  <td class="border px-2 py-1">
-                    <input type="hidden" name="data[{{ $i }}][tanggal]"
-                      value="{{ $row['tanggal'] }}">
-                    {{ $row['tanggal'] }}
-                  </td>
-                  <td class="border px-2 py-1">
-                    <input type="hidden" name="data[{{ $i }}][jam_masuk]"
-                      value="{{ $row['jam_masuk'] }}">
-                    {{ $row['jam_masuk'] }}
-                  </td>
-                  <td class="border px-2 py-1">
-                    <input type="hidden" name="data[{{ $i }}][jam_pulang]"
-                      value="{{ $row['jam_pulang'] }}">
-                    {{ $row['jam_pulang'] }}
-                  </td>
-                  <td class="border px-2 py-1">
-                    <input type="hidden" name="data[{{ $i }}][keterangan]"
-                      value="{{ $row['keterangan'] }}">
-                    {{ $row['keterangan'] }}
-                  </td>
+                  <td class="px-2 py-1">{{ $row['nama'] }}</td>
+                  <td class="px-2 py-1">{{ $row['departemen'] }}</td>
+                  <td class="px-2 py-1">{{ $row['tanggal'] }}</td>
+                  <td class="px-2 py-1">{{ $row['jam_masuk'] }}</td>
+                  <td class="px-2 py-1">{{ $row['jam_pulang'] }}</td>
+                  <td class="px-2 py-1">{{ $row['keterangan'] }}</td>
                 </tr>
               @endforeach
             </tbody>

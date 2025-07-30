@@ -17,6 +17,10 @@ return new class extends Migration
             $table->string('password');
             $table->timestamps();
         });
+            \App\Models\User::create([
+        'username' => 'admin',
+        'password' => bcrypt('admin1234'),
+    ]);
     }
 
     /**

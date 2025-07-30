@@ -60,14 +60,14 @@
             @csrf
 
             <!-- Password Lama -->
-            <div class="mb-4">
+            {{-- <div class="mb-4">
               <label for="current_password" class="block text-sm font-medium">Password Lama</label>
               <input type="password" name="current_password" id="current_password"
                 class="mt-1 block w-full border rounded px-3 py-2" required>
               @error('current_password')
                 <p class="text-red-500 text-sm mt-1">{{ $message }}</p>
               @enderror
-            </div>
+            </div> --}}
 
             <!-- Password Baru -->
             <div class="mb-4">
