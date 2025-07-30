@@ -1,36 +1,88 @@
 @extends('layouts.app')
 
+{{-- =============================================================
+|  Izin Presensi – DataTables (CDN) + Tailwind
+|  Multi‑tabel: semua <table class="display"> otomatis aktif
+|============================================================= --}}
+
 @push('styles')
+    {{-- Flatpickr (CDN) --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
+
+    {{-- DataTables Tailwind theme (CDN) --}}
     <link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.tailwindcss.css" />
+    {{-- Override dark‑mode: paksa kontrol DataTables tetap putih --}}
+    <style>
+        /* =====================================================
+           Paksa form‑controls DataTables tetap LIGHT, abaikan
+           dark‑mode sistem (Tailwind menambah class dark:bg‑*)
+        =====================================================*/
+        .dataTables_wrapper, .dark .dataTables_wrapper {
+            color-scheme: light;          /* hindari UA dark style */
+        }
+
+        .dataTables_wrapper select,
+        .dark .dataTables_wrapper select,
+        .dataTables_wrapper input[type="search"],
+        .dark .dataTables_wrapper input[type="search"] {
+            background-color:#ffffff !important;
+            --tw-bg-opacity:1 !important;/* override Tailwind var */
+            color:#1f2937 !important;    /* gray-800 */
+        }
+
+        /* pagination buttons */
+        .dataTables_wrapper .dataTables_paginate .paginate_button,
+        .dark .dataTables_wrapper .dataTables_paginate .paginate_button{
+            background-color:#ffffff !important;
+            color:#1f2937 !important;
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover,
+        .dark .dataTables_wrapper .dataTables_paginate .paginate_button:hover{
+            background-color:#f3f4f6 !important; /* gray‑100 */
+        }
+
+        /* === override utilitas dark:bg-* yang melekat pada elemen === */
+        select.dark\:bg-gray-800,
+        input.dark\:bg-gray-800 {
+            background-color:#ffffff !important;
+        }
+        select.dark\:border-gray-600,
+        input.dark\:border-gray-600 {
+            border-color:#d1d5db !important; /* gray‑300 */
+        }
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover,
+        .dark .dataTables_wrapper .dataTables_paginate .paginate_button:hover{
+            background-color:#f3f4f6 !important; /* gray‑100 */
+        }
+    </style>
 @endpush
 
 @push('scripts')
+    {{-- Flatpickr (CDN) --}}
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
+
+    {{-- jQuery & DataTables (CDN) --}}
     <script src="https://code.jquery.com/jquery-3.7.1.js"></script>
     <script src="https://cdn.datatables.net/2.3.2/js/dataTables.js"></script>
     <script src="https://cdn.datatables.net/2.3.2/js/dataTables.tailwindcss.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            /* Bulan–Tahun picker */
+            /* ----------   Flatpickr Bulan–Tahun   ---------- */
             flatpickr('#bulanPick', {
-                plugins: [new monthSelectPlugin({
-                    shorthand : true,
-                    dateFormat: 'Y-m',   // value: 2025-04
-                    altFormat : 'F Y'    // display: April 2025
-                })],
-                onChange() { document.getElementById('filterForm').submit(); }
+                plugins : [new monthSelectPlugin({ shorthand:true, dateFormat:'Y-m', altFormat:'F Y' })],
+                onChange: () => document.getElementById('filterForm').submit()
             });
 
-            /* DataTables init */
-            const dt = $('#izinTable').DataTable({
+            /* ----------   DataTables multi‑table   ---------- */
+            const dtApi = $('table.display').DataTable({
                 pageLength : 10,
                 lengthMenu : [[10,25,50,100,-1],[10,25,50,100,'Semua']],
-                order      : [[1,'asc']],      // default sort: Nama (A→Z)
-                columnDefs : [{targets:-1, orderable:false}],
+                order      : [[1,'asc']],          // kolom Nama
+                columnDefs : [{ targets:-1, orderable:false }],
                 responsive : true,
                 language   : {
                     search           : '',
@@ -38,10 +90,12 @@
                 }
             });
 
-            // Tailwind‑ify search input & length select
-            const $container = $(dt.table().container());
-            $container.find('input[type="search"]').addClass('border px-3 py-2 rounded-lg border-gray-200 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 bg-white text-gray-700');
-            $container.find('select[name="izinTable_length"]').addClass('border px-3 py-2 rounded-lg border-gray-200 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 bg-white text-gray-700');
+            /* ----------   Tailwind‑ify input & select   ---------- */
+            dtApi.tables().every(function () {
+                const $c = $(this.table().container());
+                $c.find('input[type="search"]').addClass('border px-3 py-2 rounded-lg border-gray-200 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 bg-white text-gray-700');
+                $c.find('select').addClass('border px-3 py-2 rounded-lg border-gray-200 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 bg-white text-gray-700');
+            });
         });
     </script>
 @endpush
@@ -54,16 +108,14 @@
         <h2 class="text-2xl font-semibold text-gray-800">Daftar Izin Presensi</h2>
 
         <div class="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-            {{-- Search stub (hidden, DataTables will replace) --}}
+            {{-- Placeholder search (DataTables akan generate) --}}
             <input type="search" placeholder="Cari nama / tipe…" class="hidden" />
 
-            {{-- Bulan picker --}}
-            <form id="filterForm" method="GET" action="{{ route('izin_presensi.index') }}" class="flex items-end gap-2">
+            {{-- Bulan picker (inline, sejajar with buttons) --}}
+            <form id="filterForm" method="GET" action="{{ route('izin_presensi.index') }}" class="flex items-center gap-2">
                 @php $bt = request('bulan_tahun', now()->format('Y-m')); @endphp
-                <label class="flex flex-col text-sm">
-                    <span class="mb-1 font-medium">Bulan</span>
-                    <input id="bulanPick" name="bulan_tahun" type="text" value="{{ $bt }}" class="border border-gray-300 p-2 rounded w-40 bg-white" placeholder="Pilih Bulan" />
-                </label>
+                <label for="bulanPick" class="sr-only">Bulan</label>
+                <input id="bulanPick" name="bulan_tahun" type="text" value="{{ $bt }}" class="h-10 w-36 border border-gray-300 px-3 rounded bg-white focus:ring focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="Bulan" />
             </form>
 
             {{-- Buat Izin --}}
@@ -81,10 +133,10 @@
         </div>
     </div>
 
-    {{-- Tabel Izin --}}
+    {{-- =======================  TABEL IZIN  ======================= --}}
     <div class="bg-white shadow rounded-lg overflow-hidden">
         <div class="overflow-x-auto">
-            <table id="izinTable" class="min-w-full text-sm">
+            <table class="display min-w-full text-sm" id="izinTable">
                 <thead class="bg-gray-100">
                     <tr>
                         <th class="w-12 px-4 py-3 text-left font-semibold text-gray-600 uppercase">No</th>

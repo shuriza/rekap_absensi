@@ -12,6 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+/* ---------- Ekspor ke window supaya bisa dipanggil di Blade inline ---------- */
+window.flatpickr         = flatpickr;
+window.monthSelectPlugin = monthSelectPlugin;
+
+
 document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("canvas.sparkline").forEach((cnv) => {
         // 1. Parse data‐values menjadi array angka

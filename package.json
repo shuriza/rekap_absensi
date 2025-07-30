@@ -21,6 +21,7 @@
     "dependencies": {
         "chart.js": "^4.4.9",
         "datatables.net": "^2.3.2",
+        "datatables.net-responsive": "^3.0.5",
         "flatpickr": "^4.6.13"
     }
 }
