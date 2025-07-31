@@ -334,7 +334,7 @@
 
             {{-- kolom tanggal ─────────────── --}}
             @foreach ($tanggalList as $tgl)
-              <th class="border px-2 py-2 no-sort">{{ $tgl }}</th>
+              <th class="border w-[70px] px-2 py-2 no-sort">{{ $tgl }}</th>
             @endforeach
 
             <th class="border px-2 py-2">Total Akumulasi</th>
