@@ -404,16 +404,17 @@
 
               {{-- ───── Total akumulasi (hari jam menit) + nilai mentah utk sort ───── --}}
               @php
-                  $hari  = intdiv($pegawai->total_menit, 1440);
+                  $hari  = str_pad(intdiv($pegawai->total_menit, 1440), 2, '0', STR_PAD_LEFT);
                   $sisa  = $pegawai->total_menit % 1440;
-                  $jam   = intdiv($sisa, 60);
-                  $menit = $sisa % 60;
-                  $tampil = "{$hari}h {$jam}j {$menit}m";
+                  $jam   = str_pad(intdiv($sisa, 60), 2, '0', STR_PAD_LEFT);
+                  $menit = str_pad($sisa % 60, 2, '0', STR_PAD_LEFT);
+                  $tampil = "{$hari} hari {$jam} jam {$menit} menit";
               @endphp
               <td class="border px-2 py-1 text-xs font-semibold">
                   <span class="sr-only">{{ $pegawai->total_menit }}</span>
                   {{ $tampil }}
               </td>
+
             </tr>
           @endforeach
         </tbody>
