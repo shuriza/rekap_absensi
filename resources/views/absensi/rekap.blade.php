@@ -193,6 +193,7 @@
 
         function openIzin(td) {
           const form = document.getElementById('form-izin');
+          const baseStorageUrl = "{{ asset('storage') }}";
 
           /* default: mode baru */
           form.action = "{{ route('izin_presensi.store') }}";
@@ -208,9 +209,9 @@
           document.getElementById('tipe-ijin').value = td.dataset.tipe || '';
           document.getElementById('jenis-ijin').value = td.dataset.jenis || '';
           document.getElementById('keterangan-izin').value = td.dataset.ket || '';
-          document.getElementById('preview-lampiran').innerHTML = td.dataset.file ?
-            `<a href="{{ asset('storage') }}/${td.dataset.file}" target="_blank" class="underline">Lampiran sebelumnya</a>` :
-            '';
+          document.getElementById('preview-lampiran').innerHTML = td.dataset.file
+            ? `<a href="${baseStorageUrl}/${td.dataset.file}" target="_blank" class="underline">Lampiran sebelumnya</a>`
+            : '';
 
           /* mode edit */
           if (td.dataset.id) {
