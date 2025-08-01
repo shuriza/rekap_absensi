@@ -15,6 +15,7 @@ public function up(): void
         $table->id();
         $table->string('nama');
         $table->string('departemen')->nullable();
+        // $table->enum('status', ['aktif', 'nonaktif'])->default('aktif');
         $table->timestamps();
     });
 }

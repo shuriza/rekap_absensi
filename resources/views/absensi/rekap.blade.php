@@ -80,17 +80,17 @@
     {{-- =============================================
           FORM ➕ TANDAI TANGGAL MERAH / HARI PENTING
       ============================================= --}}
-      @php
-          // tanggal pertama & terakhir bulan yang sedang difilter
-          $firstDay = sprintf('%04d-%02d-01',   $tahun, $bulan);
-          $lastDay  = sprintf(
-              '%04d-%02d-%02d',
-              $tahun,
-              $bulan,
-              \Carbon\Carbon::create($tahun, $bulan)->daysInMonth
-          );
-      @endphp
-      
+    @php
+      // tanggal pertama & terakhir bulan yang sedang difilter
+      $firstDay = sprintf('%04d-%02d-01', $tahun, $bulan);
+      $lastDay = sprintf(
+          '%04d-%02d-%02d',
+          $tahun,
+          $bulan,
+          \Carbon\Carbon::create($tahun, $bulan)->daysInMonth,
+      );
+    @endphp
+
     @if (session('holiday_success'))
       <div class="mb-4 px-4 py-2 rounded bg-green-100 text-green-800 text-sm">
         {{ session('holiday_success') }}
@@ -104,13 +104,10 @@
       {{-- Tanggal --}}
       <div>
         <label class="block text-sm font-medium text-gray-700">Tanggal</label>
-        <input  type="date"
-            name="tanggal"
-            required
-            value="{{ old('tanggal', $firstDay) }}"   {{-- posisi awal di bulan terpilih --}}
-            min="{{ $firstDay }}"                     {{-- tak bisa pilih sebelum bulan ini --}}
-            max="{{ $lastDay }}"                      {{-- tak bisa pilih sesudah bulan ini --}}
-            class="mt-1 block w-40 rounded border-gray-300 shadow-sm text-sm" />
+        <input type="date" name="tanggal" required value="{{ old('tanggal', $firstDay) }}"
+          {{-- posisi awal di bulan terpilih --}} min="{{ $firstDay }}" {{-- tak bisa pilih sebelum bulan ini --}}
+          max="{{ $lastDay }}" {{-- tak bisa pilih sesudah bulan ini --}}
+          class="mt-1 block w-40 rounded border-gray-300 shadow-sm text-sm" />
       </div>
 
       {{-- Keterangan --}}
@@ -182,132 +179,147 @@
       <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
       <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
       <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-     
+
       <script>
-      /* ===========================================================
-        1)  Modal Izin – openIzin() tetap seperti semula
-      =========================================================== */
-      const fpAwal  = flatpickr('#izin-awal',{dateFormat:'Y-m-d'});
-      const fpAkhir = flatpickr('#izin-akhir',{dateFormat:'Y-m-d'});
+        /* ===========================================================
+              1)  Modal Izin – openIzin() tetap seperti semula
+            =========================================================== */
+        const fpAwal = flatpickr('#izin-awal', {
+          dateFormat: 'Y-m-d'
+        });
+        const fpAkhir = flatpickr('#izin-akhir', {
+          dateFormat: 'Y-m-d'
+        });
 
-      function openIzin(td){
-        const form = document.getElementById('form-izin');
+        function openIzin(td) {
+          const form = document.getElementById('form-izin');
 
-        /* default: mode baru */
-        form.action = "{{ route('izin_presensi.store') }}";
-        form.querySelector('input[name="_method"]')?.remove();
-        document.getElementById('btn-hapus').classList.add('hidden');
-        document.getElementById('btn-simpan').textContent='Simpan';
+          /* default: mode baru */
+          form.action = "{{ route('izin_presensi.store') }}";
+          form.querySelector('input[name="_method"]')?.remove();
+          document.getElementById('btn-hapus').classList.add('hidden');
+          document.getElementById('btn-simpan').textContent = 'Simpan';
 
-        /* isi field dasar */
-        document.getElementById('izin-karyawan').value = td.dataset.karyawan;
-        fpAwal.setDate(td.dataset.awal ?? td.dataset.date,true);
-        fpAkhir.setDate(td.dataset.akhir?? td.dataset.date,true);
+          /* isi field dasar */
+          document.getElementById('izin-karyawan').value = td.dataset.karyawan;
+          fpAwal.setDate(td.dataset.awal ?? td.dataset.date, true);
+          fpAkhir.setDate(td.dataset.akhir ?? td.dataset.date, true);
 
-        document.getElementById('tipe-ijin').value  = td.dataset.tipe  || '';
-        document.getElementById('jenis-ijin').value = td.dataset.jenis || '';
-        document.getElementById('keterangan-izin').value = td.dataset.ket || '';
-        document.getElementById('preview-lampiran').innerHTML = td.dataset.file
-              ? `<a href="{{ asset('storage') }}/${td.dataset.file}" target="_blank" class="underline">Lampiran sebelumnya</a>`
-              : '';
+          document.getElementById('tipe-ijin').value = td.dataset.tipe || '';
+          document.getElementById('jenis-ijin').value = td.dataset.jenis || '';
+          document.getElementById('keterangan-izin').value = td.dataset.ket || '';
+          document.getElementById('preview-lampiran').innerHTML = td.dataset.file ?
+            `<a href="{{ asset('storage') }}/${td.dataset.file}" target="_blank" class="underline">Lampiran sebelumnya</a>` :
+            '';
 
-        /* mode edit */
-        if(td.dataset.id){
-          const m=document.createElement('input');
-          m.type='hidden'; m.name='_method'; m.value='PUT';
-          form.prepend(m);
-          form.action = `/izin_presensi/${td.dataset.id}`;
+          /* mode edit */
+          if (td.dataset.id) {
+            const m = document.createElement('input');
+            m.type = 'hidden';
+            m.name = '_method';
+            m.value = 'PUT';
+            form.prepend(m);
+            form.action = `/izin_presensi/${td.dataset.id}`;
 
-          document.getElementById('btn-hapus').classList.remove('hidden');
-          document.getElementById('btn-hapus').dataset.id = td.dataset.id;
-          document.getElementById('btn-simpan').textContent='Perbarui';
+            document.getElementById('btn-hapus').classList.remove('hidden');
+            document.getElementById('btn-hapus').dataset.id = td.dataset.id;
+            document.getElementById('btn-simpan').textContent = 'Perbarui';
+          }
+          document.getElementById('modal-overlay').classList.remove('hidden');
         }
-        document.getElementById('modal-overlay').classList.remove('hidden');
-      }
 
-      function closeIzin(){
-        document.getElementById('modal-overlay').classList.add('hidden');
-      }
+        function closeIzin() {
+          document.getElementById('modal-overlay').classList.add('hidden');
+        }
 
-      /* ===========================================================
-        2) Modal Konfirmasi Hapus
-      =========================================================== */
-      let pendingDeleteId = null;
+        /* ===========================================================
+          2) Modal Konfirmasi Hapus
+        =========================================================== */
+        let pendingDeleteId = null;
 
-      function showDeleteConfirm(btn){
-        /* btn-hapus di form izin memanggil showDeleteConfirm(this) */
-        pendingDeleteId = btn.dataset.id;
-        openModal('modalConfirm');
-      }
+        function showDeleteConfirm(btn) {
+          /* btn-hapus di form izin memanggil showDeleteConfirm(this) */
+          pendingDeleteId = btn.dataset.id;
+          openModal('modalConfirm');
+        }
 
-      function deleteConfirmed(){
-        if(!pendingDeleteId) return;
-        const form = document.getElementById('form-izin');
+        function deleteConfirmed() {
+          if (!pendingDeleteId) return;
+          const form = document.getElementById('form-izin');
 
-        form.action = `/izin_presensi/${pendingDeleteId}`;
-        form.querySelector('input[name="_method"]')?.remove();
-        const d=document.createElement('input');
-        d.type='hidden'; d.name='_method'; d.value='DELETE';
-        form.prepend(d);
+          form.action = `/izin_presensi/${pendingDeleteId}`;
+          form.querySelector('input[name="_method"]')?.remove();
+          const d = document.createElement('input');
+          d.type = 'hidden';
+          d.name = '_method';
+          d.value = 'DELETE';
+          form.prepend(d);
 
-        form.submit();
-      }
+          form.submit();
+        }
 
-      /* helper open / close modal overlay */
-      function openModal(id){
-        document.getElementById(id).classList.remove('hidden');
-        document.body.classList.add('overflow-y-hidden');
-      }
-      function closeModal(id){
-        document.getElementById(id).classList.add('hidden');
-        document.body.classList.remove('overflow-y-hidden');
-      }
-      document.addEventListener('keydown',e=>{
-        if(e.key==='Escape'){
-          document.querySelectorAll('.modal').forEach(m=>m.classList.add('hidden'));
+        /* helper open / close modal overlay */
+        function openModal(id) {
+          document.getElementById(id).classList.remove('hidden');
+          document.body.classList.add('overflow-y-hidden');
+        }
+
+        function closeModal(id) {
+          document.getElementById(id).classList.add('hidden');
           document.body.classList.remove('overflow-y-hidden');
         }
-      });
+        document.addEventListener('keydown', e => {
+          if (e.key === 'Escape') {
+            document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
+            document.body.classList.remove('overflow-y-hidden');
+          }
+        });
       </script>
 
       <script>
-      let dt;
+        let dt;
 
-      $(function () {
-        const jumlahTanggal = {{ count($tanggalList) }};
-        const kolomTanggal = Array.from({ length: jumlahTanggal }, (_, i) => i + 2);
+        $(function() {
+          const jumlahTanggal = {{ count($tanggalList) }};
+          const kolomTanggal = Array.from({
+            length: jumlahTanggal
+          }, (_, i) => i + 2);
 
-        dt = $('#tabel-rekap').DataTable({
-          paging: false,
-          searching: false,
-          scrollX: true,
-          ordering: true,
-          order: [],
+          dt = $('#tabel-rekap').DataTable({
+            paging: false,
+            searching: false,
+            scrollX: true,
+            ordering: true,
+            order: [],
 
-          // Konfigurasi kolom
-          columns: [
-            { data: null, title: "No", render: (data, type, row, meta) => meta.row + 1 }, // ✅ kolom No dinamis & sortable
-            null, // Nama
-            ...kolomTanggal.map(() => null), // Tanggal
-            null // Total akumulasi
-          ],
+            // Konfigurasi kolom
+            columns: [{
+                data: null,
+                title: "No",
+                render: (data, type, row, meta) => meta.row + 1
+              }, // ✅ kolom No dinamis & sortable
+              null, // Nama
+              ...kolomTanggal.map(() => null), // Tanggal
+              null // Total akumulasi
+            ],
 
-          columnDefs: [
-            { targets: kolomTanggal, orderable: false },
-            { targets: 'no-sort', orderable: false }
-          ],
+            columnDefs: [{
+                targets: kolomTanggal,
+                orderable: false
+              },
+              {
+                targets: 'no-sort',
+                orderable: false
+              }
+            ],
+          });
         });
-      });
 
-      // ✅ Tombol Reset
-      function resetUrutan() {
-        dt.order([]).draw();
-      }
+        // ✅ Tombol Reset
+        function resetUrutan() {
+          dt.order([]).draw();
+        }
       </script>
-
-
-
-
     @endpush
 
     {{-- =============================================
@@ -326,7 +338,7 @@
     ========================================================= --}}
     <div class="overflow-x-auto border border-gray-300 rounded">
       <table id="tabel-rekap"
-            class="min-w-full table-fixed text-sm text-center border-collapse display nowrap">
+        class="min-w-full table-fixed text-sm text-center border-collapse display nowrap">
         <thead class="bg-zinc-400 text-black">
           <tr>
             <th class="border px-2 py-2 cursor-pointer text-black" onclick="resetUrutan()">No</th>
@@ -353,66 +365,63 @@
               {{-- ───── Kolom tanggal ───── --}}
               @foreach ($tanggalList as $tgl)
                 @php
-                  $sel = $pegawai->absensi_harian[$tgl]
-                        ?? ['type' => 'kosong', 'label' => '-'];
+                  $sel = $pegawai->absensi_harian[$tgl] ?? ['type' => 'kosong', 'label' => '-'];
 
                   /* warna latar */
                   $bg = match ($sel['type']) {
-                      'libur'     => 'bg-gray-300',
-                      'kosong'    => 'bg-red-500',
-                      'izin'      => 'bg-blue-300',
+                      'libur' => 'bg-gray-300',
+                      'kosong' => 'bg-red-500',
+                      'izin' => 'bg-blue-300',
                       'terlambat' => 'bg-yellow-200',
-                      default     => '',
+                      default => '',
                   };
 
                   /* warna teks */
                   $txt = $bg === 'bg-red-500' ? 'text-white' : 'text-black';
                 @endphp
 
-              <td class="border px-1 py-1 text-xs {{ $bg }} {{ $txt }}"
+                <td class="border px-1 py-1 text-xs {{ $bg }} {{ $txt }}"
                   data-karyawan="{{ $pegawai->id }}"
-                  data-date="{{ sprintf('%04d-%02d-%02d',$tahun,$bulan,$tgl) }}"
-                  @if($sel['type']==='izin')
-                      data-id="{{ $sel['id'] }}"
+                  data-date="{{ sprintf('%04d-%02d-%02d', $tahun, $bulan, $tgl) }}"
+                  @if ($sel['type'] === 'izin') data-id="{{ $sel['id'] }}"
                       data-tipe="{{ $sel['tipe'] }}"
                       data-jenis="{{ $sel['jenis'] }}"
                       data-ket="{{ $sel['ket'] }}"
                       data-file="{{ $sel['file'] }}"
                       data-awal="{{ $sel['awal'] }}"
-                     data-akhir="{{ $sel['akhir'] }}"
-                  @endif
+                     data-akhir="{{ $sel['akhir'] }}" @endif
                   onclick="openIzin(this)">
                   @switch($sel['type'])
-                      @case('hadir')
-                      @case('terlambat')
-                          {{ $sel['label'] }}
-                          @break
+                    @case('hadir')
+                    @case('terlambat')
+                      {{ $sel['label'] }}
+                    @break
 
-                      @case('libur')
-                      @case('izin')
-                          <span class="inline-block max-w-[140px] truncate"
-                                title="{{ $sel['label'] }}">
-                            {{ Str::limit($sel['label'], 25, '…') }}
-                          </span>
-                          @break
+                    @case('libur')
+                    @case('izin')
+                      <span class="inline-block max-w-[140px] truncate" title="{{ $sel['label'] }}">
+                        {{ Str::limit($sel['label'], 25, '…') }}
+                      </span>
+                    @break
 
-                      @default      {{-- kosong --}}
-                          {{ $sel['label'] }}
+                    @default
+                      {{-- kosong --}}
+                      {{ $sel['label'] }}
                   @endswitch
                 </td>
               @endforeach
 
               {{-- ───── Total akumulasi (hari jam menit) + nilai mentah utk sort ───── --}}
               @php
-                  $hari  = intdiv($pegawai->total_menit, 1440);
-                  $sisa  = $pegawai->total_menit % 1440;
-                  $jam   = intdiv($sisa, 60);
-                  $menit = $sisa % 60;
-                  $tampil = "{$hari}h {$jam}j {$menit}m";
+                $hari = intdiv($pegawai->total_menit, 1440);
+                $sisa = $pegawai->total_menit % 1440;
+                $jam = intdiv($sisa, 60);
+                $menit = $sisa % 60;
+                $tampil = "{$hari}h {$jam}j {$menit}m";
               @endphp
               <td class="border px-2 py-1 text-xs font-semibold">
-                  <span class="sr-only">{{ $pegawai->total_menit }}</span>
-                  {{ $tampil }}
+                <span class="sr-only">{{ $pegawai->total_menit }}</span>
+                {{ $tampil }}
               </td>
             </tr>
           @endforeach
@@ -441,21 +450,20 @@
     </div>
 
     {{-- ========= MODAL KONFIRMASI HAPUS ========= --}}
-    <div id="modalConfirm"
-        class="fixed inset-0 z-50 hidden bg-gray-900 bg-opacity-60 modal">
+    <div id="modalConfirm" class="fixed inset-0 z-50 hidden bg-gray-900 bg-opacity-60 modal">
       <div class="relative top-40 mx-auto shadow-xl rounded-md bg-white max-w-md">
         <div class="flex justify-end p-2">
           <button onclick="closeModal('modalConfirm')" type="button"
-                  class="text-gray-400 hover:bg-gray-200 rounded-lg p-1.5">
+            class="text-gray-400 hover:bg-gray-200 rounded-lg p-1.5">
             &times;
           </button>
         </div>
 
         <div class="p-6 pt-0 text-center">
           <svg class="w-20 h-20 text-red-600 mx-auto" fill="none" stroke="currentColor"
-              viewBox="0 0 24 24">
+            viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
 
           <h3 class="text-xl font-normal text-gray-500 mt-5 mb-6">
@@ -463,12 +471,12 @@
           </h3>
 
           <button onclick="deleteConfirmed()"
-                  class="text-white bg-red-600 hover:bg-red-800 rounded-lg px-3 py-2.5 mr-2">
-              Ya, hapus
+            class="text-white bg-red-600 hover:bg-red-800 rounded-lg px-3 py-2.5 mr-2">
+            Ya, hapus
           </button>
 
           <button onclick="closeModal('modalConfirm')"
-                  class="text-gray-900 bg-white hover:bg-gray-100 border border-gray-200
+            class="text-gray-900 bg-white hover:bg-gray-100 border border-gray-200
                         rounded-lg px-3 py-2.5">
             Batal
           </button>
@@ -490,4 +498,3 @@
     </footer>
   </div>
 @endsection
-

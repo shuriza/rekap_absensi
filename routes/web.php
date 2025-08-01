@@ -11,6 +11,7 @@ use App\Http\Controllers\ExportRekapController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ChangePasswordController;
+use App\Http\Controllers\KaryawanController;
 
 // Route login dan register (tanpa middleware auth)
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -27,6 +28,11 @@ Route::middleware('auth')->group(function () {
  });
 
  Route::post('/ganti-password', [ChangePasswordController::class, 'update'])->name('password.change');
+
+
+Route::get('/karyawan', [KaryawanController::class, 'index'])->name('absensi.karyawan');
+Route::post('/karyawan/{id}/nonaktif', [KaryawanController::class, 'nonaktifkan'])->name('karyawan.nonaktif');
+Route::post('/karyawan/{id}/aktifkan', [KaryawanController::class, 'aktifkan'])->name('karyawan.aktifkan');
 
 Route::get('/absensi', [AbsensiController::class, 'index'])->name('absensi.index');
 Route::get('/absensi/upload', [AbsensiController::class, 'formUpload'])->name('absensi.upload');
