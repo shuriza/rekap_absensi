@@ -182,8 +182,8 @@
 
       <script>
         /* ===========================================================
-              1)  Modal Izin – openIzin() tetap seperti semula
-            =========================================================== */
+                    1)  Modal Izin – openIzin() tetap seperti semula
+                  =========================================================== */
         const fpAwal = flatpickr('#izin-awal', {
           dateFormat: 'Y-m-d'
         });
@@ -411,18 +411,19 @@
                 </td>
               @endforeach
 
-              {{-- ───── Total akumulasi (hari jam menit) + nilai mentah utk sort ───── --}}
+              {{-- total akumulasi (hari jam menit) + span “sr-only” utk sort --}}
               @php
                 $hari = intdiv($pegawai->total_menit, 1440);
                 $sisa = $pegawai->total_menit % 1440;
-                $jam = intdiv($sisa, 60);
-                $menit = $sisa % 60;
-                $tampil = "{$hari}h {$jam}j {$menit}m";
+                $jam = str_pad(intdiv($sisa, 60), 2, '0', STR_PAD_LEFT);
+                $menit = str_pad($sisa % 60, 2, '0', STR_PAD_LEFT);
+                $tampil = "{$hari} hari {$jam} jam {$menit} menit";
               @endphp
               <td class="border px-2 py-1 text-xs font-semibold">
-                <span class="sr-only">{{ $pegawai->total_menit }}</span>
+                <span class="sr-only">{{ $pegawai->total_menit }}</span> {{-- untuk sort --}}
                 {{ $tampil }}
               </td>
+
             </tr>
           @endforeach
         </tbody>
