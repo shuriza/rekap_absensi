@@ -194,7 +194,35 @@
         /* base URL ke route lampiran */
         const lampiranBase = "{{ url('/izin-presensi') }}";
 
+        function showIzinAlert(msg) {
+          const alertBox = document.getElementById('alert-izin');
+          const alertMsg = document.getElementById('alert-izin-msg');
+          alertMsg.textContent = msg;
+          alertBox.classList.remove('hidden');
+          setTimeout(() => {
+            alertBox.classList.add('hidden');
+          }, 2500);
+        }
+
         function openIzin(td) {
+          // Cek jika kolom adalah hari Sabtu/Minggu atau cuti/libur
+          const tgl = td.dataset.date;
+          const tipe = td.dataset.tipe || td.dataset.type || '';
+          // Cek cuti/libur dari tipe
+          if (tipe === 'libur' || tipe === 'cuti') {
+            showIzinAlert('Tidak bisa input izin pada hari libur/cuti.');
+            return;
+          }
+          // Cek Sabtu/Minggu dari tanggal (jika format YYYY-MM-DD)
+          if (tgl) {
+            const d = new Date(tgl);
+            const day = d.getDay(); // 0 = Minggu, 6 = Sabtu
+            if (day === 0 || day === 6) {
+              showIzinAlert('Tidak bisa input izin pada hari Sabtu/Minggu.');
+              return;
+            }
+          }
+
           const form = document.getElementById('form-izin');
 
           /* default: mode baru */
@@ -292,7 +320,7 @@
         let dt;
 
         $(function() {
-          const jumlahTanggal = {{ count($tanggalList) }};
+          const jumlahTanggal = Number("{{ count($tanggalList) }}");
           const kolomTanggal = Array.from({
             length: jumlahTanggal
           }, (_, i) => i + 2);
@@ -443,6 +471,17 @@
       </table>
     </div>
 
+    {{-- =============================================
+         ALERT IZIN (custom notification)
+    ============================================= --}}
+    <div id="alert-izin" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 hidden">
+      <div class="bg-red-500 text-white px-6 py-3 rounded shadow-lg flex items-center gap-2">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span id="alert-izin-msg"></span>
+      </div>
+    </div>
     {{-- =============================================
          MODAL IZIN (overlay)
     ============================================= --}}
