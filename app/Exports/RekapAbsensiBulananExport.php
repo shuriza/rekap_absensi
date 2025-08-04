@@ -46,14 +46,16 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
 
         $this->pegawaiList = Karyawan::with([
             'absensi' => fn($q) => $q->whereYear('tanggal', $this->tahun)
-                                      ->whereMonth('tanggal', $this->bulan),
+                                    ->whereMonth('tanggal', $this->bulan),
             'izins' => fn($q) => $q->where(function ($sub) {
                 $sub->whereYear('tanggal_awal', $this->tahun)
                     ->whereMonth('tanggal_awal', $this->bulan)
                     ->orWhereYear('tanggal_akhir', $this->tahun)
                     ->whereMonth('tanggal_akhir', $this->bulan);
             }),
-        ])->get();
+            'nonaktif_terbaru' // ⬅️ Tambahkan eager load relasi ini
+        ])->get()->filter(fn($k) => !$k->sedang_nonaktif);
+
 
         foreach ($this->pegawaiList as $peg) {
             $mapIzin = [];

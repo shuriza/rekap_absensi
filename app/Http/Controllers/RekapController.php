@@ -54,7 +54,10 @@ class RekapController extends Controller
         }
 
         /** @var \Illuminate\Support\Collection $pegawaiList */
-        $pegawaiList = $pegawaiQuery->get();   // TANPA paginasi
+      $pegawaiList = $pegawaiQuery->with('nonaktif_terbaru')->get()
+         ->filter(fn ($k) => !$k->sedang_nonaktif);
+
+
 
         /* 4️⃣  Helper parse jam (toleran terhadap “2025-04-14 07:08:00” atau “07:08”) */
         $toCarbon = function(string $tgl, ?string $time): ?Carbon {
@@ -282,7 +285,10 @@ $peg->total_fmt   = $this->fmtHariJamMenit($totalMenit);
             $pegawaiQuery->where('nama', 'like', "%{$search}%");
         }
 
-        $pegawaiList = $pegawaiQuery->get(); // tanpa paginasi
+        $pegawaiList = $pegawaiQuery->with('nonaktif_terbaru')->get()
+            ->filter(fn($k) => !$k->sedang_nonaktif);
+ // tanpa paginasi
+        
 
         /* ---------- helper parse jam --------------------------- */
         $toCarbon = function (string $tgl, ?string $time): ?Carbon {
