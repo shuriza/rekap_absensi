@@ -5,10 +5,11 @@
   <div class="min-h-screen flex flex-col px-6 py-4">
     @php
       // range jam 0–165 dibagi 8 langkah
-      $maxHours = 165;
+      $maxHours = 180;
+      $minHours = 160; // Minimum ditentukan
       $steps = 8;
-      // step size bulat = 21 jam per bucket
-      $stepSize = (int) ceil($maxHours / $steps);
+      $range = $maxHours - $minHours; // 40 jam
+      $stepSize = (int) ceil($range / $steps); // 10 jam per langkah
     @endphp
 
 
@@ -104,19 +105,20 @@
                 @php
                   // definisikan mapping yang eksplisit
                   $emeraldShades = [
-                      'bg-sky-100',
-                      'bg-sky-200',
-                      'bg-sky-300',
-                      'bg-sky-400',
-                      'bg-sky-500 text-white',
-                      'bg-sky-600 text-white',
-                      'bg-sky-700 text-white',
-                      'bg-sky-800 text-white',
-                  ];
+                    'bg-sky-200 text-black',
+                    'bg-sky-300 text-black',
+                    'bg-sky-400 text-white',
+                    'bg-sky-500 text-white',
+                    'bg-sky-600 text-white',
+                    'bg-sky-700 text-white',
+                    'bg-sky-800 text-white',
+                    'bg-sky-900 text-white',
+                ];
+
 
                   $minutes = $pegawai->menitPerBulan[$bln] ?? 0;
                   $hours = $minutes / 60;
-                  $idx = min((int) floor($hours / $stepSize), $steps - 1);
+                  $idx = max(0, min((int) floor(($hours - $minHours) / $stepSize), $steps - 1));
 
                   // ambil literal class dari array
                   $colorClass = $emeraldShades[$idx];

@@ -261,9 +261,9 @@ $peg->total_fmt   = $this->fmtHariJamMenit($totalMenit);
     }
     
     /* ==========================================================
-    *  R E K A P   T A H U N A N  (dengan SEARCH & SORT)
-    * ========================================================== */
-public function rekapTahunan(Request $r)
+     *  R E K A P   T A H U N A N  (dengan SEARCH & SORT)
+     * ========================================================== */
+    public function rekapTahunan(Request $r)
     {
         $tahun  = (int) $r->input('tahun', date('Y'));
         $sort   = $r->input('sort');   // '' | nama_asc | nama_desc | total_asc | total_desc
@@ -271,7 +271,11 @@ public function rekapTahunan(Request $r)
 
         /* ---------- query karyawan + absensi setahun ----------- */
         $pegawaiQuery = Karyawan::with([
-            'absensi' => fn($q) => $q->whereYear('tanggal', $tahun)
+            'absensi' => fn($q) => $q->whereYear('tanggal', $tahun),
+            'izins' => fn($q) => $q->where(function ($sub) use ($tahun) {
+                $sub->whereYear('tanggal_awal', $tahun)
+                    ->orWhereYear('tanggal_akhir', $tahun);
+            }),
         ]);
 
         if ($search) {
@@ -290,49 +294,75 @@ public function rekapTahunan(Request $r)
 
         /* ---------- hitung menit & format ---------------------- */
         foreach ($pegawaiList as $peg) {
-            // array menit per bulan 1..12
-            $menitPerBulan = array_fill(1, 12, 0);
-
-            foreach ($peg->absensi as $row) {
-                $tglStr = $row->tanggal instanceof Carbon
-                    ? $row->tanggal->toDateString()
-                    : $row->tanggal;
-                $idx = Carbon::parse($tglStr)->month; // 1-12
-
-                $in  = $toCarbon($tglStr, $row->jam_masuk);
-                $out = $toCarbon($tglStr, $row->jam_pulang);
-
-                if ($in && $out && $out->gt($in)) {
-                    $menitPerBulan[$idx] += $in->diffInMinutes($out);
-                } elseif (($in && !$out) || (!$in && $out)) {
-                    $menitPerBulan[$idx] += $this->defaultMinutes; // 450
+            $menitPerBulan = array_fill(1, 12, 0); // Inisialisasi array untuk 12 bulan
+            $holidayMap = Holiday::whereYear('tanggal', $tahun)->get()->keyBy(fn($h) => $h->tanggal->toDateString());
+            $mapIzin = [];
+            foreach ($peg->izins as $iz) {
+                foreach (CarbonPeriod::create($iz->tanggal_awal, $iz->tanggal_akhir ?? $iz->tanggal_awal) as $d) {
+                    $mapIzin[$d->toDateString()] = strtok($iz->jenis_ijin, ' ');
                 }
             }
 
-            // simpan juga menit raw agar bisa dipakai di view
+            $mapPres = $peg->absensi->keyBy(fn($p) => $p->tanggal->toDateString());
+
+            // Hitung menit per bulan
+            for ($bulan = 1; $bulan <= 12; $bulan++) {
+                $daysInMonth = Carbon::create($tahun, $bulan)->daysInMonth;
+                for ($d = 1; $d <= $daysInMonth; $d++) {
+                    $tglStr = sprintf('%04d-%02d-%02d', $tahun, $bulan, $d);
+                    $weekday = Carbon::parse($tglStr)->dayOfWeekIso;
+
+                    // Lewati jika hari libur (Sabtu, Minggu) atau hari libur resmi
+                    if ($weekday === 6 || $weekday === 7 || isset($holidayMap[$tglStr])) {
+                        continue;
+                    }
+
+                    // Lewati jika ada izin
+                    if (isset($mapIzin[$tglStr])) {
+                        continue;
+                    }
+
+                    $row = $mapPres[$tglStr] ?? null;
+                    if ($row) {
+                        $in  = $toCarbon($tglStr, $row->jam_masuk);
+                        $out = $toCarbon($tglStr, $row->jam_pulang);
+
+                        if ($in && $out && $out->gt($in)) {
+                            $menitPerBulan[$bulan] += $in->diffInMinutes($out);
+                        } elseif (($in && !$out) || (!$in && $out)) {
+                            $menitPerBulan[$bulan] += $this->defaultMinutes;
+                        }
+                    } else {
+                        // Tambahkan default minutes untuk hari tanpa absensi (opsional)
+                        $menitPerBulan[$bulan] += $this->defaultMinutes; // Aktifkan jika ingin hitung hari kosong
+                    }
+                }
+            }
+
+            // Simpan menit raw agar bisa dipakai di view
             $peg->menitPerBulan = $menitPerBulan;
 
-            // format ke HH:MM
+            // Format ke HH:MM per bulan
             $HHMM = fn(int $m) => sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
             $peg->rekap_tahunan = array_map($HHMM, $menitPerBulan);
 
-            // total tahunan dalam menit & format
+            // Total tahunan dalam menit & format
             $totMenit = array_sum($menitPerBulan);
             $peg->total_menit = $totMenit;
 
-            $hari  = intdiv($totMenit, 1440);
-            $sisa  = $totMenit % 1440;
-            $jam   = str_pad(intdiv($sisa, 60), 2, '0', STR_PAD_LEFT);
-            $menit = str_pad($sisa % 60, 2, '0', STR_PAD_LEFT);
-            $peg->total_fmt = "{$hari}h {$jam}j {$menit}m";
+            $hari  = floor($totMenit / (60 * 24));
+            $remainingMinutes = $totMenit % (60 * 24);
+            $jam   = floor($remainingMinutes / 60);
+            $menit = $remainingMinutes % 60;
+            $peg->total_fmt = sprintf('%d hari %02d jam %02d menit', $hari, $jam, $menit);
         }
 
         /* ---------- SORT setelah total_menit tersedia ---------- */
         $pegawaiList = match ($sort) {
             'total_desc' => $pegawaiList->sortByDesc('total_menit')->values(),
             'total_asc'  => $pegawaiList->sortBy('total_menit')->values(),
-            'nama_desc'  => $pegawaiList->sortByDesc('nama', SORT_NATURAL|SORT_FLAG_CASE)->values(),
-            'nama_asc', ''=> $pegawaiList->sortBy('nama', SORT_NATURAL|SORT_FLAG_CASE)->values(),
+            'nama_desc'  => $pegawaiList->sortByDesc('nama', SORT_NATURAL | SORT_FLAG_CASE)->values(),
+            'nama_asc', '' => $pegawaiList->sortBy('nama', SORT_NATURAL | SORT_FLAG_CASE)->values(),
             default      => $pegawaiList->values(),
         };
 

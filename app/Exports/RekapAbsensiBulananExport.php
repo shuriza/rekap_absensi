@@ -9,16 +9,16 @@ use Carbon\CarbonPeriod;
 use Illuminate\Contracts\View\View;
 use Maatwebsite\Excel\Concerns\FromView;
 use Maatwebsite\Excel\Concerns\WithEvents;
-use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
+use Maatwebsite\Excel\Events\AfterSheet;
 
 class RekapAbsensiBulananExport implements FromView, WithEvents
 {
-    private int $defaultMinutes = 450;
+    private int $defaultMinutes = 450; // Default menit untuk hari tanpa data lengkap
 
     public function __construct(private int $bulan, private int $tahun) {}
 
@@ -73,16 +73,17 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
 
                 if ($weekday === 6 || $weekday === 7) {
                     $harian[$d] = ['type' => 'libur', 'label' => $weekday === 6 ? 'Sabtu' : 'Minggu'];
-                    continue;
+                    continue; // Tidak menambah total untuk hari libur
                 }
 
                 if ($h = $holidayMap[$tglStr] ?? null) {
                     $harian[$d] = ['type' => 'libur', 'label' => $h->keterangan];
-                    continue;
+                    continue; // Tidak menambah total untuk hari libur
                 }
 
                 if (isset($mapIzin[$tglStr])) {
                     $harian[$d] = ['type' => 'izin', 'label' => $mapIzin[$tglStr]];
+                    $totalMnt += 0; // Izin tidak menambah total, sesuaikan jika perlu
                     continue;
                 }
 
@@ -102,12 +103,15 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
                         'label' => ($in?->format('H:i') ?? '--:--').' - '.($out?->format('H:i') ?? '--:--'),
                     ];
                 } else {
+                    // Hari tanpa data absensi, tambahkan default jika diinginkan
                     $harian[$d] = ['type' => 'kosong', 'label' => '-'];
+                    // Tambahkan defaultMinutes untuk hari tanpa absensi (opsional)
+                    $totalMnt += $this->defaultMinutes; // Aktifkan baris ini jika ingin menghitung hari kosong
                 }
             }
 
             $peg->absensi_harian = $harian;
-            $peg->total_menit = $totalMnt;
+            $peg->total_menit = $totalMnt; // Total akumulasi per karyawan untuk seluruh bulan
         }
 
         return view('exports.rekap_bulanan_excel', [
@@ -127,28 +131,21 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
                 $sheet->getPageSetup()
                     ->setOrientation(PageSetup::ORIENTATION_LANDSCAPE)
                     ->setPaperSize(PageSetup::PAPERSIZE_A4)
-                    ->setFitToWidth(4)  // ❗ bagi horizontal jadi 4 halaman
-                    ->setFitToHeight(1) // ❗ tetap 1 halaman vertikal
-
-                    // ❗ kolom tetap diulang: No & Nama
+                    ->setFitToWidth(4)
+                    ->setFitToHeight(1)
                     ->setColumnsToRepeatAtLeftByStartAndEnd('A', 'B');
 
-                // ❗ Freeze agar saat scroll juga tetap
                 $sheet->freezePane('C2');
 
-                // ❗ Pengaturan margin cetak yang baik
                 $sheet->getPageMargins()->setTop(0.4)->setBottom(0.4)->setLeft(0.2)->setRight(0.2);
 
-                // ❗ Supaya header (baris 1) muncul di tiap halaman cetak
                 $sheet->getPageSetup()->setRowsToRepeatAtTopByStartAndEnd(1, 1);
 
-                // ✅ OPTIONAL: Print Area — batasi sesuai tabel
                 $lastColIndex = 2 + count($this->tanggalList) + 1;
                 $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($lastColIndex);
                 $lastRow = $sheet->getHighestRow();
                 $sheet->getPageSetup()->setPrintArea("A1:{$lastCol}{$lastRow}");
 
-                // ❗ Gaya umum
                 $highestCol = $sheet->getHighestColumn();
                 $highestRow = $sheet->getHighestRow();
                 $sheet->getStyle("A1:{$highestCol}{$highestRow}")
@@ -170,7 +167,6 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
                     ->getAllBorders()
                     ->setBorderStyle(Border::BORDER_THIN);
 
-                // Pewarnaan sel berdasarkan tipe
                 $firstDateColIndex = 3;
                 $startRowIndex = 2;
 
@@ -198,7 +194,6 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
                     }
                 }
 
-                // ❗ Lebar kolom
                 $columnWidths = [
                     'A' => 5,
                     'B' => 18,
@@ -218,5 +213,4 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
             },
         ];
     }
-
 }
