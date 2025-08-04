@@ -55,7 +55,8 @@ class RekapController extends Controller
 
         /** @var \Illuminate\Support\Collection $pegawaiList */
       $pegawaiList = $pegawaiQuery->with('nonaktif_terbaru')->get()
-         ->filter(fn ($k) => !$k->sedang_nonaktif);
+        ->filter(fn ($k) => !$k->nonaktifPadaBulan($tahun, $bulan));
+
 
 
 
@@ -285,8 +286,8 @@ $peg->total_fmt   = $this->fmtHariJamMenit($totalMenit);
             $pegawaiQuery->where('nama', 'like', "%{$search}%");
         }
 
-        $pegawaiList = $pegawaiQuery->with('nonaktif_terbaru')->get()
-            ->filter(fn($k) => !$k->sedang_nonaktif);
+        $pegawaiList = $pegawaiQuery->get(); // tanpa paginasi
+
  // tanpa paginasi
         
 

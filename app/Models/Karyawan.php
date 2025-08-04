@@ -61,4 +61,18 @@ class Karyawan extends Model
     {
         return $this->hasMany(IzinPresensi::class, 'karyawan_id');
     }
+
+    public function nonaktifPadaBulan(int $tahun, int $bulan): bool
+    {
+        if (!$this->nonaktif_terbaru) return false;
+
+        $awal = Carbon::parse($this->nonaktif_terbaru->tanggal_awal);
+        $akhir = Carbon::parse($this->nonaktif_terbaru->tanggal_akhir);
+
+        $startBulan = Carbon::create($tahun, $bulan, 1);
+        $endBulan = $startBulan->copy()->endOfMonth();
+
+        return $awal <= $endBulan && $akhir >= $startBulan;
+    }
+
 }
