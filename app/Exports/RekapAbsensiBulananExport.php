@@ -53,8 +53,8 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
                     ->orWhereYear('tanggal_akhir', $this->tahun)
                     ->whereMonth('tanggal_akhir', $this->bulan);
             }),
-            'nonaktif_terbaru' // ⬅️ Tambahkan eager load relasi ini
-        ])->get()->filter(fn($k) => !$k->sedang_nonaktif);
+            'nonaktif_terbaru'
+        ])->get()->filter(fn($k) => !$k->nonaktifPadaBulan($this->tahun, $this->bulan));
 
 
         foreach ($this->pegawaiList as $peg) {
