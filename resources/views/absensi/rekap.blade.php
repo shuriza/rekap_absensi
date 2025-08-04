@@ -191,9 +191,11 @@
           dateFormat: 'Y-m-d'
         });
 
+        /* base URL ke route lampiran */
+        const lampiranBase = "{{ url('/izin-presensi') }}";
+
         function openIzin(td) {
           const form = document.getElementById('form-izin');
-          const baseStorageUrl = "{{ asset('storage') }}";
 
           /* default: mode baru */
           form.action = "{{ route('izin_presensi.store') }}";
@@ -206,18 +208,26 @@
           fpAwal.setDate(td.dataset.awal ?? td.dataset.date, true);
           fpAkhir.setDate(td.dataset.akhir ?? td.dataset.date, true);
 
-          document.getElementById('tipe-ijin').value = td.dataset.tipe || '';
-          document.getElementById('jenis-ijin').value = td.dataset.jenis || '';
+          document.getElementById('tipe-ijin').value    = td.dataset.tipe  || '';
+          document.getElementById('jenis-ijin').value   = td.dataset.jenis || '';
           document.getElementById('keterangan-izin').value = td.dataset.ket || '';
-          document.getElementById('preview-lampiran').innerHTML = td.dataset.file
-            ? `<a href="${baseStorageUrl}/${td.dataset.file}" target="_blank" class="underline">Lampiran sebelumnya</a>`
-            : '';
+
+          /* ======================== perubahan utama ======================== */
+          document.getElementById('preview-lampiran').innerHTML =
+            td.dataset.id && td.dataset.file
+              ? `<a href="${lampiranBase}/${td.dataset.id}/lampiran"
+                    target="_blank"
+                    class="underline">
+                  Lampiran sebelumnya
+                </a>`
+              : '';
+          /* ================================================================= */
 
           /* mode edit */
           if (td.dataset.id) {
             const m = document.createElement('input');
-            m.type = 'hidden';
-            m.name = '_method';
+            m.type  = 'hidden';
+            m.name  = '_method';
             m.value = 'PUT';
             form.prepend(m);
             form.action = `/izin_presensi/${td.dataset.id}`;
@@ -234,7 +244,7 @@
         }
 
         /* ===========================================================
-          2) Modal Konfirmasi Hapus
+            2) Modal Konfirmasi Hapus
         =========================================================== */
         let pendingDeleteId = null;
 
@@ -251,8 +261,8 @@
           form.action = `/izin_presensi/${pendingDeleteId}`;
           form.querySelector('input[name="_method"]')?.remove();
           const d = document.createElement('input');
-          d.type = 'hidden';
-          d.name = '_method';
+          d.type  = 'hidden';
+          d.name  = '_method';
           d.value = 'DELETE';
           form.prepend(d);
 
@@ -269,6 +279,7 @@
           document.getElementById(id).classList.add('hidden');
           document.body.classList.remove('overflow-y-hidden');
         }
+
         document.addEventListener('keydown', e => {
           if (e.key === 'Escape') {
             document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
