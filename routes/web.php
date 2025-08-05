@@ -73,3 +73,4 @@ Route::delete('/rekap/holiday/{id}',   [RekapController::class, 'destroyHoliday'
 Route::get('/export/izin-bulanan', [ExportRekapController::class, 'exportIzinBulanan'])
      ->name('export.izin.bulanan');
       });
+Route::post('/update-ob-batch', [RekapController::class, 'updateObBatch'])->name('update-ob-batch');

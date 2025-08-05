@@ -22,6 +22,7 @@ class Karyawan extends Model
     protected $fillable = [
         'nama',
         'departemen',
+        'is_ob',
     ];
 
     /* -----------------------------------------------------------------
