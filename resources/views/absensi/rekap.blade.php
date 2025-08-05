@@ -208,6 +208,7 @@
           // Cek jika kolom adalah hari Sabtu/Minggu atau cuti/libur
           const tgl = td.dataset.date;
           const tipe = td.dataset.tipe || td.dataset.type || '';
+          const label = td.textContent?.trim() || '';
           // Cek cuti/libur dari tipe
           if (tipe === 'libur' || tipe === 'cuti') {
             showIzinAlert('Tidak bisa input izin pada hari libur/cuti.');
@@ -221,6 +222,16 @@
               showIzinAlert('Tidak bisa input izin pada hari Sabtu/Minggu.');
               return;
             }
+          }
+          // Cek kolom tanggal merah (fitur tandai tanggal)
+          if (td.classList.contains('bg-gray-300')) {
+            showIzinAlert('Tidak bisa input izin pada tanggal merah.');
+            return;
+          }
+          // Cek kolom yang ada isinya jam (misal: 07:30, 08:00, dst)
+          if (/\d{1,2}:\d{2}/.test(label)) {
+            showIzinAlert('Tidak bisa input izin pada kolom yang sudah ada jam hadir.');
+            return;
           }
 
           const form = document.getElementById('form-izin');
