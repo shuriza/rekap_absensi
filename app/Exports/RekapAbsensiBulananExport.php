@@ -19,8 +19,17 @@ use Maatwebsite\Excel\Events\AfterSheet;
 class RekapAbsensiBulananExport implements FromView, WithEvents
 {
     private int $defaultMinutes = 450; // Default menit untuk hari tanpa data lengkap
+    private string $namaBulan; // Tambahkan properti untuk namaBulan
 
-    public function __construct(private int $bulan, private int $tahun) {}
+    public function __construct(private int $bulan, private int $tahun)
+    {
+        // Hitung namaBulan di constructor
+        $this->namaBulan = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+        ][$this->bulan] ?? 'Tidak Diketahui';
+    }
 
     private array $tanggalList = [];
     private $pegawaiList;
@@ -56,7 +65,6 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
             'nonaktif_terbaru'
         ])->get()->filter(fn($k) => !$k->nonaktifPadaBulan($this->tahun, $this->bulan));
 
-
         foreach ($this->pegawaiList as $peg) {
             $mapIzin = [];
             foreach ($peg->izins as $iz) {
@@ -91,24 +99,44 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
 
                 $row = $mapPres[$tglStr] ?? null;
                 if ($row) {
-                    $in  = $this->toCarbon($tglStr, $row->jam_masuk);
+                    $in = $this->toCarbon($tglStr, $row->jam_masuk);
                     $out = $this->toCarbon($tglStr, $row->jam_pulang);
+                    $keterangan = strtolower(trim($row->keterangan ?? ''));
+
+                    // Logika untuk bukan OB
+                    if (!$peg->is_ob) {
+                        $type = match ($keterangan) {
+                            'diluar waktu absen' => 'kosong',
+                            'terlambat' => 'terlambat',
+                            'tepat waktu' => 'hadir',
+                            default => null,
+                        };
+
+                        if ($type === null) {
+                            $type = $in && $out ? ($in->format('H:i') > '07:30' ? 'terlambat' : 'hadir') : 'kosong';
+                        }
+                    }
+                    // Logika untuk OB
+                    else {
+                        if (!$in && !$out) {
+                            $type = 'kosong';
+                        } else {
+                            $hasSingleAbsen = ($in && !$out) || (!$in && $out);
+                            $type = $hasSingleAbsen ? 'terlambat' : 'hadir'; // Satu absen = terlambat, dua absen = hadir
+                        }
+                    }
+
+                    $label = ($in?->format('H:i') ?? '--:--') . ' - ' . ($out?->format('H:i') ?? '--:--');
+                    $harian[$d] = ['type' => $type, 'label' => $label];
 
                     if ($in && $out && $out->gt($in)) {
                         $totalMnt += $in->diffInMinutes($out);
-                    } elseif (($in && !$out) || (!$in && $out)) {
+                    } elseif ($in || $out) {
                         $totalMnt += $this->defaultMinutes;
                     }
-
-                    $harian[$d] = [
-                        'type' => $in && $out ? ($in->format('H:i') > '07:30' ? 'terlambat' : 'hadir') : 'kosong',
-                        'label' => ($in?->format('H:i') ?? '--:--').' - '.($out?->format('H:i') ?? '--:--'),
-                    ];
                 } else {
-                    // Hari tanpa data absensi, tambahkan default jika diinginkan
                     $harian[$d] = ['type' => 'kosong', 'label' => '-'];
-                    // Tambahkan defaultMinutes untuk hari tanpa absensi (opsional)
-                    $totalMnt += $this->defaultMinutes; // Aktifkan baris ini jika ingin menghitung hari kosong
+                    $totalMnt += $this->defaultMinutes; // Tambahkan default untuk hari tanpa absensi
                 }
             }
 
@@ -121,6 +149,7 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
             'tanggalList' => $this->tanggalList,
             'bulan'       => $this->bulan,
             'tahun'       => $this->tahun,
+            'namaBulan'   => $this->namaBulan, // Gunakan properti kelas
         ]);
     }
 
@@ -130,6 +159,21 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
+                // Tambahkan header bulan dan tahun
+                $sheet->setCellValue('A1', "Rekap Absensi Bulan {$this->namaBulan} {$this->tahun}");
+                $sheet->mergeCells('A1:' . \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(2 + count($this->tanggalList) + 1) . '1');
+                $sheet->getStyle('A1')->applyFromArray([
+                    'font' => ['bold' => true, 'size' => 14],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical' => Alignment::VERTICAL_CENTER,
+                    ],
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'D9D9D9'],
+                    ],
+                ]);
+
                 $sheet->getPageSetup()
                     ->setOrientation(PageSetup::ORIENTATION_LANDSCAPE)
                     ->setPaperSize(PageSetup::PAPERSIZE_A4)
@@ -137,11 +181,12 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
                     ->setFitToHeight(1)
                     ->setColumnsToRepeatAtLeftByStartAndEnd('A', 'B');
 
-                $sheet->freezePane('C2');
+                $sheet->freezePane('C3'); // Geser freeze pane ke baris 3 karena ada header
 
                 $sheet->getPageMargins()->setTop(0.4)->setBottom(0.4)->setLeft(0.2)->setRight(0.2);
 
-                $sheet->getPageSetup()->setRowsToRepeatAtTopByStartAndEnd(1, 1);
+                // Ubah pengulangan untuk mencakup baris 1 (header bulan) dan baris 2 (header tabel)
+                $sheet->getPageSetup()->setRowsToRepeatAtTopByStartAndEnd(1, 2);
 
                 $lastColIndex = 2 + count($this->tanggalList) + 1;
                 $lastCol = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($lastColIndex);
@@ -150,13 +195,13 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
 
                 $highestCol = $sheet->getHighestColumn();
                 $highestRow = $sheet->getHighestRow();
-                $sheet->getStyle("A1:{$highestCol}{$highestRow}")
+                $sheet->getStyle("A2:{$highestCol}{$highestRow}")
                     ->getAlignment()
                     ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                     ->setVertical(Alignment::VERTICAL_CENTER)
                     ->setWrapText(true);
 
-                $sheet->getStyle("A1:{$highestCol}1")->applyFromArray([
+                $sheet->getStyle("A2:{$highestCol}2")->applyFromArray([
                     'font' => ['bold' => true],
                     'fill' => [
                         'fillType' => Fill::FILL_SOLID,
@@ -164,13 +209,13 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
                     ],
                 ]);
 
-                $sheet->getStyle("A1:{$highestCol}{$highestRow}")
+                $sheet->getStyle("A2:{$highestCol}{$highestRow}")
                     ->getBorders()
                     ->getAllBorders()
                     ->setBorderStyle(Border::BORDER_THIN);
 
                 $firstDateColIndex = 3;
-                $startRowIndex = 2;
+                $startRowIndex = 3; // Mulai dari baris 3 karena ada header bulan
 
                 foreach ($this->pegawaiList as $rowIdx => $peg) {
                     $rowNum = $startRowIndex + $rowIdx;
@@ -181,11 +226,11 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
                         $cell = "{$col}{$rowNum}";
 
                         $rgb = match ($info['type']) {
-                            'kosong'    => 'FF5252',
+                            'kosong' => 'FF5252',
                             'terlambat' => 'FFF59D',
-                            'izin'      => '90CAF9',
-                            'libur'     => 'E0E0E0',
-                            default     => null,
+                            'izin' => '90CAF9',
+                            'libur' => 'E0E0E0',
+                            default => null,
                         };
 
                         if ($rgb) {

@@ -1,6 +1,9 @@
 @php
     use Illuminate\Support\Str;
 @endphp
+<div class="mb-4 text-center bg-gray-800 text-white py-2 rounded-t">
+    <h2 class="text-xl font-bold">Rekap Absensi Bulan {{ $namaBulan }} {{ $tahun }}</h2>
+</div>
 
 <table class="min-w-full border-collapse text-sm text-center">
     {{-- ================= T H E A D ================= --}}
