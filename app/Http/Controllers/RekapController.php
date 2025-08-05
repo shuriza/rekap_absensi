@@ -47,7 +47,7 @@ class RekapController extends Controller
                 $sub->whereYear('tanggal_awal', $tahun)->whereMonth('tanggal_awal', $bulan)
                      ->orWhereYear('tanggal_akhir',$tahun)->whereMonth('tanggal_akhir',$bulan);
             }),
-        ]);
+        ])->select('id', 'nama', 'departemen', 'is_ob');
 
         if ($r->filled('search')) {
             $pegawaiQuery->where('nama','like','%'.$r->search.'%');
@@ -203,8 +203,22 @@ $peg->total_fmt   = $this->fmtHariJamMenit($totalMenit);
                 // kalau tidak masuk kondisi apa-pun, isi default
                     $daily[$d] ??= ['type' => 'kosong', 'label' => '-'];
 
+                if ($peg->is_ob && $weekday >= 1 && $weekday <= 5) {
+                    $row = $mapPres[$tglStr] ?? null;
+                    $in = $row ? $toCarbon($tglStr, $row->jam_masuk) : null;
+                    $out = $row ? $toCarbon($tglStr, $row->jam_pulang) : null;
 
-            }
+                    if (!$in && !$out && !isset($holidayMap[$tglStr]) && !isset($mapIzin[$tglStr])) {
+                        $daily[$d] = ['type' => 'kosong', 'label' => '-'];
+                    } else {
+                        $in = $row->jam_masuk ? substr($row->jam_masuk, -8, 5) : '--:--';
+                        $out = $row->jam_pulang ? substr($row->jam_pulang, -8, 5) : '--:--';
+                        $daily[$d] = ['type' => 'hadir', 'label' => "$in – $out"];
+                    }
+                }
+
+        }
+        
 
             /* simpan ke model */
             $peg->absensi_harian = $daily;
@@ -245,7 +259,13 @@ $peg->total_fmt   = $this->fmtHariJamMenit($totalMenit);
             'listJenis','tipeIjin'
         ));
     }
-
+    public function updateObBatch(Request $request)
+    {
+        $obIds = $request->input('ob_ids', []);
+        Karyawan::whereIn('id', $obIds)->update(['is_ob' => true]);
+        Karyawan::whereNotIn('id', $obIds)->update(['is_ob' => false]); // Opsional: reset yang tidak dipilih
+        return redirect()->back()->with('ob_success', 'Status OB diperbarui.');
+    }
 
     private function fmtHariJamMenit(int $menit): string
     {

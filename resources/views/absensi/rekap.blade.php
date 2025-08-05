@@ -371,6 +371,19 @@
           dt.order([]).draw();
         }
       </script>
+
+      <script>
+        function openObModal() {
+          document.getElementById('modalOb').classList.remove('hidden');
+          document.body.classList.add('overflow-y-hidden');
+        }
+
+        // Pastikan closeModal sudah ada di script Anda
+        function closeModal(id) {
+          document.getElementById(id).classList.add('hidden');
+          document.body.classList.remove('overflow-y-hidden');
+        }
+      </script>
     @endpush
 
     {{-- =============================================
@@ -382,7 +395,49 @@
         📤 Export Excel Bulanan ({{ \Carbon\Carbon::create()->month($bulan)->translatedFormat('F') }}
         {{ $tahun }})
       </a>
+      <button onclick="openObModal()" class=" bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm">
+    📋 Pilih Semua OB
+      </button>
     </div>
+
+    
+
+    {{-- =============================================
+        MODAL Pilih OB
+    ============================================= --}}
+    <div id="modalOb" class="fixed inset-0 z-50 hidden bg-gray-900 bg-opacity-60 modal">
+      <div class="relative top-40 mx-auto shadow-xl rounded-md bg-white max-w-md p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold">Pilih Karyawan sebagai OB</h3>
+          <button onclick="closeModal('modalOb')" type="button"
+            class="text-gray-400 hover:bg-gray-200 rounded-lg p-1.5">&times;</button>
+        </div>
+        <form id="form-ob" action="{{ route('update-ob-batch') }}" method="POST" class="space-y-4">
+          @csrf
+          <div id="ob-list" class="max-h-60 overflow-y-auto">
+            @foreach ($pegawaiList as $pegawai)
+              <div class="flex items-center space-x-2">
+                <input type="checkbox" name="ob_ids[]" value="{{ $pegawai->id }}" {{ $pegawai->is_ob ? 'checked' : '' }}>
+                <label>{{ $pegawai->nama }} ({{ $pegawai->departemen }})</label>
+              </div>
+            @endforeach
+          </div>
+          <div class="flex justify-end space-x-2">
+            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded">
+              Simpan
+            </button>
+            <button type="button" onclick="closeModal('modalOb')" class="bg-gray-300 hover:bg-gray-400 px-3 py-2 rounded">
+              Batal
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    @if (session('ob_success'))
+      <div class="mb-4 px-4 py-2 rounded bg-green-100 text-green-800 text-sm">
+        {{ session('ob_success') }}
+      </div>
+    @endif
 
     {{-- =========================================================
         TABEL REKAP
