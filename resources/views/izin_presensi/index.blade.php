@@ -178,9 +178,9 @@
                             <td class="px-4 py-3 text-center text-gray-700 whitespace-pre-line">{{ $izin->keterangan ?: '—' }}</td>
                             <td class="px-4 py-3 text-center space-x-1">
                                 <a href="{{ route('izin_presensi.show', $izin) }}" class="inline-block px-2 py-1 bg-emerald-100 text-emerald-700 rounded hover:bg-emerald-200 text-xs transition">Detail</a>
-                                <form action="{{ route('izin_presensi.destroy', $izin) }}" method="POST" class="inline" onsubmit="return confirm('Yakin hapus?');">
+                                <form action="{{ route('izin_presensi.destroy', $izin) }}" method="POST" class="inline hapus-form">
                                     @csrf @method('DELETE')
-                                    <button type="submit" class="px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-xs transition">Hapus</button>
+                                    <button type="button" class="px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-xs transition btn-hapus-izin" data-id="{{ $izin->id }}">Hapus</button>
                                 </form>
                             </td>
                         </tr>
@@ -189,5 +189,74 @@
             </table>
         </div>
     </div>
+
+{{-- ========= MODAL KONFIRMASI HAPUS ========= --}}
+<div id="modalConfirm" class="fixed inset-0 z-50 hidden bg-gray-900 bg-opacity-60 modal">
+  <div class="relative top-40 mx-auto shadow-xl rounded-md bg-white max-w-md">
+    <div class="flex justify-end p-2">
+      <button onclick="closeModal('modalConfirm')" type="button"
+        class="text-gray-400 hover:bg-gray-200 rounded-lg p-1.5">
+        &times;
+      </button>
+    </div>
+    <div class="p-6 pt-0 text-center">
+      <svg class="w-20 h-20 text-red-600 mx-auto" fill="none" stroke="currentColor"
+        viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <h3 class="text-xl font-normal text-gray-500 mt-5 mb-6">
+        Yakin ingin menghapus izin ini?
+      </h3>
+      <button id="btn-confirm-hapus" class="text-white bg-red-600 hover:bg-red-800 rounded-lg px-3 py-2.5 mr-2">
+        Ya, hapus
+      </button>
+      <button onclick="closeModal('modalConfirm')"
+        class="text-gray-900 bg-white hover:bg-gray-100 border border-gray-200 rounded-lg px-3 py-2.5">
+        Batal
+      </button>
+    </div>
+  </div>
+</div>
+{{-- ========= END MODAL KONFIRMASI ========= --}}
+
+@push('scripts')
+<script>
+    let pendingDeleteForm = null;
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ganti tombol hapus agar buka modal
+        document.querySelectorAll('.btn-hapus-izin').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                pendingDeleteForm = btn.closest('form');
+                openModal('modalConfirm');
+            });
+        });
+        // Konfirmasi hapus
+        document.getElementById('btn-confirm-hapus').addEventListener('click', function() {
+            if (pendingDeleteForm) {
+                pendingDeleteForm.submit();
+                pendingDeleteForm = null;
+                closeModal('modalConfirm');
+            }
+        });
+    });
+    function openModal(id) {
+        document.getElementById(id).classList.remove('hidden');
+        document.body.classList.add('overflow-y-hidden');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.add('hidden');
+        document.body.classList.remove('overflow-y-hidden');
+    }
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
+            document.body.classList.remove('overflow-y-hidden');
+        }
+    });
+</script>
+@endpush
+
 </div>
 @endsection
