@@ -17,18 +17,19 @@
 
 {{-- =================  tipe & jenis  ================= --}}
 <div class="grid sm:grid-cols-2 gap-4 mt-4">
-  <div>
-    <label class="block text-sm">Tipe Izin</label>
-    <select id="tipe-ijin" name="tipe_ijin" required class="w-full border rounded">
-      <option value="">– pilih –</option>
-      @foreach($tipeIjin as $t)<option>{{ $t }}</option>@endforeach
-    </select>
-  </div>
+  
   <div>
     <label class="block text-sm">Jenis Izin</label>
     <select id="jenis-ijin" name="jenis_ijin" required class="w-full border rounded">
       <option value="">– pilih –</option>
       @foreach($listJenis as $j)<option>{{ $j }}</option>@endforeach
+    </select>
+  </div>
+  <div>
+    <label class="block text-sm">Tipe Izin</label>
+    <select id="tipe-ijin" name="tipe_ijin" required class="w-full border rounded">
+      <option value="">– pilih –</option>
+      @foreach($tipeIjin as $t)<option>{{ $t }}</option>@endforeach
     </select>
   </div>
 </div>

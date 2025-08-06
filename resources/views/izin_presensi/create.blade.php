@@ -28,16 +28,7 @@
 
         <!-- Tipe & Jenis Izin -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block mb-2 font-medium text-gray-700">Tipe Izin</label>
-                <select name="tipe_ijin" required class="w-full rounded-lg border-gray-300">
-                    <option value="">– Pilih tipe –</option>
-                    @foreach($tipeIjin as $tipe)
-                        <option value="{{ $tipe }}" {{ old('tipe_ijin') == $tipe ? 'selected' : '' }}>{{ $tipe }}</option>
-                    @endforeach
-                </select>
-                @error('tipe_ijin') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
-            </div>
+            
             <div>
                 <label class="block mb-2 font-medium text-gray-700">Jenis Izin</label>
                 <select name="jenis_ijin" required class="w-full rounded-lg border-gray-300">
@@ -47,6 +38,16 @@
                     @endforeach
                 </select>
                 @error('jenis_ijin') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
+            </div>
+            <div>
+                <label class="block mb-2 font-medium text-gray-700">Tipe Izin</label>
+                <select name="tipe_ijin" required class="w-full rounded-lg border-gray-300">
+                    <option value="">– Pilih tipe –</option>
+                    @foreach($tipeIjin as $tipe)
+                        <option value="{{ $tipe }}" {{ old('tipe_ijin') == $tipe ? 'selected' : '' }}>{{ $tipe }}</option>
+                    @endforeach
+                </select>
+                @error('tipe_ijin') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
             </div>
         </div>
 

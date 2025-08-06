@@ -240,16 +240,25 @@ $peg->total_fmt   = $this->fmtHariJamMenit($totalMenit);
 
 /* 7️⃣  kirim ke view -------------------------------------------------- */
 
-        $listJenis = [
-            'DL (DINAS LUAR) [TIDAK ADA PENGURANGAN]',
-            'CB (CUTI BERSALIN) [TIDAK ADA PENGURANGAN]',
-            'CM (CUTI MELAHIRKAN) [TIDAK ADA PENGURANGAN]',
-            'CT (CUTI TAHUNAN)',
-            'Sakit (Surat Dokter)',
-            'Sakit (Tanpa Surat Dokter)',
-            'Keperluan Keluarga',
-            'Keperluan Pribadi',
+        $rawJenis = [
+            'DL (DINAS LUAR) | TIDAK ADA PENGURANGAN Dibuktikan dengan Surat Perintah Tugas ]',
+            'PDK (PENDIDIKAN) TUGAS BELAJAR [ TIDAK DAPAT TPP Dibuklikan dengan 5K Tugas Belajar ]',
+            'SAKIT (1 HARI) [ TIDAK ADA PENGURANGAN Dibuktikan dengan Surat Keterangan Dokter ]',
+            'CT (CUTI TAHUNAN) [ 4,5% / hari ]',
+            'CB (CUTI BESAR) [ 4,5% / hari ]',
+            'CS (CUTI SAKTT) LEBIH DARI 1 HARI [ TIDAK ADA PENGURANGAN ]',
+            'CM (CUTI MELAHIRKAN) [ TIDAK ADA PENGURANGAN ]',
+            'CP (CUTI KARENA ALASAN PENTING) [ 4,5% / hari ]',
+            'CLTN (CUTI DI LUAR TANGGUNGAN NEGARA) [ 4,5% / hari ]',
+            'FM (FORCE MAJEURE) [ TIDAK ADA PENGURANGAN ]',
+            'IK (IJIN KEDINASAN) [ TIDAK ADA PENGURANGAN ]',
+            'DK - DENGAN KETERANGAN (DARURAT) ',
+            'DK - DENGAN KETERANGAN (ALASAN LAIN) ',
         ];
+        $listJenis = array_map(function($str) {
+            $max = 60;
+            return mb_strlen($str) > $max ? mb_substr($str, 0, $max-3).'...' : $str;
+        }, $rawJenis);
         $tipeIjin  = ['Ijin Penuh','Ijin Setengah','Terlambat','Pulang Cepat'];
         // ⇩ kirim ke view
         return view('absensi.rekap', compact(
