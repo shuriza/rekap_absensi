@@ -26,23 +26,22 @@ class KaryawanController extends Controller
     {
         $karyawan = Karyawan::findOrFail($id);
 
-        $request->validate([
-            'tanggal_awal'  => 'required|date',
-            'tanggal_akhir' => 'required|date|after_or_equal:tanggal_awal',
-        ]);
+        // Cegah duplikasi jika sudah nonaktif
+        $existing = NonaktifKaryawan::where('karyawan_id', $id)
+            ->whereNull('tanggal_akhir')
+            ->first();
 
-        NonaktifKaryawan::create([
-            'karyawan_id'   => $karyawan->id,
-            'tanggal_awal'  => $request->input('tanggal_awal'),
-            'tanggal_akhir' => $request->input('tanggal_akhir'),
-        ]);
+        if (!$existing) {
+            NonaktifKaryawan::create([
+                'karyawan_id'  => $id,
+                'tanggal_awal' => now(),
+                'tanggal_akhir'=> null,
+            ]);
+        }
 
-        // Response untuk AJAX
         if ($request->wantsJson() || $request->ajax()) {
-            $nonaktif = $karyawan->fresh()->nonaktif_terbaru;
             return response()->json([
-                'tanggal_awal'  => Carbon::parse($nonaktif->tanggal_awal)->translatedFormat('d M Y'),
-                'tanggal_akhir' => Carbon::parse($nonaktif->tanggal_akhir)->translatedFormat('d M Y'),
+                'tanggal_awal' => now()->translatedFormat('d M Y H:i'),
                 'message' => 'Karyawan dinonaktifkan.',
             ]);
         }
@@ -53,10 +52,17 @@ class KaryawanController extends Controller
     public function aktifkan(Request $request, $id)
     {
         $karyawan = Karyawan::findOrFail($id);
-        NonaktifKaryawan::where('karyawan_id', $karyawan->id)->delete();
+
+        // Update record nonaktif terakhir
+        NonaktifKaryawan::where('karyawan_id', $id)
+            ->whereNull('tanggal_akhir')
+            ->update(['tanggal_akhir' => now()]);
 
         if ($request->wantsJson() || $request->ajax()) {
-            return response()->json(['message' => 'Karyawan diaktifkan kembali.']);
+            return response()->json([
+                'tanggal_akhir' => now()->translatedFormat('d M Y H:i'),
+                'message' => 'Karyawan diaktifkan kembali.'
+            ]);
         }
 
         return redirect()->route('absensi.karyawan')->with('success', 'Karyawan diaktifkan kembali.');
