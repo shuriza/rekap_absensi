@@ -31,6 +31,7 @@ class AbsensiController extends Controller
                 'jam_masuk_max_jumat'   => 'required|date_format:H:i',
                 'jam_pulang_min_jumat'  => 'required|date_format:H:i',
                 'jam_pulang_max_jumat'  => 'required|date_format:H:i',
+                'ramadhan_dates'        => 'nullable|string', // boleh kosong
             ]);
         }
 
@@ -38,28 +39,60 @@ class AbsensiController extends Controller
         $preview = [];
         $bulanTahunSet = [];
 
-        // 3. Baca filter jam dari request
+        // 3. Baca filter jam dari request (non-Ramadhan)
         $seninKamis = [
-            'masuk_min'  => $request->input('jam_masuk_min_senin',  '07:00'),
-            'masuk_max'  => $request->input('jam_masuk_max_senin',  '07:30'),
+            'masuk_min'  => $request->input('jam_masuk_min_senin', '07:00'),
+            'masuk_max'  => $request->input('jam_masuk_max_senin', '07:30'),
             'pulang_min' => $request->input('jam_pulang_min_senin', '15:30'),
             'pulang_max' => $request->input('jam_pulang_max_senin', '17:00'),
         ];
         $jumat = [
-            'masuk_min'  => $request->input('jam_masuk_min_jumat',  '07:00'),
-            'masuk_max'  => $request->input('jam_masuk_max_jumat',  '07:30'),
+            'masuk_min'  => $request->input('jam_masuk_min_jumat', '07:00'),
+            'masuk_max'  => $request->input('jam_masuk_max_jumat', '07:30'),
             'pulang_min' => $request->input('jam_pulang_min_jumat', '15:00'),
             'pulang_max' => $request->input('jam_pulang_max_jumat', '17:00'),
         ];
 
-        // 4. Jika ada file Excel, parse semuanya
+        // 4. Ambil rentang & konfigurasi Ramadhan jika ada
+        $ramadhanDates = $request->input('ramadhan_dates');
+        $ramadhanRange = null;
+        if ($ramadhanDates) {
+            // split dengan separator " - "
+            $parts = explode(' - ', $ramadhanDates, 2);
+            if (count($parts) !== 2) {
+                return back()->with('error',
+                    'Format rentang tanggal Ramadhan tidak valid. Gunakan "YYYY-MM-DD - YYYY-MM-DD".');
+            }
+            [$rawStart, $rawEnd] = array_map('trim', $parts);
+            $startDate = Carbon::parse($rawStart);
+            $endDate   = Carbon::parse($rawEnd);
+
+            $ramadhanRange = [
+                'start_date'   => $startDate,
+                'end_date'     => $endDate,
+                'senin_kamis' => [
+                    'masuk_min'  => $request->input('jam_masuk_min_ramadhan_senin', '08:00'),
+                    'masuk_max'  => $request->input('jam_masuk_max_ramadhan_senin', '08:30'),
+                    'pulang_min' => $request->input('jam_pulang_min_ramadhan_senin', '15:00'),
+                    'pulang_max' => $request->input('jam_pulang_max_ramadhan_senin', '16:00'),
+                ],
+                'jumat' => [
+                    'masuk_min'  => $request->input('jam_masuk_min_ramadhan_jumat', '08:00'),
+                    'masuk_max'  => $request->input('jam_masuk_max_ramadhan_jumat', '08:30'),
+                    'pulang_min' => $request->input('jam_pulang_min_ramadhan_jumat', '15:00'),
+                    'pulang_max' => $request->input('jam_pulang_max_ramadhan_jumat', '16:00'),
+                ],
+            ];
+        }
+
+        // 5. Jika ada file Excel, parse semuanya
         if ($request->hasFile('file_excel')) {
             foreach ($request->file('file_excel') as $file) {
                 $data = Excel::toArray([], $file->getRealPath());
-                $sheet = $data[2] ?? [];        // sheet ke-3
-                $barisTanggal = $sheet[3] ?? [];      // row ke-4 sebagai header tanggal
+                $sheet = $data[2] ?? [];           // sheet ke-3
+                $barisTanggal = $sheet[3] ?? [];   // row ke-4 sebagai header tanggal
 
-                // 4a. Parse rentang tanggal dari C3
+                // 5a. Parse rentang tanggal dari C3
                 $cellC3 = $sheet[2][2] ?? null;
                 if (! $cellC3) {
                     return back()->with('error', 'Cell C3 tidak ditemukan.');
@@ -67,20 +100,20 @@ class AbsensiController extends Controller
                 if (is_string($cellC3) && str_contains($cellC3, '~')) {
                     [$rawAwal, $rawAkhir] = array_map('trim', explode('~', $cellC3));
                     $startDate = Carbon::parse($rawAwal);
-                    $endDate = Carbon::parse($rawAkhir);
+                    $endDate   = Carbon::parse($rawAkhir);
                 } elseif (is_numeric($cellC3)) {
                     $dt = Date::excelToDateTimeObject($cellC3);
                     $startDate = Carbon::instance($dt);
-                    $endDate = Carbon::instance((clone $dt));
+                    $endDate   = Carbon::instance((clone $dt));
                 } else {
                     $startDate = Carbon::parse($cellC3);
-                    $endDate = Carbon::parse($cellC3);
+                    $endDate   = Carbon::parse($cellC3);
                 }
                 $tahun = $startDate->year;
                 $bulan = $startDate->month;
                 $bulanTahunSet[] = sprintf('%04d-%02d', $tahun, $bulan);
 
-                // 4b. Loop baris data (dua-dua: infoRow & dataRow)
+                // 5b. Loop baris data (infoRow & dataRow)
                 for ($i = 4; $i < count($sheet); $i += 2) {
                     $infoRow = $sheet[$i];
                     $dataRow = $sheet[$i + 1] ?? [];
@@ -89,13 +122,13 @@ class AbsensiController extends Controller
                     $departemen = $infoRow[20] ?? null;
                     if (! $nama || ! $departemen) continue;
 
-                    // 4c. Untuk setiap kolom tanggal 1–30
+                    // 5c. Untuk setiap tanggal 1–31
                     for ($col = 1; $col <= 31; $col++) {
                         $tanggalKe = $barisTanggal[$col] ?? null;
-                        $raw       = $dataRow[$col] ?? null;
+                        $raw       = $dataRow[$col]      ?? null;
                         if (! $tanggalKe || ! $raw) continue;
 
-                        // parse satu atau beberapa jam
+                        // parse timestamp/string ke daftar jam
                         $jamList = [];
                         if (is_numeric($raw)) {
                             try {
@@ -108,118 +141,116 @@ class AbsensiController extends Controller
                             preg_match_all('/\d{1,2}:\d{2}/', $raw, $m);
                             $jamList = $m[0] ?? [];
                         }
-
                         if (empty($jamList)) continue;
-                        
-                        // bangun tanggal lengkap
-                        $tanggal = Carbon::createFromDate($tahun, $bulan, (int)$tanggalKe)
-                                         ->format('Y-m-d');
-                        // jika di luar rentang C3, skip
-                        if (Carbon::parse($tanggal)->lt($startDate)
-                           || Carbon::parse($tanggal)->gt($endDate)) {
+
+                        // bangun tanggal penuh dan cek C3-range
+                        $tgl = Carbon::createFromDate($tahun, $bulan, (int)$tanggalKe)->format('Y-m-d');
+                        if (Carbon::parse($tgl)->lt($startDate)
+                         || Carbon::parse($tgl)->gt($endDate)) {
                             continue;
                         }
 
-                        // pilih range berdasar hari kerja / Jumat
-                        $dow = Carbon::parse($tanggal)->dayOfWeekIso;
-                        if ($dow >= 1 && $dow <= 4) {
-                            $range = $seninKamis;
-                        } elseif ($dow === 5) {
-                            $range = $jumat;
+                        // pilih konfigurasi jam berdasarkan:
+                        // - Ramadhan (dalam rentang + beda Jumat vs Senin–Kamis)
+                        // - atau non-Ramadhan (seninKamis/jumat biasa)
+                        $tanggalObj = Carbon::parse($tgl);
+                        if ($ramadhanRange
+                            && $tanggalObj->between(
+                                $ramadhanRange['start_date'],
+                                $ramadhanRange['end_date']
+                            )
+                        ) {
+                            // Ramadhan
+                            if ($tanggalObj->dayOfWeekIso === 5) {
+                                $range = $ramadhanRange['jumat'];
+                            } else {
+                                $range = $ramadhanRange['senin_kamis'];
+                            }
                         } else {
-                            continue; // weekend
+                            // non-Ramadhan
+                            $dow = $tanggalObj->dayOfWeekIso;
+                            if ($dow >= 1 && $dow <= 4) {
+                                $range = $seninKamis;
+                            } elseif ($dow === 5) {
+                                $range = $jumat;
+                            } else {
+                                continue; // weekend
+                            }
                         }
 
-                        // buat objek batas masuk/pulang
+                        // buat objek Carbon untuk batas waktu
                         $masukMin  = Carbon::createFromFormat('H:i', $range['masuk_min']);
                         $masukMax  = Carbon::createFromFormat('H:i', $range['masuk_max']);
                         $pulangMin = Carbon::createFromFormat('H:i', $range['pulang_min']);
                         $pulangMax = Carbon::createFromFormat('H:i', $range['pulang_max']);
-                        
-                        // 4d. Tentukan jam masuk dan jam pulang yang paling valid dari semua jam yang tersedia
-                        $jamMasukValid = null;
+
+                        // 5d. Tentukan jam masuk/pulang valid
+                        sort($jamList);
+                        $jamMasukValid  = null;
                         $jamPulangValid = null;
 
-                        // Urutkan jam dari yang paling awal
-                        sort($jamList);
-
-                        // Cari jam masuk (paling awal yang valid)
+                        // cari jam masuk valid
                         foreach ($jamList as $j) {
-                            $jamObj = Carbon::createFromFormat('H:i', $j);
-                            if ($jamObj->betweenIncluded($masukMin, $masukMax)) {
+                            $jObj = Carbon::createFromFormat('H:i', $j);
+                            if ($jObj->betweenIncluded($masukMin, $masukMax)) {
                                 $jamMasukValid = $j;
-                                break; // Ambil jam masuk pertama yang valid
+                                break;
                             }
                         }
-                        
-                        // Jika jam masuk tidak ditemukan, ambil jam pertama (paling awal) dari semua data
-                        if (!$jamMasukValid && !empty($jamList)) {
-                            // Dengan asumsi jam paling awal selalu jam masuk jika tidak ada yang valid
+                        if (!$jamMasukValid) {
                             $jamMasukValid = $jamList[0];
                         }
-                        
-                        // Cari jam pulang (paling akhir yang valid)
-                        // Periksa dari belakang array $jamList yang sudah diurutkan
-                        $reversedJamList = array_reverse($jamList);
-                        foreach ($reversedJamList as $j) {
-                            $jamObj = Carbon::createFromFormat('H:i', $j);
-                            // Pastikan jam pulang lebih besar dari jam masuk
-                            if ($jamMasukValid && $j > $jamMasukValid) {
-                                if ($jamObj->betweenIncluded($pulangMin, $pulangMax)) {
-                                    $jamPulangValid = $j;
-                                    break; // Ambil jam pulang pertama (paling akhir) yang valid
-                                }
+
+                        // cari jam pulang valid
+                        foreach (array_reverse($jamList) as $j) {
+                            $jObj = Carbon::createFromFormat('H:i', $j);
+                            if ($jamMasukValid && $j > $jamMasukValid
+                             && $jObj->betweenIncluded($pulangMin, $pulangMax)
+                            ) {
+                                $jamPulangValid = $j;
+                                break;
                             }
                         }
-                        // Jika jam pulang tidak ditemukan, ambil jam terakhir dari semua data
-                        if (!$jamPulangValid && !empty($jamList) && count($jamList) > 1 && $jamList[count($jamList) - 1] > $jamMasukValid) {
-                            // Dengan asumsi jam paling akhir selalu jam pulang jika tidak ada yang valid
-                            $jamPulangValid = $jamList[count($jamList) - 1];
+                        if (!$jamPulangValid && count($jamList) > 1
+                            && end($jamList) > $jamMasukValid
+                        ) {
+                            $jamPulangValid = end($jamList);
                         }
 
-                        // Tambahkan entri tunggal per hari dengan jam yang sudah divalidasi
-                        // Hitung satu kolom keterangan dengan override
-                        $keterangan = null;
-                        
-                        // Jika jam masuk dan jam pulang tidak ada, tidak perlu diproses
                         if (! $jamMasukValid && ! $jamPulangValid) {
                             continue;
                         }
 
+                        // keterangan terlambat/tepat waktu/diluar
                         $jm = $jamMasukValid ? Carbon::createFromFormat('H:i', $jamMasukValid) : null;
                         $jp = $jamPulangValid ? Carbon::createFromFormat('H:i', $jamPulangValid) : null;
+                        $keterangan = null;
 
-                        // Kasus 2: Hanya ada jam masuk, tidak ada jam pulang
                         if ($jm && !$jp) {
                             $keterangan = 'terlambat';
-                        } 
-                        // Kasus 3: Hanya ada jam pulang, tidak ada jam masuk
-                        else if (!$jm && $jp) {
+                        } elseif (!$jm && $jp) {
                             $keterangan = 'terlambat';
-                        }           
-                        // Kasus 4: Ada jam masuk dan jam pulang
-                        else if ($jm && $jp) {
-                            $sMasuk = null;
-                            if ($jm->lt($masukMin))         $sMasuk = 'diluar waktu absen';
-                            elseif ($jm->gt($masukMax))     $sMasuk = 'terlambat';
-                            else                            $sMasuk = 'tepat waktu';
-                            
-                            $sPulang = null;
-                            if ($jp->gt($pulangMax))        $sPulang = 'diluar waktu absen';
-                            elseif ($jp->lt($pulangMin))    $sPulang = 'terlambat';
-                            else                            $sPulang = 'tepat waktu';
-
+                        } elseif ($jm && $jp) {
+                            $sMasuk  = $jm->lt($masukMin)
+                                        ? 'diluar waktu absen'
+                                        : ($jm->gt($masukMax) ? 'terlambat' : 'tepat waktu');
+                            $sPulang = $jp->gt($pulangMax)
+                                        ? 'diluar waktu absen'
+                                        : ($jp->lt($pulangMin) ? 'terlambat' : 'tepat waktu');
                             $all = array_filter([$sMasuk, $sPulang]);
-                            if (in_array('diluar waktu absen', $all))   $keterangan = 'diluar waktu absen';
-                            elseif (in_array('terlambat', $all))        $keterangan = 'terlambat';
-                            else                                        $keterangan = 'tepat waktu';
+                            if (in_array('diluar waktu absen', $all)) {
+                                $keterangan = 'diluar waktu absen';
+                            } elseif (in_array('terlambat', $all)) {
+                                $keterangan = 'terlambat';
+                            } else {
+                                $keterangan = 'tepat waktu';
+                            }
                         }
 
-                        
                         $preview[] = [
                             'nama'       => $nama,
                             'departemen' => $departemen,
-                            'tanggal'    => $tanggal,
+                            'tanggal'    => $tgl,
                             'jam_masuk'  => $jamMasukValid,
                             'jam_pulang' => $jamPulangValid,
                             'keterangan' => $keterangan,
@@ -228,29 +259,29 @@ class AbsensiController extends Controller
                 }
             }
 
-            // 5. Validasi bulan sama & hapus data lama
+            // 6. Validasi bulan sama & hapus data lama
             $bulanUnik = array_unique($bulanTahunSet);
             if (count($bulanUnik) > 1) {
                 return back()->with('error', 'Bulan tidak sama antara file!');
             }
             [$y, $m] = explode('-', $bulanUnik[0]);
             Absensi::whereYear('tanggal', $y)
-                ->whereMonth('tanggal', $m)
-                ->delete();
+                   ->whereMonth('tanggal', $m)
+                   ->delete();
 
-            // 6. Simpan preview ke session
+            // 7. Simpan preview ke session
             session(['preview_data' => $preview]);
         } else {
             // GET: ambil dari session
             $preview = session('preview_data', []);
         }
-        
-        // 7. Jika kosong
+
+        // 8. Jika kosong
         if (count($preview) === 0) {
             return back()->with('success', 'Tidak ada data absensi yang bisa ditampilkan.');
         }
 
-        // 8. Filter & Sort
+        // 9. Filter & Sort
         $collection = collect($preview);
         if ($search = $request->input('search')) {
             $collection = $collection->filter(fn($row) =>
@@ -259,15 +290,18 @@ class AbsensiController extends Controller
         }
         switch ($request->input('sort_by')) {
             case 'nama_asc':    $collection = $collection->sortBy('nama');      break;
-            case 'nama_desc':   $collection = $collection->sortByDesc('nama');   break;
+            case 'nama_desc':   $collection = $collection->sortByDesc('nama');  break;
             case 'tanggal_asc': $collection = $collection->sortBy('tanggal');    break;
             case 'tanggal_desc':$collection = $collection->sortByDesc('tanggal');break;
         }
 
-        // 9. Paginasi
-        $currentPage = LengthAwarePaginator::resolveCurrentPage();
-        $perPage = 25;
-        $currentItems = $collection->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        // 10. Paginasi
+        $currentPage   = LengthAwarePaginator::resolveCurrentPage();
+        $perPage       = 25;
+        $currentItems  = $collection
+            ->slice(($currentPage - 1) * $perPage, $perPage)
+            ->values();
+
         $paginatedPreview = new LengthAwarePaginator(
             $currentItems,
             $collection->count(),
@@ -276,12 +310,12 @@ class AbsensiController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        // 10. Kembalikan view
+        // 11. Kembalikan view
         return view('absensi.index', [
             'preview' => $paginatedPreview,
         ]);
     }
-    
+
     public function store(Request $request)
     {
         $data = session('preview_data');
@@ -291,13 +325,11 @@ class AbsensiController extends Controller
         }
 
         foreach ($data as $row) {
-            // 1) Ambil atau buat karyawan
             $karyawan = Karyawan::firstOrCreate([
                 'nama'       => $row['nama'],
                 'departemen' => $row['departemen'],
             ]);
 
-            // 2) Replace/insert Absensi per karyawan + tanggal
             Absensi::updateOrCreate(
                 [
                     'karyawan_id' => $karyawan->id,
@@ -311,10 +343,10 @@ class AbsensiController extends Controller
             );
         }
 
-        // 3) Clear session dan redirect
         session()->forget('preview_data');
 
-        return redirect()->route('absensi.index')
-                         ->with('success', 'Semua data absensi berhasil disimpan!');
+        return redirect()
+            ->route('absensi.index')
+            ->with('success', 'Semua data absensi berhasil disimpan!');
     }
 }
