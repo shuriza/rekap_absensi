@@ -132,123 +132,86 @@ $peg->total_menit = $totalMenit;
 $peg->total_fmt   = $this->fmtHariJamMenit($totalMenit);
 
             /* 5-c. tabel harian utk segment */
-            $daily = [];
-            $mapPres = $peg->absensi->keyBy(fn($p) => $p->tanggal->toDateString());
+        $daily = [];
+        $mapPres = $peg->absensi->keyBy(fn($p) => $p->tanggal->toDateString());
 
-            foreach ($tanggalList as $d) {
-                $tglStr = sprintf('%04d-%02d-%02d', $tahun, $bulan, $d);
-                $weekday = Carbon::parse($tglStr)->dayOfWeekIso; // 6=Sabtu 7=Minggu
+        foreach ($tanggalList as $d) {
+            $tglStr = sprintf('%04d-%02d-%02d', $tahun, $bulan, $d);
+            $weekday = Carbon::parse($tglStr)->dayOfWeekIso; // 6=Sabtu 7=Minggu
 
-                /* sabtu / minggu */
-                if ($weekday === 6) {
-                    $daily[$d] = ['type' => 'libur', 'label' => 'Sabtu'];
-                    continue;   
-                }
-                if ($weekday === 7) {
-                    $daily[$d] = ['type' => 'libur', 'label' => 'Minggu'];
-                    continue;
-                }
+            // Sabtu / Minggu
+            if ($weekday === 6) {
+                $daily[$d] = ['type' => 'libur', 'label' => 'Sabtu'];
+                continue;
+            }
+            if ($weekday === 7) {
+                $daily[$d] = ['type' => 'libur', 'label' => 'Minggu'];
+                continue;
+            }
 
-                /* libur nasional / manual */
-                if ($h = $holidayMap[$tglStr] ?? null) {
-                    $daily[$d] = ['type' => 'libur', 'label' => $h->keterangan];
-                    continue;
-                }
+            // Libur nasional / manual
+            if ($h = $holidayMap[$tglStr] ?? null) {
+                $daily[$d] = ['type' => 'libur', 'label' => $h->keterangan];
+                continue;
+            }
 
-                /* 5-c. Saat isi $daily untuk type ‘izin’ */
-                if (isset($mapIzin[$tglStr])) {
-                    $iz = $mapIzin[$tglStr];
-                    $daily[$d] = [
-                        'type' => 'izin',
-                        'label' => strtok($iz->jenis_ijin, ' '),
-                        'id' => $iz->id,
-                        'tipe' => $iz->tipe_ijin,
-                        'jenis' => $iz->jenis_ijin,
-                        'ket' => $iz->keterangan,
-                        'file' => $iz->berkas,
-                        'awal' => $iz->tanggal_awal->toDateString(),
-                        'akhir' => ($iz->tanggal_akhir ?? $iz->tanggal_awal)->toDateString(),
-                    ];
-                    continue;
-                }
+            // Izin
+            if (isset($mapIzin[$tglStr])) {
+                $iz = $mapIzin[$tglStr];
+                $daily[$d] = [
+                    'type' => 'izin',
+                    'label' => strtok($iz->jenis_ijin, ' '),
+                    'id' => $iz->id,
+                    'tipe' => $iz->tipe_ijin,
+                    'jenis' => $iz->jenis_ijin,
+                    'ket' => $iz->keterangan,
+                    'file' => $iz->berkas,
+                    'awal' => $iz->tanggal_awal->toDateString(),
+                    'akhir' => ($iz->tanggal_akhir ?? $iz->tanggal_awal)->toDateString(),
+                ];
+                continue;
+            }
 
-                /* presensi */
-                $row = $mapPres[$tglStr] ?? null;
-                if ($row) {
-                    $keterangan = strtolower(trim($row->keterangan ?? ''));
-                    $in = $row->jam_masuk ? $toCarbon($tglStr, $row->jam_masuk) : null;
-                    $out = $row->jam_pulang ? $toCarbon($tglStr, $row->jam_pulang) : null;
-                    $inTime = $row->jam_masuk ? substr($row->jam_masuk, -8, 5) : '--:--';
-                    $outTime = $row->jam_pulang ? substr($row->jam_pulang, -8, 5) : '--:--';
+            // Presensi
+            $row = $mapPres[$tglStr] ?? null;
+            $keterangan = $row ? strtolower(trim($row->keterangan ?? '')) : '';
+            $in = $row ? $toCarbon($tglStr, $row->jam_masuk) : null;
+            $out = $row ? $toCarbon($tglStr, $row->jam_pulang) : null;
+            $inTime = $row && $row->jam_masuk ? substr($row->jam_masuk, -8, 5) : '--:--';
+            $outTime = $row && $row->jam_pulang ? substr($row->jam_pulang, -8, 5) : '--:--';
 
-                    // Logika untuk bukan OB
-                    if (!$peg->is_ob) {
-                        $type = match ($keterangan) {
-                            'diluar waktu absen' => 'kosong',      // Merah
-                            'terlambat'          => 'terlambat',
-                            'tepat waktu'        => 'hadir',
-                            default              => null,
-                        };
-
-                        if ($type === null) {
-                            $late = $in ? $in->gt($toCarbon($tglStr, '07:30:00')) : false;
-                            $type = ($in || $out) ? ($late ? 'terlambat' : 'hadir') : 'kosong';
-                        }
-                        $daily[$d] = ['type' => $type, 'label' => "$inTime – $outTime"];
-                    }
-                    // Logika untuk OB
-                    else if ($peg->is_ob && $weekday >= 1 && $weekday <= 5) {
-                        if (!$in && !$out && !isset($holidayMap[$tglStr]) && !isset($mapIzin[$tglStr])) {
-                            $daily[$d] = ['type' => 'kosong', 'label' => '-'];
-                        } else {
-                            // Prioritaskan cek satu absen, abaikan keterangan "diluar waktu absen" untuk OB
-                            $hasSingleAbsen = ($in && !$out) || (!$in && $out);
-                            if ($hasSingleAbsen) {
-                                $daily[$d] = ['type' => 'terlambat', 'label' => "$inTime – $outTime"]; // Kuning
-                            } else {
-                                $daily[$d] = ['type' => 'hadir', 'label' => "$inTime – $outTime"]; // Hadir, bahkan dengan "diluar waktu absen"
-                            }
-                        }
-                    }
-                } else {
+            if ($peg->is_ob && $weekday >= 1 && $weekday <= 5) {
+                // Logika khusus OB (mengabaikan "keterangan")
+                if (!$in && !$out) {
                     $daily[$d] = ['type' => 'kosong', 'label' => '-'];
+                } elseif (($in && !$out) || (!$in && $out)) {
+                    $daily[$d] = ['type' => 'terlambat', 'label' => "$inTime – $outTime"];
+                } else {
+                    $daily[$d] = ['type' => 'hadir', 'label' => "$inTime – $outTime"];
                 }
+            } else {
+                // Logika non-OB (menggunakan keterangan)
+                $type = match ($keterangan) {
+                    'diluar waktu absen' => 'kosong',
+                    'terlambat' => 'terlambat',
+                    'tepat waktu' => 'hadir',
+                    default => null,
+                };
 
-
-
-                if ($peg->is_ob && $weekday >= 1 && $weekday <= 5) {
-                    $row = $mapPres[$tglStr] ?? null;
-                    $in = $row ? $toCarbon($tglStr, $row->jam_masuk) : null;
-                    $out = $row ? $toCarbon($tglStr, $row->jam_pulang) : null;
-
-                    if (!$in && !$out && !isset($holidayMap[$tglStr]) && !isset($mapIzin[$tglStr])) {
-                        $daily[$d] = ['type' => 'kosong', 'label' => '-']; // Tandai merah jika tidak absen
-                    } else {
-                        $keterangan = $row ? strtolower(trim($row->keterangan ?? '')) : '';
-                        $inTime = $row->jam_masuk ? substr($row->jam_masuk, -8, 5) : '--:--';
-                        $outTime = $row->jam_pulang ? substr($row->jam_pulang, -8, 5) : '--:--';
-
-                        if ($keterangan === 'diluar waktu absen') {
-                            $daily[$d] = ['type' => 'hadir', 'label' => "$inTime – $outTime"]; // Putih, tampilkan jam
-                        } else {
-                            // Cek jika hanya ada satu absen (datang atau pulang)
-                            if (($in && !$out) || (!$in && $out)) {
-                                $daily[$d] = ['type' => 'terlambat', 'label' => "$inTime – $outTime"]; // Background kuning
-                            } else {
-                                $daily[$d] = ['type' => 'hadir', 'label' => "$inTime – $outTime"];
-                            }
-                        }
-                    }
+                if ($type === null) {
+                    $late = $in ? $in->gt($toCarbon($tglStr, '07:30:00')) : false;
+                    $type = ($in || $out) ? ($late ? 'terlambat' : 'hadir') : 'kosong';
                 }
-
-                
+                $label = ($in || $out) ? "$inTime – $outTime" : '-';
+                $daily[$d] = ['type' => $type, 'label' => $label];
+            }
         }
-        
 
-            /* simpan ke model */
-            $peg->absensi_harian = $daily;
-            $peg->total_menit    = $totalMenit;  
-            $peg->total_fmt = $this->fmtHariJamMenit($totalMenit);
+        // Simpan ke model
+        $peg->absensi_harian = $daily;
+        $peg->total_menit = $totalMenit;
+        $peg->total_fmt = $this->fmtHariJamMenit($totalMenit);
+
      // int!
         }   
     
