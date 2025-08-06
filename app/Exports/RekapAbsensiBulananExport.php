@@ -126,8 +126,15 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
                         }
                     }
 
-                    $label = ($in?->format('H:i') ?? '--:--') . ' - ' . ($out?->format('H:i') ?? '--:--');
+                    if (!$in && !$out) {
+                        $label = '-';
+                    } else {
+                        $inTime = $in ? $in->format('H:i') : '--:--';
+                        $outTime = $out ? $out->format('H:i') : '--:--';
+                        $label = "$inTime – $outTime";
+                    }
                     $harian[$d] = ['type' => $type, 'label' => $label];
+
 
                     if ($in && $out && $out->gt($in)) {
                         $totalMnt += $in->diffInMinutes($out);
