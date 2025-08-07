@@ -15,8 +15,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
             </svg>
             Dashboard Analytics
-            <span class="ml-2 bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded-full">New</span>
-          </a>
+              </a>
           
           <a href="{{ route('absensi.rekap') }}"
             class="group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm {{ request()->is('absensi/rekap') ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
@@ -202,30 +201,38 @@
       </div>
     @endif
 
-    <form action="{{ route('rekap.holiday.add') }}" method="POST"
-      class="flex flex-wrap items-end gap-4 mb-6 border p-4 rounded bg-slate-50">
-      @csrf
+    <div class="flex flex-wrap justify-between items-start mb-6 border p-4 rounded bg-slate-50">
 
-      {{-- Tanggal --}}
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Tanggal</label>
-        <input type="date" name="tanggal" required value="{{ old('tanggal', $firstDay) }}"
-          {{-- posisi awal di bulan terpilih --}} min="{{ $firstDay }}" {{-- tak bisa pilih sebelum bulan ini --}}
-          max="{{ $lastDay }}" {{-- tak bisa pilih sesudah bulan ini --}}
-          class="mt-1 block w-40 rounded border-gray-300 shadow-sm text-sm" />
-      </div>
+      {{-- ======= Form Tandai Tanggal (kiri) ======= --}}
+      <form action="{{ route('rekap.holiday.add') }}" method="POST"
+        class="flex flex-wrap items-end gap-4">
+        @csrf
 
-      {{-- Keterangan --}}
-      <div>
-        <label class="block text-sm font-medium text-gray-700">Keterangan</label>
-        <input type="text" name="keterangan" required placeholder="Hari Besar / Cuti Bersama ..."
-          class="mt-1 block w-72 rounded border-gray-300 shadow-sm text-sm" />
-      </div>
+        {{-- Tanggal --}}
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Tanggal</label>
+          <input type="date" name="tanggal" required value="{{ old('tanggal', $firstDay) }}"
+            min="{{ $firstDay }}" max="{{ $lastDay }}"
+            class="mt-1 block w-40 rounded border-gray-300 shadow-sm text-sm" />
+        </div>
 
-      <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm">
-        ➕ Tandai Tanggal
-      </button>
-    </form>
+        {{-- Keterangan --}}
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Keterangan</label>
+          <input type="text" name="keterangan" required
+            placeholder="Hari Besar / Cuti Bersama ..."
+            class="mt-1 block w-72 rounded border-gray-300 shadow-sm text-sm" />
+        </div>
+
+        <button type="submit" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm">
+          ➕ Tandai Tanggal
+        </button>
+      </form>
+
+      
+
+    </div>
+
 
     {{-- =============================================
           DAFTAR LIBUR BULAN INI  +  Tombol 🗑 Hapus
@@ -811,6 +818,25 @@
             </svg>
             Rekap Absensi Karyawan
           </h3>
+
+           <div class="flex flex-row gap-2 mt-2 text-sm">
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 bg-red-500 rounded border"></div>
+              <span>Kosong</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 bg-yellow-200 rounded border"></div>
+              <span>Terlambat</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 bg-blue-300 rounded border"></div>
+              <span>Izin</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 bg-gray-300 rounded border"></div>
+              <span>Hari Libur</span>
+            </div>
+          </div>
           <div class="flex items-center space-x-2 text-sm text-gray-500">
             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
               {{ $pegawaiList->count() }} Karyawan
