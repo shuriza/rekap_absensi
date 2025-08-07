@@ -57,7 +57,7 @@ class IzinPresensiController extends Controller
     /* ---------------------------------------------------- CREATE */
     public function create()
     {
-        $listJenis = [
+        $rawJenis = [
         'DL (DINAS LUAR) | TIDAK ADA PENGURANGAN Dibuktikan dengan Surat Perintah Tugas ]',
         'PDK (PENDIDIKAN) TUGAS BELAJAR [ TIDAK DAPAT TPP Dibuktikan dengan 5K Tugas Belajar ]',
         'SAKIT (1 HARI) [ TIDAK ADA PENGURANGAN Dibuktikan dengan Surat Keterangan Dokter ]',
@@ -74,6 +74,11 @@ class IzinPresensiController extends Controller
         'DK - DENGAN KETERANGAN (PULANG CEPAT)',
 
     ];
+    $listJenis = array_map(function($str) {
+            $max = 80;
+            return mb_strlen($str) > $max ? mb_substr($str, 0, $max-3).'...' : $str;
+        }, $rawJenis);
+    
         $tipeIjin  = ['Ijin Penuh','Ijin Setengah','Terlambat','Pulang Cepat'];
         $karyawans = Karyawan::orderBy('nama')->get(['id','nama']);
 

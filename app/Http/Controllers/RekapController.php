@@ -92,44 +92,44 @@ class RekapController extends Controller
 
 
 
-/* 5️⃣  TOTAL MENIT SE-BULAN PENUH  (tidak tergantung segment) -------------- *
- * • Hari kerja (Sen–Jum) tanpa presensi = 7 jam 30 m (defaultMinutes).      *
- * • Hari libur/izin dilewati.                                              *
- * • Presensi sebagian (hanya jam masuk / pulang) = 7 jam 30 m.             *
- * • Presensi lengkap = selisih jam masuk-pulang.                           */
-$totalMenit = 0;
+            /* 5️⃣  TOTAL MENIT SE-BULAN PENUH  (tidak tergantung segment) -------------- *
+            * • Hari kerja (Sen–Jum) tanpa presensi = 7 jam 30 m (defaultMinutes).      *
+            * • Hari libur/izin dilewati.                                              *
+            * • Presensi sebagian (hanya jam masuk / pulang) = 7 jam 30 m.             *
+            * • Presensi lengkap = selisih jam masuk-pulang.                           */
+            $totalMenit = 0;
 
-/* Peta presensi → agar lookup per-tanggal cepat */
-$mapPres = $peg->absensi->keyBy(fn($p) => $p->tanggal->toDateString());
+            /* Peta presensi → agar lookup per-tanggal cepat */
+            $mapPres = $peg->absensi->keyBy(fn($p) => $p->tanggal->toDateString());
 
-for ($d = 1; $d <= $daysInMonth; $d++) {
-    $tglStr  = sprintf('%04d-%02d-%02d', $tahun, $bulan, $d);
-    $weekday = Carbon::parse($tglStr)->dayOfWeekIso;   // 6 = Sabtu, 7 = Minggu
+            for ($d = 1; $d <= $daysInMonth; $d++) {
+                $tglStr  = sprintf('%04d-%02d-%02d', $tahun, $bulan, $d);
+                $weekday = Carbon::parse($tglStr)->dayOfWeekIso;   // 6 = Sabtu, 7 = Minggu
 
-    /* ─── Abaikan akhir-pekan, tanggal merah & izin ─── */
-    if ($weekday >= 6)                continue;   // Sabtu / Minggu
-    if (isset($holidayMap[$tglStr]))  continue;   // Libur nasional/manual
-    if (isset($mapIzin[$tglStr]))     continue;   // Ada izin pegawai
+                /* ─── Abaikan akhir-pekan, tanggal merah & izin ─── */
+                if ($weekday >= 6)                continue;   // Sabtu / Minggu
+                if (isset($holidayMap[$tglStr]))  continue;   // Libur nasional/manual
+                if (isset($mapIzin[$tglStr]))     continue;   // Ada izin pegawai
 
-    /* ─── Hitung presensi ─── */
-    $row = $mapPres[$tglStr] ?? null;
-    $in  = $row ? $toCarbon($tglStr, $row->jam_masuk)  : null;
-    $out = $row ? $toCarbon($tglStr, $row->jam_pulang) : null;
+                /* ─── Hitung presensi ─── */
+                $row = $mapPres[$tglStr] ?? null;
+                $in  = $row ? $toCarbon($tglStr, $row->jam_masuk)  : null;
+                $out = $row ? $toCarbon($tglStr, $row->jam_pulang) : null;
 
-    if ($in && $out && $out->gt($in)) {
-        // Presensi lengkap → pakai selisih sebenarnya
-        $totalMenit += $in->diffInMinutes($out);
-    } else {
-        /* • Tidak ada presensi sama sekali
-           • Atau hanya jam masuk / pulang yang tercatat
-           ➜ Tetap dihitung 7 jam 30 menit (defaultMinutes) */
-        $totalMenit += $this->defaultMinutes;   // 450 menit
-    }
-}
+                if ($in && $out && $out->gt($in)) {
+                    // Presensi lengkap → pakai selisih sebenarnya
+                    $totalMenit += $in->diffInMinutes($out);
+                } else {
+                    /* • Tidak ada presensi sama sekali
+                    • Atau hanya jam masuk / pulang yang tercatat
+                    ➜ Tetap dihitung 7 jam 30 menit (defaultMinutes) */
+                    $totalMenit += $this->defaultMinutes;   // 450 menit
+                }
+            }
 
-/* simpan ke model (nilai ini dipakai Blade & Export) */
-$peg->total_menit = $totalMenit;
-$peg->total_fmt   = $this->fmtHariJamMenit($totalMenit);
+            /* simpan ke model (nilai ini dipakai Blade & Export) */
+            $peg->total_menit = $totalMenit;
+            $peg->total_fmt   = $this->fmtHariJamMenit($totalMenit);
 
             /* 5-c. tabel harian utk segment */
             $daily   = [];
@@ -255,17 +255,23 @@ $peg->total_fmt   = $this->fmtHariJamMenit($totalMenit);
             'DK - DENGAN KETERANGAN (DARURAT)',
             'DK - DENGAN KETERANGAN (ALASAN LAIN)',
         ];
+        
+        // Untuk dropdown di form (dibatasi panjangnya)
         $listJenis = array_map(function($str) {
-            $max = 60;
+            $max = 80;
             return mb_strlen($str) > $max ? mb_substr($str, 0, $max-3).'...' : $str;
         }, $rawJenis);
+        
+        // Untuk tooltip (versi lengkap tanpa batas)
+        $jenisLengkap = $rawJenis;
+        
         $tipeIjin  = ['Ijin Penuh','Ijin Setengah','Terlambat','Pulang Cepat'];
         // ⇩ kirim ke view
         return view('absensi.rekap', compact(
             'pegawaiList','tanggalList','bulan','tahun',
             'segment','daysInMonth','holidayMap','sort',
             // ⇩ kirim ke view
-            'listJenis','tipeIjin'
+            'listJenis','tipeIjin','jenisLengkap'
         ));
     }
     public function updateObBatch(Request $request)
@@ -428,9 +434,10 @@ $peg->total_fmt   = $this->fmtHariJamMenit($totalMenit);
     public function destroyHoliday(string $id)
     {
         $holiday = Holiday::findOrFail($id);
+        $tanggalStr = $holiday->tanggal->format('d-m-Y');
         $holiday->delete();
 
         return back()->with('holiday_success',
-            'Tanggal '.$holiday->tanggal->format('d-m-Y').' dihapus.');
+            'Tanggal '.$tanggalStr.' dihapus.');
     }
 }

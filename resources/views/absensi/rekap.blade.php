@@ -167,6 +167,79 @@
       <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
       <link rel="stylesheet"
         href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+      
+      {{-- Custom Tooltip Styles --}}
+      <style>
+        .custom-tooltip {
+          position: absolute;
+          background: #1f2937;
+          color: white;
+          padding: 12px 16px;
+          border-radius: 8px;
+          font-size: 13px;
+          line-height: 1.5;
+          max-width: 400px;
+          min-width: 200px;
+          white-space: pre-line;
+          z-index: 1000;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          opacity: 0;
+          transition: opacity 0.3s ease-in-out;
+          pointer-events: none;
+          word-wrap: break-word;
+          border: 1px solid #374151;
+        }
+        
+        .custom-tooltip.show {
+          opacity: 1;
+        }
+        
+        .custom-tooltip::before {
+          content: '';
+          position: absolute;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 0;
+          height: 0;
+          border-left: 6px solid transparent;
+          border-right: 6px solid transparent;
+        }
+        
+        .custom-tooltip:not([style*="--arrow-position"])::before {
+          top: -6px;
+          border-bottom: 6px solid #1f2937;
+        }
+        
+        .custom-tooltip[style*="--arrow-position: top"]::before {
+          bottom: -6px;
+          border-top: 6px solid #1f2937;
+        }
+        
+        /* Hover effect untuk sel yang memiliki tooltip */
+        td[data-tooltip]:hover {
+          position: relative;
+          transition: all 0.2s ease;
+        }
+        
+        /* Style khusus untuk kolom izin */
+        td[data-tooltip][data-id] {
+          cursor: pointer;
+        }
+        
+        td[data-tooltip][data-id]:hover {
+          opacity: 0.9;
+          transform: scale(1.02);
+        }
+        
+        /* Responsive tooltip untuk mobile */
+        @media (max-width: 768px) {
+          .custom-tooltip {
+            max-width: 280px;
+            font-size: 12px;
+            padding: 10px 12px;
+          }
+        }
+      </style>
     @endpush
 
     @push('scripts')
@@ -193,6 +266,105 @@
 
         /* base URL ke route lampiran */
         const lampiranBase = "{{ url('/izin-presensi') }}";
+
+        /* ===========================================================
+            Custom Tooltip Implementation
+        =========================================================== */
+        let currentTooltip = null;
+
+        function createTooltip(element, text) {
+          // Hapus tooltip yang ada
+          removeTooltip();
+          
+          if (!text || text.trim() === '') return;
+          
+          const tooltip = document.createElement('div');
+          tooltip.className = 'custom-tooltip';
+          tooltip.textContent = text;
+          
+          document.body.appendChild(tooltip);
+          currentTooltip = tooltip;
+          
+          // Posisi tooltip dengan perhitungan yang lebih baik
+          const rect = element.getBoundingClientRect();
+          const tooltipRect = tooltip.getBoundingClientRect();
+          const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+          const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+          
+          let left = rect.left + scrollX + (rect.width / 2) - (tooltipRect.width / 2);
+          let top = rect.top + scrollY - tooltipRect.height - 10;
+          
+          // Pastikan tooltip tidak keluar dari viewport (horizontal)
+          if (left < 10) {
+            left = 10;
+          } else if (left + tooltipRect.width > window.innerWidth - 10) {
+            left = window.innerWidth - tooltipRect.width - 10;
+          }
+          
+          // Pastikan tooltip tidak keluar dari viewport (vertical)
+          if (top < scrollY + 10) {
+            // Tampilkan di bawah jika tidak muat di atas
+            top = rect.bottom + scrollY + 10;
+            tooltip.style.setProperty('--arrow-position', 'top');
+          }
+          
+          tooltip.style.left = left + 'px';
+          tooltip.style.top = top + 'px';
+          
+          // Show tooltip dengan delay untuk smooth animation
+          requestAnimationFrame(() => {
+            tooltip.classList.add('show');
+          });
+        }
+
+        function removeTooltip() {
+          if (currentTooltip) {
+            currentTooltip.remove();
+            currentTooltip = null;
+          }
+        }
+
+        // Event listeners untuk tooltip
+        document.addEventListener('DOMContentLoaded', function() {
+          const tooltipElements = document.querySelectorAll('[data-tooltip]');
+          let tooltipTimeout;
+          
+          tooltipElements.forEach(element => {
+            element.addEventListener('mouseenter', function(e) {
+              const tooltipText = this.getAttribute('data-tooltip');
+              // Hanya tampilkan tooltip untuk izin, libur, atau informasi yang berguna
+              const tipe = this.getAttribute('data-id') ? 'izin' : 
+                          this.classList.contains('bg-gray-300') ? 'libur' : 'lain';
+              
+              if (tooltipText && tooltipText.trim() !== '' && tooltipText !== '-' && 
+                  (tipe === 'izin' || tipe === 'libur' || 
+                   (tooltipText.includes('Jenis:') || tooltipText.includes('Hari Libur:')))) {
+                
+                // Clear any existing timeout
+                clearTimeout(tooltipTimeout);
+                
+                // Small delay untuk smooth UX
+                tooltipTimeout = setTimeout(() => {
+                  createTooltip(this, tooltipText);
+                }, 100);
+              }
+            });
+            
+            element.addEventListener('mouseleave', function() {
+              // Clear timeout jika mouse keluar sebelum tooltip muncul
+              clearTimeout(tooltipTimeout);
+              
+              // Delay sedikit sebelum menghilangkan tooltip agar user bisa baca
+              setTimeout(() => {
+                removeTooltip();
+              }, 150);
+            });
+          });
+        });
+
+        // Hapus tooltip saat scroll atau resize
+        window.addEventListener('scroll', removeTooltip);
+        window.addEventListener('resize', removeTooltip);
 
         function showIzinAlert(msg) {
           const alertBox = document.getElementById('alert-izin');
@@ -486,7 +658,56 @@
                   $txt = $bg === 'bg-red-500' ? 'text-white' : 'text-black';
                 @endphp
 
-                <td class="border px-1 py-1 text-xs {{ $bg }} {{ $txt }}"
+                @php
+                  // Buat tooltip lengkap untuk izin
+                  $tooltipText = '';
+                  if ($sel['type'] === 'izin') {
+                    // Cari jenis lengkap dari array jenisLengkap berdasarkan jenis yang tersimpan
+                    $jenisLengkap = $jenisLengkap ?? [];
+                    $jenisAsli = $sel['jenis'] ?? 'Tidak ada jenis';
+                    
+                    // Coba cari jenis lengkap yang cocok
+                    $jenisTooltip = $jenisAsli;
+                    foreach ($jenisLengkap as $lengkap) {
+                      if (str_starts_with($lengkap, $jenisAsli) || 
+                          str_contains($lengkap, explode(' ', $jenisAsli)[0])) {
+                        $jenisTooltip = $lengkap;
+                        break;
+                      }
+                    }
+                    
+                    // Mulai dengan jenis izin lengkap
+                    $tooltipText = "Jenis: " . $jenisTooltip;
+                    
+                    // Tambahkan keterangan jika ada
+                    if (!empty($sel['ket']) && $sel['ket'] !== '-') {
+                      $tooltipText .= "\n\nKeterangan: " . $sel['ket'];
+                    }
+                    
+                    // Tambahkan periode jika berbeda dari tanggal tunggal
+                    if (!empty($sel['awal']) && !empty($sel['akhir'])) {
+                      if ($sel['awal'] !== $sel['akhir']) {
+                        $awalFmt = \Carbon\Carbon::parse($sel['awal'])->translatedFormat('d M Y');
+                        $akhirFmt = \Carbon\Carbon::parse($sel['akhir'])->translatedFormat('d M Y');
+                        $tooltipText .= "\n\nPeriode: " . $awalFmt . " s/d " . $akhirFmt;
+                      } else {
+                        $tanggalFmt = \Carbon\Carbon::parse($sel['awal'])->translatedFormat('d M Y');
+                        $tooltipText .= "\n\nTanggal: " . $tanggalFmt;
+                      }
+                    }
+                    
+                    // Tambahkan tipe izin jika ada dan berbeda
+                    if (!empty($sel['tipe']) && $sel['tipe'] !== $jenisAsli) {
+                      $tooltipText .= "\n\nTipe: " . $sel['tipe'];
+                    }
+                  } elseif ($sel['type'] === 'libur') {
+                    $tooltipText = "Hari Libur: " . $sel['label'];
+                  } else {
+                    $tooltipText = $sel['label'];
+                  }
+                @endphp
+
+                <td class="border px-1 py-1 text-xs {{ $bg }} {{ $txt }} relative"
                   data-karyawan="{{ $pegawai->id }}"
                   data-date="{{ sprintf('%04d-%02d-%02d', $tahun, $bulan, $tgl) }}"
                   @if ($sel['type'] === 'izin') data-id="{{ $sel['id'] }}"
@@ -496,7 +717,9 @@
                       data-file="{{ $sel['file'] }}"
                       data-awal="{{ $sel['awal'] }}"
                      data-akhir="{{ $sel['akhir'] }}" @endif
-                  onclick="openIzin(this)">
+                  onclick="openIzin(this)"
+                  title="{{ $tooltipText }}"
+                  data-tooltip="{{ $tooltipText }}">
                   @switch($sel['type'])
                     @case('hadir')
                     @case('terlambat')
@@ -505,7 +728,7 @@
 
                     @case('libur')
                     @case('izin')
-                      <span class="inline-block max-w-[140px] truncate" title="{{ $sel['label'] }}">
+                      <span class="inline-block max-w-[140px] truncate">
                         {{ Str::limit($sel['label'], 25, '…') }}
                       </span>
                     @break

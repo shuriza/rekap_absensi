@@ -9,6 +9,6 @@ class Holiday extends Model
     protected $fillable = ['tanggal', 'keterangan'];
 
     protected $casts = [
-        'tanggal' => 'date:Y-m-d',
+        'tanggal' => 'datetime',
     ];
 }
