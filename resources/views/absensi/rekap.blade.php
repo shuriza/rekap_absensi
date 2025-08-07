@@ -11,53 +11,7 @@
         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
           <a href="{{ route('dashboard.analytics') }}"
             class="group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm {{ request()->is('dashboard') ? 'border-purple-500 text-purple-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-            <svg class="w-5 h-5 mr-2 {{ request()->is('dashboard') ? 'text-purple-500' : 'text-gray-400 group    {{-- ========================================================
-        MODERN TABLE CONTAINER
-    ========================================================= --}}
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      {{-- Table Header --}}
-      <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-medium text-gray-900 flex items-center">
-            <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
-            </svg>
-            Rekap Absensi Karyawan
-          </h3>
-          <div class="flex items-center space-x-2 text-sm text-gray-500">
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-              {{ $karyawanList->count() }} Karyawan
-            </span>
-            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-              {{ \Carbon\Carbon::create($tahun, $bulan)->translatedFormat('F Y') }}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {{-- Table Content --}}
-      <div class="overflow-x-auto">
-        <table id="tabel-rekap"
-          class="min-w-full table-fixed text-sm text-center border-collapse display nowrap">
-          <thead class="bg-gradient-to-r from-gray-100 to-gray-200">
-            <tr>
-              <th class="border border-gray-300 px-3 py-3 cursor-pointer text-gray-800 font-semibold hover:bg-gray-200 transition-colors" 
-                onclick="resetUrutan()" title="Klik untuk reset urutan">
-                <div class="flex items-center justify-center space-x-1">
-                  <span>No</span>
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
-                  </svg>
-                </div>
-              </th>
-              <th class="border border-gray-300 px-3 py-3 text-gray-800 font-semibold">
-                <div class="flex items-center justify-center space-x-1">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                  </svg>
-                  <span>Nama Karyawan</span>
-                </div>
-              </th>t-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 mr-2 {{ request()->is('dashboard') ? 'text-purple-500' : 'text-gray-400 group-hover:text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
             </svg>
             Dashboard Analytics
@@ -218,9 +172,33 @@
       );
     @endphp
 
+    {{-- =============================================
+         HOLIDAY SUCCESS NOTIFICATION
+    ============================================= --}}
     @if (session('holiday_success'))
-      <div class="mb-4 px-4 py-2 rounded bg-green-100 text-green-800 text-sm">
-        {{ session('holiday_success') }}
+      <div class="mb-6 relative">
+        <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-400 p-4 rounded-lg shadow-sm">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm font-medium text-blue-800">
+                📅 {{ session('holiday_success') }}
+              </p>
+            </div>
+            <div class="ml-auto pl-3">
+              <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                class="inline-flex text-blue-400 hover:text-blue-600">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     @endif
 
@@ -728,37 +706,6 @@
             </svg>
             📋 Kelola OB
           </button>
-
-          {{-- Print Button --}}
-          <button type="button" onclick="window.print()" 
-            class="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
-            </svg>
-            �️ Print
-          </button>
-        </div>
-      </div>
-
-      {{-- Quick Stats --}}
-      <div class="mt-4 pt-4 border-t border-green-200">
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-          <div class="bg-white rounded-lg p-3 shadow-sm">
-            <div class="text-2xl font-bold text-blue-600">{{ $karyawanList->count() }}</div>
-            <div class="text-xs text-gray-600">Total Karyawan</div>
-          </div>
-          <div class="bg-white rounded-lg p-3 shadow-sm">
-            <div class="text-2xl font-bold text-green-600">{{ \Carbon\Carbon::create($tahun, $bulan)->daysInMonth }}</div>
-            <div class="text-xs text-gray-600">Hari dalam Bulan</div>
-          </div>
-          <div class="bg-white rounded-lg p-3 shadow-sm">
-            <div class="text-2xl font-bold text-purple-600">{{ \Carbon\Carbon::create($tahun, $bulan)->translatedFormat('F') }}</div>
-            <div class="text-xs text-gray-600">Periode</div>
-          </div>
-          <div class="bg-white rounded-lg p-3 shadow-sm">
-            <div class="text-2xl font-bold text-orange-600">{{ $tahun }}</div>
-            <div class="text-xs text-gray-600">Tahun</div>
-          </div>
         </div>
       </div>
     </div>
@@ -766,26 +713,16 @@
     
 
     {{-- =============================================
-        MODERN MODAL OB MANAGEMENT
+        MODAL OB MANAGEMENT - SIMPLIFIED
     ============================================= --}}
-    <div id="modalOb" class="fixed inset-0 z-50 hidden bg-gray-900 bg-opacity-60 modal backdrop-blur-sm">
+    <div id="modalOb" class="fixed inset-0 z-50 hidden bg-gray-900 bg-opacity-60 modal">
       <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="relative bg-white rounded-xl shadow-2xl max-w-lg w-full p-6 transform transition-all">
+        <div class="relative bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
           {{-- Modal Header --}}
           <div class="flex items-center justify-between pb-4 border-b border-gray-200">
-            <div class="flex items-center space-x-3">
-              <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-                </svg>
-              </div>
-              <div>
-                <h3 class="text-lg font-semibold text-gray-900">Kelola Status OB</h3>
-                <p class="text-sm text-gray-600">Pilih karyawan yang bertugas sebagai OB</p>
-              </div>
-            </div>
+            <h3 class="text-lg font-semibold text-gray-900">Kelola Status OB</h3>
             <button onclick="closeModal('modalOb')" type="button"
-              class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-2 transition-colors">
+              class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-2">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
               </svg>
@@ -796,126 +733,131 @@
           <form id="form-ob" action="{{ route('update-ob-batch') }}" method="POST" class="mt-6">
             @csrf
             
-            {{-- Search & Filter --}}
-            <div class="mb-4">
-              <div class="relative">
-                <input type="text" id="searchOB" placeholder="Cari nama karyawan..." 
-                  class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                  </svg>
-                </div>
-              </div>
-            </div>
-
             {{-- Employee List --}}
             <div id="ob-list" class="max-h-80 overflow-y-auto border border-gray-200 rounded-lg">
-              @foreach ($pegawaiList as $index => $pegawai)
-                <div class="employee-item flex items-center justify-between p-3 {{ $index % 2 == 0 ? 'bg-gray-50' : 'bg-white' }} hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-b-0"
-                  data-name="{{ strtolower($pegawai->nama) }}">
+              @foreach ($pegawaiList as $pegawai)
+                <div class="flex items-center justify-between p-3 hover:bg-blue-50 border-b border-gray-100 last:border-b-0">
                   <div class="flex items-center space-x-3">
-                    <div class="relative">
-                      <input type="checkbox" 
-                        name="ob_ids[]" 
-                        value="{{ $pegawai->id }}" 
-                        {{ $pegawai->is_ob ? 'checked' : '' }}
-                        class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2">
-                    </div>
-                    <div class="flex-1">
-                      <div class="flex items-center space-x-2">
-                        <span class="font-medium text-gray-900">{{ $pegawai->nama }}</span>
-                        @if($pegawai->is_ob)
-                          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            Active OB
-                          </span>
-                        @endif
-                      </div>
-                      <p class="text-sm text-gray-600">{{ $pegawai->departemen }}</p>
+                    @php
+                      $inputName = 'ob_ids[]';
+                      $isChecked = $pegawai->is_ob;
+                    @endphp
+                    <input type="checkbox" 
+                      name="{{ $inputName }}" 
+                      value="{{ $pegawai->id }}" 
+                      @if($isChecked) checked @endif
+                      class="w-4 h-4 text-blue-600 rounded">
+                    <div>
+                      <div class="font-medium text-gray-900">{{ $pegawai->nama }}</div>
+                      <div class="text-sm text-gray-600">{{ $pegawai->departemen }}</div>
                     </div>
                   </div>
-                  <div class="text-sm text-gray-400">
-                    ID: {{ $pegawai->id }}
-                  </div>
+                  @if($pegawai->is_ob)
+                    <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Active OB</span>
+                  @endif
                 </div>
               @endforeach
             </div>
 
             {{-- Action Buttons --}}
-            <div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-200">
-              <div class="text-sm text-gray-500">
-                <span id="selectedCount">0</span> karyawan dipilih sebagai OB
-              </div>
-              <div class="flex space-x-3">
-                <button type="button" onclick="closeModal('modalOb')" 
-                  class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                  Batal
-                </button>
-                <button type="submit" 
-                  class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                  💾 Simpan Perubahan
-                </button>
-              </div>
+            <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+              <button type="button" onclick="closeModal('modalOb')" 
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">
+                Batal
+              </button>
+              <button type="submit" 
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
+                💾 Simpan Perubahan
+              </button>
             </div>
           </form>
         </div>
       </div>
     </div>
-
-    {{-- Enhanced JavaScript for Modal --}}
-    <script>
-      // Search functionality in OB modal
-      document.getElementById('searchOB')?.addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase();
-        const employees = document.querySelectorAll('.employee-item');
-        
-        employees.forEach(employee => {
-          const name = employee.getAttribute('data-name');
-          if (name.includes(searchTerm)) {
-            employee.style.display = 'flex';
-          } else {
-            employee.style.display = 'none';
-          }
-        });
-      });
-
-      // Update selected count
-      function updateSelectedCount() {
-        const checkedBoxes = document.querySelectorAll('input[name="ob_ids[]"]:checked');
-        document.getElementById('selectedCount').textContent = checkedBoxes.length;
-      }
-
-      // Add event listeners to checkboxes
-      document.querySelectorAll('input[name="ob_ids[]"]').forEach(checkbox => {
-        checkbox.addEventListener('change', updateSelectedCount);
-      });
-
-      // Initialize count
-      updateSelectedCount();
-    </script>
+    {{-- =============================================
+         MODERN NOTIFICATION MESSAGES
+    ============================================= --}}
     @if (session('ob_success'))
-      <div class="mb-4 px-4 py-2 rounded bg-green-100 text-green-800 text-sm">
-        {{ session('ob_success') }}
+      <div class="mb-6 relative">
+        <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 p-4 rounded-lg shadow-sm">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm font-medium text-green-800">
+                ✅ {{ session('ob_success') }}
+              </p>
+            </div>
+            <div class="ml-auto pl-3">
+              <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                class="inline-flex text-green-400 hover:text-green-600">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     @endif
 
-    {{-- =========================================================
-        TABEL REKAP
+    {{-- ========================================================
+        MODERN TABLE CONTAINER
     ========================================================= --}}
-    <div class="overflow-x-auto border border-gray-300 rounded">
-      <table id="tabel-rekap"
-        class="min-w-full table-fixed text-sm text-center border-collapse display nowrap">
-        <thead class="bg-zinc-400 text-black">
-          <tr>
-            <th class="border px-2 py-2 cursor-pointer text-black" onclick="resetUrutan()">No</th>
-            <th class="border px-2 py-2">Nama</th>
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      {{-- Table Header --}}
+      <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-medium text-gray-900 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+            </svg>
+            Rekap Absensi Karyawan
+          </h3>
+          <div class="flex items-center space-x-2 text-sm text-gray-500">
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {{ $pegawaiList->count() }} Karyawan
+            </span>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+              {{ \Carbon\Carbon::create($tahun, $bulan)->translatedFormat('F Y') }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {{-- Table Content --}}
+      <div class="overflow-x-auto">
+        <table id="tabel-rekap"
+          class="min-w-full table-fixed text-sm text-center border-collapse display nowrap">
+          <thead class="bg-gradient-to-r from-gray-100 to-gray-200">
+            <tr>
+              <th class="border border-gray-300 px-3 py-3 cursor-pointer text-gray-800 font-semibold hover:bg-gray-200 transition-colors" 
+                onclick="resetUrutan()" title="Klik untuk reset urutan">
+                <div class="flex items-center justify-center space-x-1">
+                  <span>No</span>
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                  </svg>
+                </div>
+              </th>
+              <th class="border border-gray-300 px-3 py-3 text-gray-800 font-semibold">
+                <div class="flex items-center justify-center space-x-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                  </svg>
+                  <span>Nama Karyawan</span>
+                </div>
+              </th>
 
             {{-- kolom tanggal ─────────────── --}}
             @foreach ($tanggalList as $tgl)
-              <th class="border w-[70px] px-2 py-2 no-sort">{{ $tgl }}</th>
+              <th class="border border-gray-300 w-[70px] px-2 py-3 no-sort text-gray-800 font-medium">{{ $tgl }}</th>
             @endforeach
 
-            <th class="border px-2 py-2">Total Akumulasi</th>
+            <th class="border border-gray-300 px-3 py-3 text-gray-800 font-semibold">Total Akumulasi</th>
           </tr>
         </thead>
 
@@ -1044,8 +986,8 @@
             </tr>
           @endforeach
         </tbody>
-
       </table>
+      </div>
     </div>
 
     {{-- =============================================
