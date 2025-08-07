@@ -25,9 +25,9 @@
             {{ __('izin') }}
           </x-nav-link>
 
-          <x-nav-link :href="route('absensi.karyawan')" :active="request()->routeIs('absensi.karyawan')">
+          {{-- <x-nav-link :href="route('absensi.karyawan')" :active="request()->routeIs('absensi.karyawan')">
             {{ __('karyawan') }}
-          </x-nav-link>
+          </x-nav-link> --}}
 
         </div>
       </div>

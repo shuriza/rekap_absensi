@@ -147,7 +147,7 @@
                   Minimal</label>
                 <div class="mt-1 relative">
                   <input type="time" name="jam_masuk_min_jumat"
-                    value="{{ old('jam_masuk_min_jumat', '07:00') }}"
+                    value="{{ old('jam_masuk_min_jumat', '06:30') }}"
                     class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
                   <div
                     class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
@@ -166,7 +166,7 @@
                   Maksimal</label>
                 <div class="mt-1 relative">
                   <input type="time" name="jam_masuk_max_jumat"
-                    value="{{ old('jam_masuk_max_jumat', '07:30') }}"
+                    value="{{ old('jam_masuk_max_jumat', '07:00') }}"
                     class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
                   <div
                     class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
@@ -185,7 +185,7 @@
                   Minimal</label>
                 <div class="mt-1 relative">
                   <input type="time" name="jam_pulang_min_jumat"
-                    value="{{ old('jam_pulang_min_jumat', '15:00') }}"
+                    value="{{ old('jam_pulang_min_jumat', '14:30') }}"
                     class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
                   <div
                     class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
@@ -204,7 +204,7 @@
                   Maksimal</label>
                 <div class="mt-1 relative">
                   <input type="time" name="jam_pulang_max_jumat"
-                    value="{{ old('jam_pulang_max_jumat', '17:00') }}"
+                    value="{{ old('jam_pulang_max_jumat', '16:00') }}"
                     class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm" />
                   <div
                     class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
