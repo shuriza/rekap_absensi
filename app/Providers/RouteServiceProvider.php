@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Route;
 
 class RouteServiceProvider extends ServiceProvider
 {
-    public const HOME = '/absensi'; // Arahkan ke halaman admin setelah login/registrasi
+    public const HOME = '/dashboard'; // Arahkan ke dashboard setelah login/registrasi
 
     public function boot(): void
     {

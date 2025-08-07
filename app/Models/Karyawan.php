@@ -23,6 +23,7 @@ class Karyawan extends Model
         'nama',
         'departemen',
         'is_ob',
+        'status',
     ];
 
     /* -----------------------------------------------------------------

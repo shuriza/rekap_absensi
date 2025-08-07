@@ -12,6 +12,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\KaryawanController;
+use App\Http\Controllers\DashboardController;
 
 // Route login dan register (tanpa middleware auth)
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -26,6 +27,9 @@ Route::middleware('auth')->group(function () {
  Route::get('/', function () {
      return view('absensi.index');
  });
+
+ // Dashboard Analytics
+ Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.analytics');
 
  Route::post('/ganti-password', [ChangePasswordController::class, 'update'])->name('password.change');
 

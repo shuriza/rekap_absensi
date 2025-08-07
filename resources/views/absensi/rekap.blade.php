@@ -6,6 +6,10 @@
   <div class="min-h-screen flex flex-col px-6 py-4 ">
 
     <div class="my-8 space-x-2">
+      <a href="{{ route('dashboard.analytics') }}"
+        class="px-4 py-2 rounded {{ request()->is('dashboard') ? 'bg-purple-600 text-white' : 'bg-gray-200' }}">
+        📊 Dashboard
+      </a>
       <a href="{{ route('absensi.rekap') }}"
         class="px-4 py-2 rounded {{ request()->is('absensi/rekap') ? 'bg-blue-600 text-white' : 'bg-gray-200' }}">
         Rekap Bulanan
