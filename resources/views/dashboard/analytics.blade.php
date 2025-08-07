@@ -208,11 +208,26 @@
 {{-- Chart Scripts --}}
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{{-- Data JSON untuk JavaScript --}}
+<script type="application/json" id="dashboard-data">
+{
+    "departemenData": {!! json_encode($kehadiranPerDepartemen) !!},
+    "trendData": {!! json_encode($trendAbsensi) !!},
+    "tahun": {{ $tahun }}
+}
+</script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Ambil data dari JSON script
+    const dashboardData = JSON.parse(document.getElementById('dashboard-data').textContent);
+    const departemenData = dashboardData.departemenData;
+    const trendData = dashboardData.trendData;
+    const tahun = dashboardData.tahun;
+    
     // Chart Kehadiran per Departemen
     const departemenCtx = document.getElementById('departemenChart').getContext('2d');
-    const departemenData = @json($kehadiranPerDepartemen);
     
     new Chart(departemenCtx, {
         type: 'bar',
@@ -267,7 +282,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Chart Trend Absensi
     const trendCtx = document.getElementById('trendChart').getContext('2d');
-    const trendData = @json($trendAbsensi);
     
     new Chart(trendCtx, {
         type: 'line',
@@ -306,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
             plugins: {
                 title: {
                     display: true,
-                    text: 'Trend Absensi Bulanan {{ $tahun }}'
+                    text: 'Trend Absensi Bulanan ' + tahun
                 },
                 legend: {
                     position: 'top'
