@@ -689,9 +689,6 @@
           {{-- Excel Export --}}
           <a href="{{ route('rekap.export.bulanan', ['bulan' => $bulan, 'tahun' => $tahun]) }}"
             class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M7 13h10M7 13V8a2 2 0 012-2h6a2 2 0 012 2v5M7 13v5a2 2 0 002 2h6a2 2 0 002-2v-5"></path>
-            </svg>
             📤 Export Excel
             <span class="ml-2 text-xs bg-green-500 px-2 py-0.5 rounded-full">
               {{ \Carbon\Carbon::create()->month($bulan)->translatedFormat('M') }} {{ $tahun }}
@@ -701,9 +698,6 @@
           {{-- OB Management --}}
           <button onclick="openObModal()" 
             class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-            </svg>
             📋 Kelola OB
           </button>
         </div>
