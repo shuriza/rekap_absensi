@@ -58,28 +58,20 @@ class IzinPresensiController extends Controller
     public function create()
     {
         $rawJenis = [
-        'DL (DINAS LUAR) | TIDAK ADA PENGURANGAN Dibuktikan dengan Surat Perintah Tugas ]',
-        'PDK (PENDIDIKAN) TUGAS BELAJAR [ TIDAK DAPAT TPP Dibuktikan dengan 5K Tugas Belajar ]',
-        'SAKIT (1 HARI) [ TIDAK ADA PENGURANGAN Dibuktikan dengan Surat Keterangan Dokter ]',
-        'CT (CUTI TAHUNAN) [ 4,5% / hari ]',
-        'CB (CUTI BESAR) [ 4,5% / hari ]',
-        'CS (CUTI SAKIT) LEBIH DARI 1 HARI [ TIDAK ADA PENGURANGAN ]',
-        'CM (CUTI MELAHIRKAN) [ TIDAK ADA PENGURANGAN ]',
-        'CP (CUTI KARENA ALASAN PENTING) [ 4,5% / hari ]',
-        'CLTN (CUTI DI LUAR TANGGUNGAN NEGARA) [ 4,5% / hari ]',
-        'FM (FORCE MAJEURE) [ TIDAK ADA PENGURANGAN ]',
-        'IK (IJIN KEDINASAN) [ TIDAK ADA PENGURANGAN ]',
-        'DK - DENGAN KETERANGAN (DARURAT)',
-        'DK - DENGAN KETERANGAN (ALASAN LAIN)',
-        'DK - DENGAN KETERANGAN (PULANG CEPAT)',
+            'DL - DINAS LUAR',
+            'K - KEDINASAN',
+            'S - SAKIT',
+            'M - MELAHIRKAN',
+            'AP - ALASAN PRIBADI',
+            'L - LAINNYA',
 
     ];
     $listJenis = array_map(function($str) {
             $max = 80;
             return mb_strlen($str) > $max ? mb_substr($str, 0, $max-3).'...' : $str;
         }, $rawJenis);
-    
-        $tipeIjin  = ['Ijin Penuh','Ijin Setengah','Terlambat','Pulang Cepat'];
+
+        $tipeIjin  = ['PENUH','PARSIAL','TERLAMBAT','PULANG CEPAT','LAINNYA'];
         $karyawans = Karyawan::orderBy('nama')->get(['id','nama']);
 
         return view('izin_presensi.create',compact('listJenis','tipeIjin','karyawans'));
@@ -159,7 +151,7 @@ class IzinPresensiController extends Controller
     {
         return $r->validate([
             'karyawan_id'   => ['required','exists:karyawans,id'],
-            'tipe_ijin'     => ['required',Rule::in(['Ijin Penuh','Ijin Setengah','Terlambat','Pulang Cepat'])],
+            'tipe_ijin'     => ['required',Rule::in(['PENUH','PARSIAL','TERLAMBAT','PULANG CEPAT','LAINNYA'])],
             'tanggal_awal'  => ['required','date'],
             'tanggal_akhir' => ['nullable','date','after_or_equal:tanggal_awal'],
             'jenis_ijin'    => ['required','string'],

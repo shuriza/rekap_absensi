@@ -16,7 +16,7 @@ class CreateIzinPresensiTable extends Migration
               ->constrained('karyawans')
               ->onDelete('cascade');
 
-        $table->enum('tipe_ijin', ['Ijin Penuh','Ijin Setengah','Terlambat','Pulang Cepat']);
+        $table->enum('tipe_ijin', ['PENUH','PARSIAL','TERLAMBAT','PULANG CEPAT','LAINNYA']);
         $table->date('tanggal_awal');
         $table->date('tanggal_akhir')->nullable();
         $table->string('jenis_ijin');

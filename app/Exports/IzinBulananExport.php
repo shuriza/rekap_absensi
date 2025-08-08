@@ -187,10 +187,11 @@ class IzinBulananSummarySheet implements FromCollection, WithHeadings, ShouldAut
                 return [
                     'Departement'    => $k->departemen,
                     'Nama'            => $k->nama,
-                    'Ijin Penuh'      => $k->izins->where('tipe_ijin', 'Ijin Penuh')->count(),
-                    'Ijin Setengah'   => $k->izins->where('tipe_ijin', 'Ijin Setengah')->count(),
-                    'Terlambat'       => $k->izins->where('tipe_ijin', 'Terlambat')->count(),
-                    'Pulang Cepat'    => $k->izins->where('tipe_ijin', 'Pulang Cepat')->count(),
+                    'PENUH'      => $k->izins->where('tipe_ijin', 'PENUH')->count(),
+                    'PARSIAL'   => $k->izins->where('tipe_ijin', 'PARSIAL')->count(),
+                    'TERLAMBAT'       => $k->izins->where('tipe_ijin', 'TERLAMBAT')->count(),
+                    'PULANG CEPAT'    => $k->izins->where('tipe_ijin', 'PULANG CEPAT')->count(),
+                    'LAINNYA' => $k->izins->where('tipe_ijin', 'LAINNYA')->count(),
                     'Total Hari Izin' => $totalHari,
                 ];
             });
@@ -200,7 +201,7 @@ class IzinBulananSummarySheet implements FromCollection, WithHeadings, ShouldAut
     {
         $bulanNama = Carbon::createFromDate($this->tahun, $this->bulan, 1)->translatedFormat('F');
         $judul = ["Laporan Izin Bulanan: {$bulanNama} {$this->tahun}", '', '', '', '', '', ''];
-        $header = ['Departement','Nama','Ijin Penuh','Ijin Setengah','Terlambat','Pulang Cepat','Total Hari Izin'];
+        $header = ['Departement','Nama','PENUH','PARSIAL','TERLAMBAT','PULANG CEPAT','LAINNYA','Total Hari Izin'];
         return [$judul, $header];
     }
 

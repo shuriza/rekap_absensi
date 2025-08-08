@@ -241,19 +241,12 @@ class RekapController extends Controller
 /* 7️⃣  kirim ke view -------------------------------------------------- */
 
         $rawJenis = [
-            'DL (DINAS LUAR) | TIDAK ADA PENGURANGAN Dibuktikan dengan Surat Perintah Tugas ]',
-            'PDK (PENDIDIKAN) TUGAS BELAJAR [ TIDAK DAPAT TPP Dibuktikan dengan SK Tugas Belajar ]',
-            'SAKIT (1 HARI) [ TIDAK ADA PENGURANGAN Dibuktikan dengan Surat Keterangan Dokter ]',
-            'CT (CUTI TAHUNAN) [ 4,5% / hari ]',
-            'CB (CUTI BESAR) [ 4,5% / hari ]',
-            'CS (CUTI SAKIT) LEBIH DARI 1 HARI [ TIDAK ADA PENGURANGAN ]',
-            'CM (CUTI MELAHIRKAN) [ TIDAK ADA PENGURANGAN ]',
-            'CP (CUTI KARENA ALASAN PENTING) [ 4,5% / hari ]',
-            'CLTN (CUTI DI LUAR TANGGUNGAN NEGARA) [ 4,5% / hari ]',
-            'FM (FORCE MAJEURE) [ TIDAK ADA PENGURANGAN ]',
-            'IK (IJIN KEDINASAN) [ TIDAK ADA PENGURANGAN ]',
-            'DK - DENGAN KETERANGAN (DARURAT)',
-            'DK - DENGAN KETERANGAN (ALASAN LAIN)',
+            'DL - DINAS LUAR',
+            'K - KEDINASAN',
+            'S - SAKIT',
+            'M - MELAHIRKAN',
+            'AP - ALASAN PRIBADI',
+            'L - LAINNYA',
         ];
         
         // Untuk dropdown di form (dibatasi panjangnya)
@@ -265,7 +258,7 @@ class RekapController extends Controller
         // Untuk tooltip (versi lengkap tanpa batas)
         $jenisLengkap = $rawJenis;
         
-        $tipeIjin  = ['Ijin Penuh','Ijin Setengah','Terlambat','Pulang Cepat'];
+        $tipeIjin  = ['PENUH','PARSIAL','TERLAMBAT','PULANG CEPAT','LAINNYA'];
         // ⇩ kirim ke view
         return view('absensi.rekap', compact(
             'pegawaiList','tanggalList','bulan','tahun',

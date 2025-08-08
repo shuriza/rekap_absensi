@@ -4,18 +4,24 @@ window.Alpine = Alpine;
 Alpine.start();
 
 import flatpickr from "flatpickr";
+import { monthSelect } from "flatpickr/dist/plugins/monthSelect/index.js";
 import "flatpickr/dist/flatpickr.css";
+import "flatpickr/dist/plugins/monthSelect/style.css";
+
 /*  Gunakan class .datepicker agar tak kena semua      */
 document.addEventListener('DOMContentLoaded', () => {
-  flatpickr('.datepicker', {
-    dateFormat: 'Y-m-d',
+  // Hanya inisialisasi elemen dengan class .datepicker untuk input tanggal biasa
+  const datePickers = document.querySelectorAll('.datepicker');
+  datePickers.forEach(element => {
+    flatpickr(element, {
+      dateFormat: 'Y-m',
+    });
   });
 });
 
 /* ---------- Ekspor ke window supaya bisa dipanggil di Blade inline ---------- */
-window.flatpickr         = flatpickr;
-window.monthSelectPlugin = monthSelectPlugin;
-
+window.flatpickr = flatpickr;
+window.monthSelectPlugin = monthSelect;
 
 document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("canvas.sparkline").forEach((cnv) => {
@@ -53,6 +59,4 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.strokeStyle = cnv.dataset.color || "#a0aec0";
         ctx.stroke();
     });
-
-    
 });
