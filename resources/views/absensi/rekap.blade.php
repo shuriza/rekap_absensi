@@ -2,6 +2,10 @@
 
 @extends('layouts.app')
 
+@php
+  use Illuminate\Support\Str;
+@endphp
+
 @section('content')
   <div class="min-h-screen flex flex-col px-6 py-4 ">
 
@@ -13,7 +17,7 @@
           <a href="{{ route('absensi.rekap') }}"
             class="group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm {{ request()->is('absensi/rekap') ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
             <svg class="w-5 h-5 mr-2 {{ request()->is('absensi/rekap') ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
             </svg>
             Rekap Bulanan
           </a>
@@ -21,7 +25,7 @@
           <a href="{{ route('absensi.rekap.tahunan') }}"
             class="group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm {{ request()->is('absensi/rekap-tahunan') ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
             <svg class="w-5 h-5 mr-2 {{ request()->is('absensi/rekap-tahunan') ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
             </svg>
             Rekap Tahunan
           </a>
@@ -50,12 +54,13 @@
         <span class="text-sm text-gray-500">Pilih periode dan kriteria filter</span>
       </div>
       
-      <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {{-- Update bagian form pencarian --}}
+      <form method="GET" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="filter-form">
         {{-- Bulan --}}
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700 flex items-center">
             <svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
             </svg>
             Bulan
           </label>
@@ -73,7 +78,7 @@
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700 flex items-center">
             <svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h2a2 2 0 002-2z"></path>
             </svg>
             Tahun
           </label>
@@ -85,7 +90,7 @@
           </select>
         </div>
 
-        {{-- Cari Nama --}}
+        {{-- Cari Nama dengan tombol pencarian --}}
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700 flex items-center">
             <svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -93,19 +98,38 @@
             </svg>
             Cari Nama
           </label>
-          <div class="relative">
-            <input type="text" name="search" value="{{ request('search') }}"
-              placeholder="Ketik nama pegawai..." oninput="this.form.submit()"
-              class="w-full pl-10 pr-4 py-2 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm transition-colors" />
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="relative flex">
+            <div class="relative flex-1">
+              <input type="text" 
+                name="search" 
+                value="{{ request('search') }}"
+
+                placeholder="Ketik nama pegawai..." 
+                onkeypress="handleSearchKeypress(event)"
+                class="w-full pl-10 pr-4 py-2 rounded-l-md border-gray-300 border-r-0 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm transition-colors" />
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+              </div>
+            </div>
+            
+            {{-- Tombol Cari --}}
+            <button type="submit" 
+              class="inline-flex items-center px-3 py-2 border border-gray-300 border-l-0 rounded-r-md bg-gray-50 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-medium text-gray-700 transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
               </svg>
-            </div>
+              <span class="ml-1 hidden sm:inline">Cari</span>
+            </button>
+            
+            {{-- Tombol Clear (hanya tampil jika ada pencarian) --}}
             @if(request('search'))
-              <button type="button" onclick="document.querySelector('input[name=search]').value=''; this.closest('form').submit();" 
-                class="absolute inset-y-0 right-0 pr-3 flex items-center">
-                <svg class="h-4 w-4 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <button type="button" 
+                onclick="clearSearch()" 
+                class="inline-flex items-center px-2 py-2 ml-1 border border-gray-300 rounded-md bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm font-medium text-red-700 transition-colors"
+                title="Hapus pencarian">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
               </button>
@@ -117,7 +141,7 @@
         <div class="space-y-2">
           <label class="block text-sm font-medium text-gray-700 flex items-center">
             <svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
             </svg>
             Segment Tanggal
           </label>
@@ -137,12 +161,18 @@
             <span class="text-sm text-gray-500">Filter aktif:</span>
             @if(request('search'))
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
                 Nama: "{{ request('search') }}"
-                <button type="button" onclick="document.querySelector('input[name=search]').value=''; document.querySelector('form').submit();" class="ml-1 hover:text-blue-600">×</button>
+                <button type="button" onclick="clearSearch()" class="ml-1 hover:text-blue-600 font-bold">×</button>
               </span>
             @endif
             @if(request('segment', 1) != 1)
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+                </svg>
                 Segment: {{ request('segment') == 2 ? '11-20' : '21-31' }}
               </span>
             @endif
@@ -173,7 +203,7 @@
           <div class="flex items-center">
             <div class="flex-shrink-0">
               <svg class="h-5 w-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2h2a2 2 0 002-2z"></path>
               </svg>
             </div>
             <div class="ml-3">
@@ -270,11 +300,122 @@
     ============================================= --}}
     @push('styles')
       <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
-      <link rel="stylesheet"
-        href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
+      <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
       
-      {{-- Custom Tooltip Styles --}}
       <style>
+        /* Pastikan tabel menggunakan fixed layout untuk kolom yang konsisten */
+        #tabel-rekap {
+          table-layout: fixed !important;
+          width: 100% !important;
+        }
+        
+        /* Fixed width untuk kolom No - DIPERBESAR sedikit agar tidak scroll */
+        #tabel-rekap th:first-child,
+        #tabel-rekap td:first-child {
+          width: 35px !important;
+          min-width: 35px !important;
+          max-width: 35px !important;
+        }
+        
+        /* Kolom Nama - DIPERKECIL sedikit untuk kompensasi */
+        #tabel-rekap th:nth-child(2),
+        #tabel-rekap td:nth-child(2) {
+          width: 100px !important;
+          min-width: 100px !important;
+          max-width: 100px !important;
+        }
+        
+        /* Kolom tanggal - DIPERKECIL sedikit untuk fit dalam viewport */
+        #tabel-rekap th:not(:first-child):not(:nth-child(2)):not(:last-child),
+        #tabel-rekap td:not(:first-child):not(:nth-child(2)):not(:last-child) {
+          width: 75px !important;
+          min-width: 75px !important;
+          max-width: 75px !important;
+        }
+        
+        /* Kolom Total - DIPERKECIL untuk kompensasi */
+        #tabel-rekap th:last-child,
+        #tabel-rekap td:last-child {
+          width: 110px !important;
+          min-width: 110px !important;
+          max-width: 110px !important;
+        }
+
+        /* Style khusus untuk nama karyawan - text truncate */
+        #tabel-rekap td:nth-child(2) {
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          overflow: hidden;
+          font-size: 12px;
+        }
+
+        /* Font size untuk header No dan Nama */
+        #tabel-rekap th:first-child,
+        #tabel-rekap th:nth-child(2) {
+          font-size: 12px;
+        }
+
+        /* Font size untuk header kolom tanggal - TETAP */
+        #tabel-rekap th:not(:first-child):not(:nth-child(2)):not(:last-child) {
+          font-size: 11px;
+        }
+
+        /* Font size untuk kolom No */
+        #tabel-rekap td:first-child {
+          font-size: 12px;
+        }
+
+        /* Font size untuk konten kolom tanggal (jam) - TETAP */
+        #tabel-rekap td:not(:first-child):not(:nth-child(2)):not(:last-child) {
+          font-size: 11px !important;
+        }
+
+        /* Font size untuk header dan konten Total Akumulasi - TETAP */
+        #tabel-rekap th:last-child {
+          font-size: 11px;
+        }
+
+        #tabel-rekap td:last-child {
+          font-size: 11px;
+        }
+
+        /* Pastikan text wrapping yang baik */
+        #tabel-rekap td {
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+        }
+
+        /* Responsive table untuk memastikan fit di layar */
+        .table-container {
+          max-width: 100vw;
+          overflow-x: auto;
+        }
+
+        /* Responsive adjustments untuk layar yang sangat kecil */
+        @media (max-width: 1200px) {
+          #tabel-rekap th:not(:first-child):not(:nth-child(2)):not(:last-child),
+          #tabel-rekap td:not(:first-child):not(:nth-child(2)):not(:last-child) {
+            width: 70px !important;
+            min-width: 70px !important;
+            max-width: 70px !important;
+          }
+          
+          #tabel-rekap th:nth-child(2),
+          #tabel-rekap td:nth-child(2) {
+            width: 90px !important;
+            min-width: 90px !important;
+            max-width: 90px !important;
+          }
+          
+          #tabel-rekap th:last-child,
+          #tabel-rekap td:last-child {
+            width: 100px !important;
+            min-width: 100px !important;
+            max-width: 100px !important;
+          }
+        }
+
+        /* Custom Tooltip Styles - existing styles remain unchanged */
         .custom-tooltip {
           position: absolute;
           background: #1f2937;
@@ -359,6 +500,31 @@
       <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
       <script>
+        // Function untuk handle keypress pada input pencarian
+        function handleSearchKeypress(event) {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            document.getElementById('filter-form').submit();
+          }
+        }
+        
+        // Function untuk clear pencarian
+        function clearSearch() {
+          const searchInput = document.querySelector('input[name="search"]');
+          searchInput.value = '';
+          document.getElementById('filter-form').submit();
+        }
+        
+        // Focus pada input pencarian saat halaman dimuat jika ada pencarian aktif
+        document.addEventListener('DOMContentLoaded', function() {
+          const searchInput = document.querySelector('input[name="search"]');
+          if (searchInput && searchInput.value) {
+            searchInput.focus();
+            // Set cursor di akhir text
+            searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+          }
+        });
+
         /* ===========================================================
                     1)  Modal Izin – openIzin() tetap seperti semula
                   =========================================================== */
@@ -573,25 +739,6 @@
         function deleteConfirmed() {
           if (!pendingDeleteId) return;
           const form = document.getElementById('form-izin');
-
-          form.action = `/izin_presensi/${pendingDeleteId}`;
-          form.querySelector('input[name="_method"]')?.remove();
-          const d = document.createElement('input');
-          d.type  = 'hidden';
-          d.name  = '_method';
-          d.value = 'DELETE';
-          form.prepend(d);
-
-          form.submit();
-        }
-
-        /* helper open / close modal overlay */
-        function openModal(id) {
-          document.getElementById(id).classList.remove('hidden');
-          document.body.classList.add('overflow-y-hidden');
-        }
-
-        function closeModal(id) {
           document.getElementById(id).classList.add('hidden');
           document.body.classList.remove('overflow-y-hidden');
         }
@@ -798,21 +945,42 @@
       </div>
     @endif
 
+    {{-- =============================================
+         Cek apakah ada data absensi yang valid di bulan ini
+    ============================================= --}}
+    @php
+      $hasValidAttendanceData = false;
+      
+      // Loop semua karyawan untuk cek data absensi
+      foreach ($pegawaiList as $pegawai) {
+        foreach ($tanggalList as $tgl) {
+          $sel = $pegawai->absensi_harian[$tgl] ?? ['type' => 'kosong', 'label' => '-'];
+          
+          // Jika ada data selain kosong dan libur, berarti ada data absensi valid
+          if ($sel['type'] !== 'kosong' && $sel['type'] !== 'libur') {
+            $hasValidAttendanceData = true;
+            break 2; // keluar dari kedua loop
+          }
+        }
+      }
+    @endphp
+
     {{-- ========================================================
         MODERN TABLE CONTAINER
     ========================================================= --}}
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-      {{-- Table Header --}}
+      {{-- Table Header - Selalu tampil --}}
       <div class="bg-gray-50 px-6 py-4 border-b border-gray-200">
         <div class="flex items-center justify-between">
           <h3 class="text-lg font-medium text-gray-900 flex items-center">
             <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
             </svg>
             Rekap Absensi Karyawan
           </h3>
 
-           <div class="flex flex-row gap-2 mt-2 text-sm">
+          {{-- Legend selalu tampil --}}
+          <div class="flex flex-row gap-2 mt-2 text-sm">
             <div class="flex items-center gap-2">
               <div class="w-4 h-4 bg-red-500 rounded border"></div>
               <span>Kosong</span>
@@ -830,6 +998,8 @@
               <span>Hari Libur</span>
             </div>
           </div>
+
+          {{-- Info karyawan and bulan selalu tampil --}}
           <div class="flex items-center space-x-2 text-sm text-gray-500">
             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
               {{ $pegawaiList->count() }} Karyawan
@@ -841,244 +1011,372 @@
         </div>
       </div>
 
-      {{-- Table Content --}}
-      <div class="overflow-x-auto">
-        <table id="tabel-rekap"
-          class="min-w-full table-fixed text-sm text-center border-collapse display nowrap">
-          <thead class="bg-gradient-to-r from-gray-100 to-gray-200">
-            <tr>
-              <th class="border border-gray-300 px-3 py-3 cursor-pointer text-gray-800 font-semibold hover:bg-gray-200 transition-colors" 
-                onclick="resetUrutan()" title="Klik untuk reset urutan">
-                <div class="flex items-center justify-center space-x-1">
-                  <span>No</span>
-                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
-                  </svg>
-                </div>
-              </th>
-              <th class="border border-gray-300 px-3 py-3 text-gray-800 font-semibold">
-                <div class="flex items-center justify-center space-x-1">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                  </svg>
-                  <span>Nama Karyawan</span>
-                </div>
-              </th>
+      {{-- Tampilkan tabel hanya jika ada data absensi --}}
+      @if($hasValidAttendanceData)
+        {{-- Table Content dengan container responsif --}}
+        <div class="overflow-x-auto table-container">
+          <table id="tabel-rekap" class="min-w-full text-center border-collapse display nowrap">
+            <thead class="bg-gradient-to-r from-gray-100 to-gray-200">
+              <tr>
+                <th class="border border-gray-300 w-9 px-1 py-3 cursor-pointer text-gray-800 font-semibold hover:bg-gray-200 transition-colors" 
+                  onclick="resetUrutan()" title="Klik untuk reset urutan">
+                  <div class="flex items-center justify-center space-x-1">
+                    <span class="text-xs">No</span>
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                    </svg>
+                  </div>
+                </th>
+                <th class="border border-gray-300 w-25 px-1 py-3 text-gray-800 font-semibold">
+                  <div class="flex items-center justify-center space-x-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    </svg>
+                    <span class="text-xs">Nama</span>
+                  </div>
+                </th>
 
-            {{-- kolom tanggal ─────────────── --}}
-            @foreach ($tanggalList as $tgl)
-              <th class="border border-gray-300 w-[70px] px-2 py-3 no-sort text-gray-800 font-medium">{{ $tgl }}</th>
-            @endforeach
+                {{-- Header kolom tanggal dengan lebar yang disesuaikan --}}
+                @foreach ($tanggalList as $tgl)
+                  <th class="border border-gray-300 w-19 min-w-[75px] px-1 py-3 no-sort text-gray-800 font-medium text-xs">
+                    {{ $tgl }}
+                  </th>
+                @endforeach
 
-            <th class="border border-gray-300 px-3 py-3 text-gray-800 font-semibold">Total Akumulasi</th>
-          </tr>
-        </thead>
+                <th class="border border-gray-300 w-28 px-2 py-3 text-gray-800 font-semibold">
+                  <span class="text-xs">Total Akumulasi</span>
+                </th>
+              </tr>
+            </thead>
 
-        <tbody class="bg-white text-gray-800">
-          @php  use Illuminate\Support\Str;  @endphp
+            {{-- Update bagian body tabel dengan Tailwind classes yang disesuaikan --}}
+            <tbody class="bg-white text-gray-800">
+              @foreach ($pegawaiList as $pegawai)
+                <tr class="hover:bg-gray-50">
+                  {{-- No dengan lebar yang disesuaikan --}}
+                  <td class="border border-gray-300 px-1 py-1 w-9 text-xs">{{ $loop->iteration }}</td>
+                  
+                  {{-- Nama dengan lebar yang disesuaikan --}}
+                  <td class="border border-gray-300 px-1 py-1 text-left w-25 text-xs" 
+                      title="{{ $pegawai->nama }}">
+                    {{ Str::limit($pegawai->nama, 10, '...') }}
+                  </td>
 
-          @foreach ($pegawaiList as $pegawai)
-            <tr class="hover:bg-gray-50">
-              {{-- No & Nama --}}
-              <td class="border px-2 py-1"></td>
-              <td class="border px-2 py-1 text-left">{{ $pegawai->nama }}</td>
+                  {{-- Kolom tanggal dengan lebar yang disesuaikan --}}
+                  @foreach ($tanggalList as $tgl)
+                    @php
+                      $sel = $pegawai->absensi_harian[$tgl] ?? ['type' => 'kosong', 'label' => '-'];
 
-              {{-- ───── Kolom tanggal ───── --}}
-              @foreach ($tanggalList as $tgl)
-                @php
-                  $sel = $pegawai->absensi_harian[$tgl] ?? ['type' => 'kosong', 'label' => '-'];
+                      /* warna latar */
+                      $bg = match ($sel['type']) {
+                          'libur' => 'bg-gray-300',
+                          'kosong' => 'bg-red-500',
+                          'izin' => 'bg-blue-300',
+                          'terlambat' => 'bg-yellow-200',
+                          default => '',
+                      };
 
-                  /* warna latar */
-                  $bg = match ($sel['type']) {
-                      'libur' => 'bg-gray-300',
-                      'kosong' => 'bg-red-500',
-                      'izin' => 'bg-blue-300',
-                      'terlambat' => 'bg-yellow-200',
-                      default => '',
-                  };
+                      /* warna teks */
+                      $txt = $bg === 'bg-red-500' ? 'text-white' : 'text-black';
 
-                  /* warna teks */
-                  $txt = $bg === 'bg-red-500' ? 'text-white' : 'text-black';
-                @endphp
-
-                @php
-                  // Buat tooltip lengkap untuk izin
-                  $tooltipText = '';
-                  if ($sel['type'] === 'izin') {
-                    // Cari jenis lengkap dari array jenisLengkap berdasarkan jenis yang tersimpan
-                    $jenisLengkap = $jenisLengkap ?? [];
-                    $jenisAsli = $sel['jenis'] ?? 'Tidak ada jenis';
-                    
-                    // Coba cari jenis lengkap yang cocok
-                    $jenisTooltip = $jenisAsli;
-                    foreach ($jenisLengkap as $lengkap) {
-                      if (str_starts_with($lengkap, $jenisAsli) || 
-                          str_contains($lengkap, explode(' ', $jenisAsli)[0])) {
-                        $jenisTooltip = $lengkap;
-                        break;
-                      }
-                    }
-                    
-                    // Mulai dengan jenis izin lengkap
-                    $tooltipText = "Jenis: " . $jenisTooltip;
-                    
-                    // Tambahkan keterangan jika ada
-                    if (!empty($sel['ket']) && $sel['ket'] !== '-') {
-                      $tooltipText .= "\n\nKeterangan: " . $sel['ket'];
-                    }
-                    
-                    // Tambahkan periode jika berbeda dari tanggal tunggal
-                    if (!empty($sel['awal']) && !empty($sel['akhir'])) {
-                      if ($sel['awal'] !== $sel['akhir']) {
-                        $awalFmt = \Carbon\Carbon::parse($sel['awal'])->translatedFormat('d M Y');
-                        $akhirFmt = \Carbon\Carbon::parse($sel['akhir'])->translatedFormat('d M Y');
-                        $tooltipText .= "\n\nPeriode: " . $awalFmt . " s/d " . $akhirFmt;
+                      // Buat tooltip lengkap untuk izin
+                      $tooltipText = '';
+                      if ($sel['type'] === 'izin') {
+                        $jenisLengkap = $jenisLengkap ?? [];
+                        $jenisAsli = $sel['jenis'] ?? 'Tidak ada jenis';
+                        
+                        $jenisTooltip = $jenisAsli;
+                        foreach ($jenisLengkap as $lengkap) {
+                          if (str_starts_with($lengkap, $jenisAsli) || 
+                              str_contains($lengkap, explode(' ', $jenisAsli)[0])) {
+                            $jenisTooltip = $lengkap;
+                            break;
+                          }
+                        }
+                        
+                        $tooltipText = "Jenis: " . $jenisTooltip;
+                        
+                        if (!empty($sel['ket']) && $sel['ket'] !== '-') {
+                          $tooltipText .= "\n\nKeterangan: " . $sel['ket'];
+                        }
+                        
+                        if (!empty($sel['awal']) && !empty($sel['akhir'])) {
+                          if ($sel['awal'] !== $sel['akhir']) {
+                            $awalFmt = \Carbon\Carbon::parse($sel['awal'])->translatedFormat('d M Y');
+                            $akhirFmt = \Carbon\Carbon::parse($sel['akhir'])->translatedFormat('d M Y');
+                            $tooltipText .= "\n\nPeriode: " . $awalFmt . " s/d " . $akhirFmt;
+                          } else {
+                            $tanggalFmt = \Carbon\Carbon::parse($sel['awal'])->translatedFormat('d M Y');
+                            $tooltipText .= "\n\nTanggal: " . $tanggalFmt;
+                          }
+                        }
+                        
+                        if (!empty($sel['tipe']) && $sel['tipe'] !== $jenisAsli) {
+                          $tooltipText .= "\n\nTipe: " . $sel['tipe'];
+                        }
+                      } elseif ($sel['type'] === 'libur') {
+                        $tooltipText = "Hari Libur: " . $sel['label'];
                       } else {
-                        $tanggalFmt = \Carbon\Carbon::parse($sel['awal'])->translatedFormat('d M Y');
-                        $tooltipText .= "\n\nTanggal: " . $tanggalFmt;
+                        $tooltipText = $sel['label'];
                       }
-                    }
-                    
-                    // Tambahkan tipe izin jika ada dan berbeda
-                    if (!empty($sel['tipe']) && $sel['tipe'] !== $jenisAsli) {
-                      $tooltipText .= "\n\nTipe: " . $sel['tipe'];
-                    }
-                  } elseif ($sel['type'] === 'libur') {
-                    $tooltipText = "Hari Libur: " . $sel['label'];
-                  } else {
-                    $tooltipText = $sel['label'];
-                  }
-                @endphp
+                    @endphp
 
-                <td class="border px-1 py-1 text-xs {{ $bg }} {{ $txt }} relative"
-                  data-karyawan="{{ $pegawai->id }}"
-                  data-date="{{ sprintf('%04d-%02d-%02d', $tahun, $bulan, $tgl) }}"
-                  @if ($sel['type'] === 'izin') data-id="{{ $sel['id'] }}"
-                      data-tipe="{{ $sel['tipe'] }}"
-                      data-jenis="{{ $sel['jenis'] }}"
-                      data-ket="{{ $sel['ket'] }}"
-                      data-file="{{ $sel['file'] }}"
-                      data-awal="{{ $sel['awal'] }}"
-                     data-akhir="{{ $sel['akhir'] }}" @endif
-                  onclick="openIzin(this)"
-                  title="{{ $tooltipText }}"
-                  data-tooltip="{{ $tooltipText }}">
-                  @switch($sel['type'])
-                    @case('hadir')
-                    @case('terlambat')
-                      {{ $sel['label'] }}
-                    @break
+                    <td class="border border-gray-300 px-1 py-1 text-xs {{ $bg }} {{ $txt }} w-19 min-w-[75px] relative group"
+                      data-karyawan="{{ $pegawai->id }}"
+                      data-date="{{ sprintf('%04d-%02d-%02d', $tahun, $bulan, $tgl) }}"
+                      @if ($sel['type'] === 'izin') 
+                        data-id="{{ $sel['id'] }}"
+                        data-tipe="{{ $sel['tipe'] }}"
+                        data-jenis="{{ $sel['jenis'] }}"
+                        data-ket="{{ $sel['ket'] }}"
+                        data-file="{{ $sel['file'] }}"
+                        data-awal="{{ $sel['awal'] }}"
+                        data-akhir="{{ $sel['akhir'] }}" 
+                      @endif
+                      onclick="openIzin(this)"
+                      title="{{ $tooltipText }}"
+                      data-tooltip="{{ $tooltipText }}">
+                      
+                      {{-- Konten sel dengan font size yang TIDAK BERUBAH --}}
+                      @switch($sel['type'])
+                        @case('hadir')
+                        @case('terlambat')
+                          <div class="text-center leading-tight break-words font-medium">
+                            {{ $sel['label'] }}
+                          </div>
+                        @break
 
-                    @case('libur')
-                    @case('izin')
-                      <span class="inline-block max-w-[140px] truncate">
-                        {{ Str::limit($sel['label'], 25, '…') }}
-                      </span>
-                    @break
+                        @case('libur')
+                          <div class="text-center leading-tight break-words">
+                            {{ Str::limit($sel['label'], 8, '...') }}
+                          </div>
+                        @break
 
-                    @default
-                      {{-- kosong --}}
-                      {{ $sel['label'] }}
-                  @endswitch
-                </td>
+                        @case('izin')
+                          <div class="text-center leading-tight break-words cursor-pointer">
+                            {{ Str::limit($sel['label'], 8, '...') }}
+                          </div>
+                          
+                          {{-- Tooltip untuk izin menggunakan Tailwind CSS sesuai project pattern --}}
+                          @if(!empty($tooltipText))
+                            <div class="absolute z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 whitespace-pre-line bottom-full left-1/2 transform -translate-x-1/2 mb-2 min-w-[200px] max-w-[300px] shadow-lg pointer-events-none">
+                              {{ $tooltipText }}
+                              {{-- Arrow using Tailwind utilities --}}
+                              <div class="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                            </div>
+                          @endif
+                        @break
+
+                        @default
+                          <div class="text-center leading-tight break-words">
+                            {{ $sel['label'] }}
+                          </div>
+                      @endswitch
+                    </td>
+                  @endforeach
+
+                  {{-- Total akumulasi dengan lebar yang disesuaikan --}}
+                  @php
+                    $hari = intdiv($pegawai->total_menit, 1440);
+                    $sisa = $pegawai->total_menit % 1440;
+                    $jam = str_pad(intdiv($sisa, 60), 2, '0', STR_PAD_LEFT);
+                    $menit = str_pad($sisa % 60, 2, '0', STR_PAD_LEFT);
+                    $tampil = "{$hari} hari {$jam} jam {$menit} menit";
+                  @endphp
+                  <td class="border border-gray-300 px-1 py-1 text-xs font-semibold w-28" 
+                      title="{{ $tampil }}">
+                    <span class="sr-only">{{ $pegawai->total_menit }}</span>
+                    {{ $tampil }}
+                  </td>
+                </tr>
               @endforeach
+            </tbody>
+          </table>
+        </div>
+      @else
+        {{-- Tampilan kosong ketika tidak ada data absensi --}}
+        <div class="text-center py-16 px-6">
+          <div class="max-w-md mx-auto">
+            {{-- Empty Icon --}}
+            <div class="mx-auto w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+              <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+            </div>
+            
+            {{-- Empty Message --}}
+            <h4 class="text-xl font-medium text-gray-900 mb-3">
+              Belum Ada Data Absensi
+            </h4>
+            
+            <p class="text-gray-500 text-base leading-relaxed mb-6">
+              Belum ada karyawan yang melakukan absensi di bulan 
+              <span class="font-semibold text-gray-700">{{ \Carbon\Carbon::create($tahun, $bulan)->translatedFormat('F Y') }}</span>
+            </p>
+            
+            {{-- Additional Info --}}
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div class="flex items-center justify-center space-x-2">
+                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p class="text-sm text-blue-700 font-medium">
+                  Tabel akan muncul otomatis setelah ada data absensi
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      @endif
 
-              {{-- total akumulasi (hari jam menit) + span “sr-only” utk sort --}}
-              @php
-                $hari = intdiv($pegawai->total_menit, 1440);
-                $sisa = $pegawai->total_menit % 1440;
-                $jam = str_pad(intdiv($sisa, 60), 2, '0', STR_PAD_LEFT);
-                $menit = str_pad($sisa % 60, 2, '0', STR_PAD_LEFT);
-                $tampil = "{$hari} hari {$jam} jam {$menit} menit";
-              @endphp
-              <td class="border px-2 py-1 text-xs font-semibold">
-                <span class="sr-only">{{ $pegawai->total_menit }}</span> {{-- untuk sort --}}
-                {{ $tampil }}
-              </td>
-
-            </tr>
-          @endforeach
-        </tbody>
-      </table>
-      </div>
+      {{-- Pastikan penutupan div container --}}
     </div>
 
     {{-- =============================================
-         ALERT IZIN (custom notification)
-    ============================================= --}}
-    <div id="alert-izin" class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 hidden">
-      <div class="bg-red-500 text-white px-6 py-3 rounded shadow-lg flex items-center gap-2">
-        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span id="alert-izin-msg"></span>
-      </div>
-    </div>
-    {{-- =============================================
-         MODAL IZIN (overlay)
-    ============================================= --}}
-    <div id="modal-overlay"
-      class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center hidden z-50">
-      <div class="bg-white rounded-xl max-w-2xl w-full p-6">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-lg font-semibold">Input Izin Presensi</h3>
-          <button onclick="closeIzin()"
-            class="text-xl font-bold text-gray-600 hover:text-red-600">&times;</button>
-        </div>
-        <form id="form-izin" action="{{ route('izin_presensi.store') }}" method="POST"
-          enctype="multipart/form-data" class="space-y-6">
-          @csrf
-          @include('izin_presensi._form')
-        </form>
-      </div>
-    </div>
-
-    {{-- ========= MODAL KONFIRMASI HAPUS ========= --}}
-    <div id="modalConfirm" class="fixed inset-0 z-50 hidden bg-gray-900 bg-opacity-60 modal">
-      <div class="relative top-40 mx-auto shadow-xl rounded-md bg-white max-w-md">
-        <div class="flex justify-end p-2">
-          <button onclick="closeModal('modalConfirm')" type="button"
-            class="text-gray-400 hover:bg-gray-200 rounded-lg p-1.5">
-            &times;
-          </button>
-        </div>
-
-        <div class="p-6 pt-0 text-center">
-          <svg class="w-20 h-20 text-red-600 mx-auto" fill="none" stroke="currentColor"
-            viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+     MODAL IZIN PRESENSI
+============================================= --}}
+<div id="modal-overlay" class="fixed inset-0 z-50 hidden bg-gray-900 bg-opacity-60 modal">
+  <div class="flex items-center justify-center min-h-screen px-4">
+    <div class="relative bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+      {{-- Modal Header --}}
+      <div class="flex items-center justify-between pb-4 border-b border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-900 flex items-center">
+          <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
           </svg>
+          Form Izin Presensi
+        </h3>
+        <button onclick="closeIzin()" type="button"
+          class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-2 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
 
-          <h3 class="text-xl font-normal text-gray-500 mt-5 mb-6">
-            Yakin ingin menghapus izin ini?
-          </h3>
+      {{-- Modal Content --}}
+      <form id="form-izin" action="{{ route('izin_presensi.store') }}" method="POST" enctype="multipart/form-data" class="mt-6">
+        @csrf
+        
+        {{-- Hidden Fields --}}
+        <input type="hidden" name="karyawan_id" id="izin-karyawan" />
+        
+        {{-- Tanggal Awal --}}
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Awal</label>
+          <input type="date" name="tanggal_awal" id="izin-awal" required
+            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm" />
+        </div>
 
-          <button onclick="deleteConfirmed()"
-            class="text-white bg-red-600 hover:bg-red-800 rounded-lg px-3 py-2.5 mr-2">
-            Ya, hapus
+        {{-- Tanggal Akhir --}}
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Tanggal Akhir</label>
+          <input type="date" name="tanggal_akhir" id="izin-akhir" required
+            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm" />
+        </div>
+
+        {{-- Tipe Izin --}}
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Tipe Izin</label>
+          <select name="tipe" id="tipe-ijin" required
+            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm">
+            <option value="">Pilih tipe izin</option>
+            <option value="Izin">Izin</option>
+            <option value="Sakit">Sakit</option>
+            <option value="Cuti">Cuti</option>
+          </select>
+        </div>
+
+        {{-- Jenis Izin --}}
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Jenis Izin</label>
+          <input type="text" name="jenis" id="jenis-ijin" 
+            placeholder="Contoh: Keperluan Pribadi, Sakit Demam, dll"
+            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm" />
+        </div>
+
+        {{-- Keterangan --}}
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Keterangan</label>
+          <textarea name="keterangan" id="keterangan-izin" rows="3"
+            placeholder="Keterangan tambahan (opsional)"
+            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"></textarea>
+        </div>
+
+        {{-- File Lampiran --}}
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-gray-700 mb-2">File Lampiran</label>
+          <input type="file" name="file_lampiran" accept="image/*,.pdf,.doc,.docx"
+            class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
+          <p class="text-xs text-gray-500 mt-1">Format: JPG, PNG, PDF, DOC (Max: 2MB)</p>
+          <div id="preview-lampiran" class="mt-2 text-sm text-blue-600"></div>
+        </div>
+
+        {{-- Action Buttons --}}
+        <div class="flex justify-between space-x-3">
+          <button type="button" id="btn-hapus" onclick="showDeleteConfirm(this)" 
+            class="hidden px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
+            🗑️ Hapus
           </button>
+          
+          <div class="flex space-x-3 ml-auto">
+            <button type="button" onclick="closeIzin()" 
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+              Batal
+            </button>
+            <button type="submit" id="btn-simpan"
+              class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+              💾 Simpan
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
-          <button onclick="closeModal('modalConfirm')"
-            class="text-gray-900 bg-white hover:bg-gray-100 border border-gray-200
-                        rounded-lg px-3 py-2.5">
+{{-- =============================================
+     MODAL KONFIRMASI HAPUS
+============================================= --}}
+<div id="modalConfirm" class="fixed inset-0 z-50 hidden bg-gray-900 bg-opacity-60 modal">
+  <div class="flex items-center justify-center min-h-screen px-4">
+    <div class="relative bg-white rounded-xl shadow-2xl max-w-sm w-full p-6">
+      <div class="text-center">
+        <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+          <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v6m-6 0h12M4 4h16v16H4z"></path>
+          </svg>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">Konfirmasi Hapus</h3>
+        <p class="text-sm text-gray-500 mb-6">Apakah Anda yakin ingin menghapus data izin ini? Tindakan ini tidak dapat dibatalkan.</p>
+        
+        <div class="flex space-x-3">
+          <button type="button" onclick="closeModal('modalConfirm')" 
+            class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
             Batal
           </button>
+          <button type="button" onclick="deleteConfirmed()" 
+            class="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors">
+            Hapus
+          </button>
         </div>
       </div>
     </div>
-    {{-- ========= END MODAL KONFIRMASI ========= --}}
-
-    {{-- =============================================
-         SCRIPT UNTUK DATATABLES
-
-    {{-- =============================================
-     FOOTER
-============================================= --}}
-    <footer class="text-center py-4 text-sm text-gray-600">
-      Dinas Penanaman Modal &amp; Pelayanan Terpadu Satu Pintu &middot;
-      {{ $tahun }} &ndash;
-      {{ \Carbon\Carbon::create()->month((int) $bulan)->translatedFormat('F') }}
-    </footer>
   </div>
+</div>
+
+{{-- =============================================
+     ALERT NOTIFICATION
+============================================= --}}
+<div id="alert-izin" class="fixed top-4 right-4 z-50 hidden">
+  <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg max-w-sm">
+    <div class="flex items-center">
+      <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+      <span id="alert-izin-msg"></span>
+    </div>
+  </div>
+</div>
+
 @endsection
