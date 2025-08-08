@@ -19,6 +19,24 @@ class AbsensiController extends Controller
 
     public function preview(Request $request)
     {
+        // Debug: Log input Ramadhan
+        if ($request->isMethod('post')) {
+            $debugInfo = [
+                'ramadhan_start_date' => $request->input('ramadhan_start_date'),
+                'ramadhan_end_date' => $request->input('ramadhan_end_date'),
+                'jam_masuk_min_ramadhan_senin' => $request->input('jam_masuk_min_ramadhan_senin'),
+                'jam_masuk_max_ramadhan_senin' => $request->input('jam_masuk_max_ramadhan_senin'),
+            ];
+            \Log::info('Ramadhan Debug:', $debugInfo);
+            
+            // Temporary debug - comment out after testing
+            if ($request->input('ramadhan_start_date') && $request->input('ramadhan_end_date')) {
+                session()->flash('debug_ramadhan', 'Ramadhan dates received: ' . 
+                    $request->input('ramadhan_start_date') . ' to ' . 
+                    $request->input('ramadhan_end_date'));
+            }
+        }
+
         // 1. Validasi input saat POST
         if ($request->isMethod('post')) {
             $request->validate([
@@ -31,7 +49,17 @@ class AbsensiController extends Controller
                 'jam_masuk_max_jumat'   => 'required|date_format:H:i',
                 'jam_pulang_min_jumat'  => 'required|date_format:H:i',
                 'jam_pulang_max_jumat'  => 'required|date_format:H:i',
-                'ramadhan_dates'        => 'nullable|string', // boleh kosong
+                // Validasi field Ramadhan - boleh kosong
+                'ramadhan_start_date'   => 'nullable|date',
+                'ramadhan_end_date'     => 'nullable|date',
+                'jam_masuk_min_ramadhan_senin'   => 'nullable|date_format:H:i',
+                'jam_masuk_max_ramadhan_senin'   => 'nullable|date_format:H:i',
+                'jam_pulang_min_ramadhan_senin'  => 'nullable|date_format:H:i',
+                'jam_pulang_max_ramadhan_senin'  => 'nullable|date_format:H:i',
+                'jam_masuk_min_ramadhan_jumat'   => 'nullable|date_format:H:i',
+                'jam_masuk_max_ramadhan_jumat'   => 'nullable|date_format:H:i',
+                'jam_pulang_min_ramadhan_jumat'  => 'nullable|date_format:H:i',
+                'jam_pulang_max_ramadhan_jumat'  => 'nullable|date_format:H:i',
             ]);
         }
 
@@ -54,41 +82,50 @@ class AbsensiController extends Controller
         ];
 
         // 4. Ambil rentang & konfigurasi Ramadhan jika ada
-        $ramadhanDates = $request->input('ramadhan_dates');
+        $ramadhanStartDate = $request->input('ramadhan_start_date');
+        $ramadhanEndDate = $request->input('ramadhan_end_date');
         $ramadhanRange = null;
-        if ($ramadhanDates) {
-            // split dengan separator " - "
-            $parts = explode(' - ', $ramadhanDates, 2);
-            if (count($parts) !== 2) {
-                return back()->with('error',
-                    'Format rentang tanggal Ramadhan tidak valid. Gunakan "YYYY-MM-DD - YYYY-MM-DD".');
-            }
-            [$rawStart, $rawEnd] = array_map('trim', $parts);
-            $startDate = Carbon::parse($rawStart);
-            $endDate   = Carbon::parse($rawEnd);
+        
+        if ($ramadhanStartDate && $ramadhanEndDate) {
+            try {
+                $startDate = Carbon::parse($ramadhanStartDate);
+                $endDate   = Carbon::parse($ramadhanEndDate);
 
-            $ramadhanRange = [
-                'start_date'   => $startDate,
-                'end_date'     => $endDate,
-                'senin_kamis' => [
-                    'masuk_min'  => $request->input('jam_masuk_min_ramadhan_senin', '08:00'),
-                    'masuk_max'  => $request->input('jam_masuk_max_ramadhan_senin', '08:30'),
-                    'pulang_min' => $request->input('jam_pulang_min_ramadhan_senin', '15:00'),
-                    'pulang_max' => $request->input('jam_pulang_max_ramadhan_senin', '16:00'),
-                ],
-                'jumat' => [
-                    'masuk_min'  => $request->input('jam_masuk_min_ramadhan_jumat', '08:00'),
-                    'masuk_max'  => $request->input('jam_masuk_max_ramadhan_jumat', '08:30'),
-                    'pulang_min' => $request->input('jam_pulang_min_ramadhan_jumat', '15:00'),
-                    'pulang_max' => $request->input('jam_pulang_max_ramadhan_jumat', '16:00'),
-                ],
-            ];
+                // Debug: Log parsed dates
+                \Log::info('Ramadhan Dates Parsed:', [
+                    'start' => $startDate->format('Y-m-d'),
+                    'end' => $endDate->format('Y-m-d'),
+                ]);
+
+                $ramadhanRange = [
+                    'start_date'   => $startDate,
+                    'end_date'     => $endDate,
+                    'senin_kamis' => [
+                        'masuk_min'  => $request->input('jam_masuk_min_ramadhan_senin', '08:00'),
+                        'masuk_max'  => $request->input('jam_masuk_max_ramadhan_senin', '08:30'),
+                        'pulang_min' => $request->input('jam_pulang_min_ramadhan_senin', '15:00'),
+                        'pulang_max' => $request->input('jam_pulang_max_ramadhan_senin', '16:00'),
+                    ],
+                    'jumat' => [
+                        'masuk_min'  => $request->input('jam_masuk_min_ramadhan_jumat', '08:00'),
+                        'masuk_max'  => $request->input('jam_masuk_max_ramadhan_jumat', '08:30'),
+                        'pulang_min' => $request->input('jam_pulang_min_ramadhan_jumat', '15:00'),
+                        'pulang_max' => $request->input('jam_pulang_max_ramadhan_jumat', '16:00'),
+                    ],
+                ];
+                
+                // Debug: Log Ramadhan config
+                \Log::info('Ramadhan Config:', $ramadhanRange);
+                
+            } catch (\Exception $e) {
+                return back()->with('error', 'Format tanggal Ramadhan tidak valid: ' . $e->getMessage());
+            }
         }
 
         // 5. Jika ada file Excel, parse semuanya
         if ($request->hasFile('file_excel')) {
             foreach ($request->file('file_excel') as $file) {
-                $data = Excel::toArray([], $file->getRealPath());
+                $data = Excel::toArray(new \stdClass(), $file->getRealPath());
                 $sheet = $data[2] ?? [];           // sheet ke-3
                 $barisTanggal = $sheet[3] ?? [];   // row ke-4 sebagai header tanggal
 
@@ -154,6 +191,8 @@ class AbsensiController extends Controller
                         // - Ramadhan (dalam rentang + beda Jumat vs Senin–Kamis)
                         // - atau non-Ramadhan (seninKamis/jumat biasa)
                         $tanggalObj = Carbon::parse($tgl);
+                        $isRamadhan = false;
+                        
                         if ($ramadhanRange
                             && $tanggalObj->between(
                                 $ramadhanRange['start_date'],
@@ -161,20 +200,23 @@ class AbsensiController extends Controller
                             )
                         ) {
                             // Ramadhan
-                            if ($tanggalObj->dayOfWeekIso === 5) {
+                            $isRamadhan = true;
+                            if ($tanggalObj->dayOfWeekIso === 5) { // Jumat
                                 $range = $ramadhanRange['jumat'];
-                            } else {
+                                \Log::info('Using Ramadhan Jumat rules for: ' . $tgl);
+                            } else { // Senin-Kamis
                                 $range = $ramadhanRange['senin_kamis'];
+                                \Log::info('Using Ramadhan Senin-Kamis rules for: ' . $tgl);
                             }
                         } else {
                             // non-Ramadhan
                             $dow = $tanggalObj->dayOfWeekIso;
-                            if ($dow >= 1 && $dow <= 4) {
+                            if ($dow >= 1 && $dow <= 4) { // Senin-Kamis
                                 $range = $seninKamis;
-                            } elseif ($dow === 5) {
+                            } elseif ($dow === 5) { // Jumat
                                 $range = $jumat;
                             } else {
-                                continue; // weekend
+                                continue; // weekend, skip
                             }
                         }
 
@@ -245,6 +287,11 @@ class AbsensiController extends Controller
                             } else {
                                 $keterangan = 'tepat waktu';
                             }
+                        }
+
+                        // Tambahkan info Ramadhan ke keterangan untuk debugging
+                        if ($isRamadhan) {
+                            $keterangan = $keterangan . ' (Ramadhan)';
                         }
 
                         $preview[] = [
