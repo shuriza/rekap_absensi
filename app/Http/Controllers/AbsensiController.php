@@ -290,9 +290,9 @@ class AbsensiController extends Controller
                         }
 
                         // Tambahkan info Ramadhan ke keterangan untuk debugging
-                        if ($isRamadhan) {
-                            $keterangan = $keterangan . ' (Ramadhan)';
-                        }
+                        // if ($isRamadhan) {
+                        //     $keterangan = $keterangan . ' (Ramadhan)';
+                        // }
 
                         $preview[] = [
                             'nama'       => $nama,
