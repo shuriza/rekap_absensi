@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const datePickers = document.querySelectorAll('.datepicker');
   datePickers.forEach(element => {
     flatpickr(element, {
-      dateFormat: 'Y-m',
+      dateFormat: 'Y-m-d',
     });
   });
 });

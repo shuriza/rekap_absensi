@@ -143,7 +143,10 @@ class IzinPresensiController extends Controller
     {
         if(!$izin->berkas || !Storage::disk('public')->exists($izin->berkas))
             abort(404);
-        return Storage::disk('public')->response($izin->berkas);
+        
+        $filePath = Storage::disk('public')->path($izin->berkas);
+        
+        return response()->file($filePath);
     }
 
     /* -------------- HELPER -------------- */

@@ -52,103 +52,104 @@
             background-color:#f3f4f6 !important; /* gray‑100 */
         }
 
-        /* Custom styling untuk Month Picker seperti gambar */
-        .flatpickr-calendar {
-            font-family: inherit;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        /* Custom styling untuk DataTables */
+        .dataTables_wrapper .dataTables_filter {
+            float: none !important;
+            text-align: left !important;
+            margin-bottom: 1rem !important;
         }
-
-        /* Style untuk tahun navigation */
-        .flatpickr-month {
-            background: transparent;
+        
+        .dataTables_wrapper .dataTables_filter label {
+            font-weight: 500 !important;
+            color: #374151 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
+            margin-bottom: 0 !important;
         }
-
-        .flatpickr-prev-month,
-        .flatpickr-next-month {
-            color: #6b7280;
-            padding: 10px;
+        
+        .dataTables_wrapper .dataTables_filter input[type="search"] {
+            margin-left: 0 !important;
+            padding: 8px 12px !important;
+            border: 1px solid #d1d5db !important;
+            border-radius: 0.5rem !important;
+            background: white !important;
+            color: #1f2937 !important;
+            font-size: 14px !important;
+            width: 250px !important;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
         }
-
-        .flatpickr-current-month {
-            font-size: 16px;
-            font-weight: 600;
-            color: #374151;
+        
+        .dataTables_wrapper .dataTables_filter input[type="search"]:focus {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+            outline: none !important;
         }
-
-        /* Month grid styling seperti gambar */
-        .flatpickr-monthSelect-months {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            padding: 16px;
-            background: white;
+        
+        .dataTables_wrapper .dataTables_length {
+            float: none !important;
+            margin-bottom: 1rem !important;
         }
-
-        .flatpickr-monthSelect-month {
-            padding: 12px 16px;
-            text-align: center;
-            border: 1px solid #e5e7eb;
-            border-radius: 6px;
-            cursor: pointer;
-            background: white;
-            color: #374151;
-            font-size: 14px;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            min-height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        
+        .dataTables_wrapper .dataTables_length label {
+            font-weight: 500 !important;
+            color: #374151 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.5rem !important;
         }
-
-        .flatpickr-monthSelect-month:hover {
-            background-color: #f3f4f6;
-            border-color: #d1d5db;
+        
+        .dataTables_wrapper .dataTables_length select {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            padding: 6px 8px !important;
+            border: 1px solid #d1d5db !important;
+            border-radius: 0.5rem !important;
+            background: white !important;
+            color: #1f2937 !important;
+            font-size: 14px !important;
         }
-
-        .flatpickr-monthSelect-month.selected {
-            background-color: #9ca3af;
-            color: white;
-            border-color: #9ca3af;
-            font-weight: 600;
+        
+        /* Info dan pagination styling */
+        .dataTables_wrapper .dataTables_info {
+            color: #6b7280 !important;
+            font-size: 14px !important;
+            padding-top: 1rem !important;
         }
-
-        /* Hide default calendar */
-        .flatpickr-calendar .flatpickr-days {
-            display: none;
+        
+        .dataTables_wrapper .dataTables_paginate {
+            float: none !important;
+            text-align: center !important;
+            padding-top: 1rem !important;
         }
-
-        .flatpickr-calendar .flatpickr-weekdays {
-            display: none;
+        
+        /* Top controls layout */
+        .dataTables_wrapper .dataTables_length,
+        .dataTables_wrapper .dataTables_filter {
+            width: auto !important;
+            display: inline-block !important;
         }
-
-        /* Custom month picker dropdown */
-        #monthPickerDropdown {
-            font-family: inherit;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-            border: 1px solid #d1d5db;
-            z-index: 9999 !important;
-            position: fixed;
+        
+        .dt-top-controls {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            margin-bottom: 1rem !important;
+            padding: 1rem !important;
+            background: #f9fafb !important;
+            border-radius: 0.5rem !important;
+            border: 1px solid #e5e7eb !important;
         }
-
-        #monthPickerDropdown .month-btn {
-            transition: all 0.2s ease;
-            font-weight: 500;
-        }
-
-        #monthPickerDropdown .month-btn:hover {
-            background-color: #f3f4f6;
-            border-color: #9ca3af;
-        }
-
-        #monthPickerDropdown .month-btn.selected {
-            background-color: #6b7280;
-            color: white;
-            border-color: #6b7280;
+        
+        @media (max-width: 768px) {
+            .dt-top-controls {
+                flex-direction: column !important;
+                gap: 1rem !important;
+            }
+            
+            .dataTables_wrapper .dataTables_filter input[type="search"] {
+                width: 200px !important;
+            }
         }
     </style>
 @endpush
@@ -226,11 +227,38 @@
                     order      : [[1,'asc']],          // kolom Nama
                     columnDefs : [{ targets:-1, orderable:false }],
                     responsive : true,
+                    dom: '<"dt-top-controls"<"dataTables_length"l><"dataTables_filter"f>>rtip',
                     language   : {
                         search           : '',
-                        searchPlaceholder: 'Cari nama / tipe…'
+                        searchPlaceholder: 'Cari nama karyawan, tipe, atau jenis izin...',
+                        lengthMenu: 'Tampilkan _MENU_ data per halaman',
+                        info: 'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',
+                        infoEmpty: 'Tidak ada data yang tersedia',
+                        infoFiltered: '(difilter dari _MAX_ total data)',
+                        paginate: {
+                            first: 'Pertama',
+                            last: 'Terakhir',
+                            next: 'Selanjutnya',
+                            previous: 'Sebelumnya'
+                        },
+                        emptyTable: 'Tidak ada data izin yang tersedia',
+                        zeroRecords: 'Tidak ditemukan data yang sesuai'
                     }
                 });
+
+                // Custom search label dengan icon
+                $('.dataTables_filter label').prepend(`
+                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                `);
+                
+                // Custom length label dengan icon
+                $('.dataTables_length label').prepend(`
+                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+                    </svg>
+                `);
 
                 /* ----------   Tailwind‑ify input & select   ---------- */
                 dtApi.tables().every(function () {
