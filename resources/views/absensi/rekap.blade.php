@@ -482,6 +482,51 @@
             max-width: 100px !important;
           }
         }
+
+        /* Enhanced styles untuk employee rows di modal OB */
+        .employee-row {
+          transition: all 0.2s ease-in-out;
+          border-radius: 6px;
+          margin: 2px;
+          border: 1px solid transparent !important;
+        }
+        
+        .employee-row:hover {
+          background-color: #dbeafe !important;
+          border-color: #3b82f6 !important;
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15) !important;
+        }
+        
+        .employee-row:active {
+          transform: translateY(0);
+          transition: transform 0.1s ease;
+        }
+        
+        /* Visual feedback untuk area yang bisa diklik */
+        .employee-row::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 3px;
+          background: transparent;
+          transition: background-color 0.2s ease;
+        }
+        
+        .employee-row:hover::before {
+          background-color: #3b82f6;
+        }
+        
+        /* Style untuk checkbox agar tidak mengganggu flow klik */
+        .employee-row input[type="checkbox"] {
+          transition: all 0.2s ease;
+        }
+        
+        .employee-row:hover input[type="checkbox"] {
+          transform: scale(1.1);
+        }
       </style>
     @endpush
 
@@ -809,6 +854,36 @@
           document.body.classList.add('overflow-y-hidden');
         }
 
+        // Function untuk toggle checkbox OB ketika area karyawan diklik
+        function toggleObCheckbox(employeeId) {
+          const checkbox = document.getElementById('ob-checkbox-' + employeeId);
+          if (checkbox) {
+            checkbox.checked = !checkbox.checked;
+          }
+        }
+
+        // Event delegation untuk handle klik pada employee rows
+        document.addEventListener('DOMContentLoaded', function() {
+          const obList = document.getElementById('ob-list');
+          if (obList) {
+            obList.addEventListener('click', function(event) {
+              // Jika yang diklik adalah checkbox, jangan toggle lagi
+              if (event.target.classList.contains('ob-checkbox')) {
+                return; // Biarkan checkbox handling default behavior
+              }
+              
+              // Cari parent element yang memiliki class employee-row
+              const employeeRow = event.target.closest('.employee-row');
+              if (employeeRow) {
+                const employeeId = employeeRow.getAttribute('data-employee-id');
+                if (employeeId) {
+                  toggleObCheckbox(employeeId);
+                }
+              }
+            });
+          }
+        });
+
         // Pastikan closeModal sudah ada di script Anda
         function closeModal(id) {
           document.getElementById(id).classList.add('hidden');
@@ -881,28 +956,49 @@
           <form id="form-ob" action="{{ route('update-ob-batch') }}" method="POST" class="mt-6">
             @csrf
             
+            {{-- Info Text --}}
+            <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div class="flex items-center space-x-2">
+                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <p class="text-sm text-blue-700">
+                  <strong>Tip:</strong> Klik di mana saja pada baris karyawan untuk menandai/menghapus status OB
+                </p>
+              </div>
+            </div>
+            
             {{-- Employee List --}}
             <div id="ob-list" class="max-h-80 overflow-y-auto border border-gray-200 rounded-lg">
               @foreach ($pegawaiList as $pegawai)
-                <div class="flex items-center justify-between p-3 hover:bg-blue-50 border-b border-gray-100 last:border-b-0">
-                  <div class="flex items-center space-x-3">
+                <div class="employee-row flex items-center justify-between p-3 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 cursor-pointer transition-all duration-200 hover:shadow-sm" 
+                     data-employee-id="{{ $pegawai->id }}"
+                     title="Klik untuk toggle status OB {{ $pegawai->nama }}">
+                  <div class="flex items-center space-x-3 pointer-events-none">
                     @php
                       $inputName = 'ob_ids[]';
                       $isChecked = $pegawai->is_ob;
                     @endphp
                     <input type="checkbox" 
+                      id="ob-checkbox-{{ $pegawai->id }}"
                       name="{{ $inputName }}" 
                       value="{{ $pegawai->id }}" 
                       @if($isChecked) checked @endif
-                      class="w-4 h-4 text-blue-600 rounded">
+                      class="w-4 h-4 text-blue-600 rounded pointer-events-auto ob-checkbox">
                     <div>
                       <div class="font-medium text-gray-900">{{ $pegawai->nama }}</div>
                       <div class="text-sm text-gray-600">{{ $pegawai->departemen }}</div>
                     </div>
                   </div>
-                  @if($pegawai->is_ob)
-                    <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">Active OB</span>
-                  @endif
+                  <div class="flex items-center space-x-2">
+                    @if($pegawai->is_ob)
+                      <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full pointer-events-none">Active OB</span>
+                    @endif
+                    {{-- Click indicator icon --}}
+                    <svg class="w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path>
+                    </svg>
+                  </div>
                 </div>
               @endforeach
             </div>
@@ -1033,9 +1129,14 @@
               </th>
               <th class="border border-gray-300 px-3 py-3 text-gray-800 font-semibold">
                 <div class="flex items-center justify-center space-x-1">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                  </svg>
+                  <div class="relative">
+                    <input type="checkbox" class="ob-checkbox hidden" id="ob-{{ $pegawai->id }}" />
+                    <label for="ob-{{ $pegawai->id }}" class="cursor-pointer">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                      </svg>
+                    </label>
+                  </div>
                   <span>Nama Karyawan</span>
                 </div>
               </th>
