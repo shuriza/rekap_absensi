@@ -1052,8 +1052,8 @@
         foreach ($tanggalList as $tgl) {
           $sel = $pegawai->absensi_harian[$tgl] ?? ['type' => 'kosong', 'label' => '-'];
           
-          // Jika ada data selain kosong dan libur, berarti ada data absensi valid
-          if ($sel['type'] !== 'kosong' && $sel['type'] !== 'libur') {
+          // Jika ada data selain kosong, tidak_valid, dan libur, berarti ada data absensi valid
+          if ($sel['type'] !== 'kosong' && $sel['type'] !== 'tidak_valid' && $sel['type'] !== 'libur') {
             $hasValidAttendanceData = true;
             break 2; // keluar dari kedua loop
           }
@@ -1079,6 +1079,10 @@
             <div class="flex items-center gap-2">
               <div class="w-4 h-4 bg-red-500 rounded border"></div>
               <span>Kosong</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 bg-red-600 rounded border"></div>
+              <span>Tidak Valid</span>
             </div>
             <div class="flex items-center gap-2">
               <div class="w-4 h-4 bg-yellow-200 rounded border"></div>
@@ -1161,13 +1165,14 @@
                   $bg = match ($sel['type']) {
                       'libur' => 'bg-gray-300',
                       'kosong' => 'bg-red-500',
+                      'tidak_valid' => 'bg-red-600',
                       'izin' => 'bg-blue-300',
                       'terlambat' => 'bg-yellow-200',
                       default => '',
                   };
 
                   /* warna teks */
-                  $txt = $bg === 'bg-red-500' ? 'text-white' : 'text-black';
+                  $txt = ($bg === 'bg-red-500' || $bg === 'bg-red-600') ? 'text-white' : 'text-black';
                 @endphp
 
                 @php

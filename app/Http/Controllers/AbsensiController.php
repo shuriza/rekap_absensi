@@ -9,6 +9,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\Shared\Date;
+use Illuminate\Support\Facades\Log;
 
 class AbsensiController extends Controller
 {
@@ -27,7 +28,7 @@ class AbsensiController extends Controller
                 'jam_masuk_min_ramadhan_senin' => $request->input('jam_masuk_min_ramadhan_senin'),
                 'jam_masuk_max_ramadhan_senin' => $request->input('jam_masuk_max_ramadhan_senin'),
             ];
-            \Log::info('Ramadhan Debug:', $debugInfo);
+            Log::info('Ramadhan Debug:', $debugInfo);
             
             // Temporary debug - comment out after testing
             if ($request->input('ramadhan_start_date') && $request->input('ramadhan_end_date')) {
@@ -92,7 +93,7 @@ class AbsensiController extends Controller
                 $endDate   = Carbon::parse($ramadhanEndDate);
 
                 // Debug: Log parsed dates
-                \Log::info('Ramadhan Dates Parsed:', [
+                Log::info('Ramadhan Dates Parsed:', [
                     'start' => $startDate->format('Y-m-d'),
                     'end' => $endDate->format('Y-m-d'),
                 ]);
@@ -115,7 +116,7 @@ class AbsensiController extends Controller
                 ];
                 
                 // Debug: Log Ramadhan config
-                \Log::info('Ramadhan Config:', $ramadhanRange);
+                Log::info('Ramadhan Config:', $ramadhanRange);
                 
             } catch (\Exception $e) {
                 return back()->with('error', 'Format tanggal Ramadhan tidak valid: ' . $e->getMessage());
@@ -203,10 +204,10 @@ class AbsensiController extends Controller
                             $isRamadhan = true;
                             if ($tanggalObj->dayOfWeekIso === 5) { // Jumat
                                 $range = $ramadhanRange['jumat'];
-                                \Log::info('Using Ramadhan Jumat rules for: ' . $tgl);
+                                Log::info('Using Ramadhan Jumat rules for: ' . $tgl);
                             } else { // Senin-Kamis
                                 $range = $ramadhanRange['senin_kamis'];
-                                \Log::info('Using Ramadhan Senin-Kamis rules for: ' . $tgl);
+                                Log::info('Using Ramadhan Senin-Kamis rules for: ' . $tgl);
                             }
                         } else {
                             // non-Ramadhan
@@ -263,15 +264,15 @@ class AbsensiController extends Controller
                             continue;
                         }
 
-                        // keterangan terlambat/tepat waktu/diluar
+                        // keterangan terlambat/tepat waktu/diluar/tidak valid
                         $jm = $jamMasukValid ? Carbon::createFromFormat('H:i', $jamMasukValid) : null;
                         $jp = $jamPulangValid ? Carbon::createFromFormat('H:i', $jamPulangValid) : null;
                         $keterangan = null;
 
                         if ($jm && !$jp) {
-                            $keterangan = 'terlambat';
+                            $keterangan = 'tidak valid';
                         } elseif (!$jm && $jp) {
-                            $keterangan = 'terlambat';
+                            $keterangan = 'tidak valid';
                         } elseif ($jm && $jp) {
                             $sMasuk  = $jm->lt($masukMin)
                                         ? 'diluar waktu absen'

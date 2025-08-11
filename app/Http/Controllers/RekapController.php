@@ -176,6 +176,7 @@ class RekapController extends Controller
 
                     // mapping keterangan → type untuk pewarnaan
                     $type = match ($keterangan) {
+                        'tidak valid'        => 'tidak_valid', // merah untuk data tidak lengkap
                         'diluar waktu absen' => 'kosong',      // merah
                         'terlambat'          => 'terlambat',   // kuning
                         'tepat waktu'        => 'hadir',       // tidak berwarna
