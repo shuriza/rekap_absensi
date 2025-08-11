@@ -99,52 +99,50 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
 
                 $row = $mapPres[$tglStr] ?? null;
                 if ($row) {
-                    $in = $this->toCarbon($tglStr, $row->jam_masuk);
+                    $in  = $this->toCarbon($tglStr, $row->jam_masuk);
                     $out = $this->toCarbon($tglStr, $row->jam_pulang);
-                    $keterangan = strtolower(trim($row->keterangan ?? ''));
+                    $ket = strtolower(trim($row->keterangan ?? ''));
 
-                    // Logika untuk bukan OB
-                    if (!$peg->is_ob) {
-                        $type = match ($keterangan) {
-                            'diluar waktu absen' => 'kosong',
-                            'terlambat' => 'terlambat',
-                            'tepat waktu' => 'hadir',
-                            default => null,
-                        };
+                    // mapping HANYA dari keterangan — TIDAK ADA fallback manual
+                    $type = match ($ket) {
+                        'tidak valid'        => 'tidak_valid',
+                        'diluar waktu absen' => 'kosong',
+                        'terlambat'          => 'terlambat',
+                        'tepat waktu'        => 'hadir',
+                        default              => null,
+                    };
 
-                        if ($type === null) {
-                            $type = $in && $out ? ($in->format('H:i') > '07:30' ? 'terlambat' : 'hadir') : 'kosong';
-                        }
-                    }
-                    // Logika untuk OB
-                    else {
-                        if (!$in && !$out) {
-                            $type = 'kosong';
+                    // === Override KHUSUS OB ===
+                    if ($peg->is_ob) {
+                        if ($in && $out && $out->gt($in)) {
+                            $type = 'hadir';                 // lengkap → hadir
+                        } elseif (($in && !$out) || (!$in && $out)) {
+                            $type = 'tidak_valid';           // satu absen → TIDAK VALID (merah)
                         } else {
-                            $hasSingleAbsen = ($in && !$out) || (!$in && $out);
-                            $type = $hasSingleAbsen ? 'terlambat' : 'hadir'; // Satu absen = terlambat, dua absen = hadir
+                            $type = 'kosong';
                         }
                     }
 
-                    if (!$in && !$out) {
-                        $label = '-';
-                    } else {
-                        $inTime = $in ? $in->format('H:i') : '--:--';
-                        $outTime = $out ? $out->format('H:i') : '--:--';
-                        $label = "$inTime – $outTime";
-                    }
-                    $harian[$d] = ['type' => $type, 'label' => $label];
+                    // label
+                    $label = ($in || $out)
+                        ? sprintf('%s – %s', $in ? $in->format('H:i') : '--:--', $out ? $out->format('H:i') : '--:--')
+                        : '-';
 
+                    // simpan ke tabel harian
+                    $harian[$d] = ['type' => $type ?? 'kosong', 'label' => $label];
 
+                    // akumulasi menit (samakan dengan web)
                     if ($in && $out && $out->gt($in)) {
                         $totalMnt += $in->diffInMinutes($out);
                     } elseif ($in || $out) {
-                        $totalMnt += $this->defaultMinutes;
+                        $totalMnt += $this->defaultMinutes; // penalti data tidak lengkap
                     }
                 } else {
                     $harian[$d] = ['type' => 'kosong', 'label' => '-'];
-                    $totalMnt += $this->defaultMinutes; // Tambahkan default untuk hari tanpa absensi
+                    $totalMnt += $this->defaultMinutes;
                 }
+
+
             }
 
             $peg->absensi_harian = $harian;
@@ -233,12 +231,13 @@ class RekapAbsensiBulananExport implements FromView, WithEvents
                         $cell = "{$col}{$rowNum}";
 
                         $rgb = match ($info['type']) {
-                            'kosong' => 'FF5252',
-                            'terlambat' => 'FFF59D',
-                            'izin' => '90CAF9',
-                            'libur' => 'E0E0E0',
-                            default => null,
-                        };
+                        'kosong'       => 'FF5252',
+                        'tidak_valid'  => 'FF5252', // ⟵ sama merah
+                        'terlambat'    => 'FFF59D',
+                        'izin'         => '90CAF9',
+                        'libur'        => 'E0E0E0',
+                        default        => null,
+                    };
 
                         if ($rgb) {
                             $sheet->getStyle($cell)->getFill()

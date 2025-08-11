@@ -22,7 +22,6 @@
     <tbody class="bg-white text-gray-800">
         @foreach ($pegawaiList as $loopIdx => $pegawai)
             @php
-                // Konversi total menit ke hari, jam, menit
                 $totalMinutes = $pegawai->total_menit ?? 0;
                 $totalDays = floor($totalMinutes / (60 * 24));
                 $remainingMinutes = $totalMinutes % (60 * 24);
@@ -30,6 +29,8 @@
                 $totalMinutes = $remainingMinutes % 60;
                 $totalAkumulasi = sprintf('%d hari %02d jam %02d menit', $totalDays, $totalHours, $totalMinutes);
             @endphp
+
+
 
             <tr class="hover:bg-gray-50">
                 <td class="border px-2 py-1">{{ $loopIdx + 1 }}</td>
@@ -48,7 +49,8 @@
                         /* warna latar berdasarkan tipe (sinkronisasi dengan Excel) */
                         $bg = match ($info['type']) {
                             'kosong'    => 'bg-red-500',     // Merah (#FF5252)
-                            'terlambat' => 'bg-yellow-300',  // Kuning (#FFF59D)
+                            'terlambat' => 'bg-yellow-300',
+                            'tidak_valid'  => 'bg-red-500',
                             'izin'      => 'bg-blue-300',    // Biru (#90CAF9)
                             'libur'     => 'bg-gray-300',    // Abu-abu (#E0E0E0)
                             'hadir'     => '',               // Tanpa warna (default)

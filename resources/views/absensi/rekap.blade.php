@@ -1077,12 +1077,8 @@
 
            <div class="flex flex-row gap-2 mt-2 text-sm">
             <div class="flex items-center gap-2">
-              <div class="w-4 h-4 bg-red-500 rounded border"></div>
-              <span>Kosong</span>
-            </div>
-            <div class="flex items-center gap-2">
               <div class="w-4 h-4 bg-red-600 rounded border"></div>
-              <span>Tidak Valid</span>
+              <span>Kosong/Tidak Valid</span>
             </div>
             <div class="flex items-center gap-2">
               <div class="w-4 h-4 bg-yellow-200 rounded border"></div>
@@ -1164,7 +1160,7 @@
                   /* warna latar */
                   $bg = match ($sel['type']) {
                       'libur' => 'bg-gray-300',
-                      'kosong' => 'bg-red-500',
+                      'kosong' => 'bg-red-600',
                       'tidak_valid' => 'bg-red-600',
                       'izin' => 'bg-blue-300',
                       'terlambat' => 'bg-yellow-200',
@@ -1266,7 +1262,7 @@
                 $tampil = "{$hari} hari {$jam} jam {$menit} menit";
               @endphp
               <td class="border px-2 py-1 text-xs font-semibold">
-                <span class="sr-only">{{ $pegawai->total_menit }}</span> {{-- untuk sort --}}
+                <span class="sr-only">{{ $pegawai->total_fmt }}</span> {{-- untuk sort --}}
                 {{ $tampil }}
               </td>
 

@@ -115,16 +115,36 @@ class RekapController extends Controller
                 $row = $mapPres[$tglStr] ?? null;
                 $in  = $row ? $toCarbon($tglStr, $row->jam_masuk)  : null;
                 $out = $row ? $toCarbon($tglStr, $row->jam_pulang) : null;
+                $ket = strtolower(trim($row->keterangan ?? ''));
 
-                if ($in && $out && $out->gt($in)) {
-                    // Presensi lengkap → pakai selisih sebenarnya
-                    $totalMenit += $in->diffInMinutes($out);
+                if ($peg->is_ob) {
+                    // OB: tidak ada "terlambat" → lengkap = selisih; selain itu = 7j30m
+                    if ($in && $out && $out->gt($in)) {
+                        $totalMenit += $in->diffInMinutes($out);
+                    } else {
+                        $totalMenit += $this->defaultMinutes; // 450
+                    }
                 } else {
-                    /* • Tidak ada presensi sama sekali
-                    • Atau hanya jam masuk / pulang yang tercatat
-                    ➜ Tetap dihitung 7 jam 30 menit (defaultMinutes) */
-                    $totalMenit += $this->defaultMinutes;   // 450 menit
+                    // Non-OB: status tertentu selalu 7j30m
+                    $forceDefault = in_array($ket, [
+                        'tidak valid',
+                        'terlambat',
+                        'kosong',
+                        'diluar waktu absen',
+                        'di luar waktu absen', // variasi ejaan
+                    ], true);
+
+                    if ($forceDefault) {
+                        $totalMenit += $this->defaultMinutes;
+                    } else {
+                        if ($in && $out && $out->gt($in)) {
+                            $totalMenit += $in->diffInMinutes($out);
+                        } else {
+                            $totalMenit += $this->defaultMinutes;
+                        }
+                    }
                 }
+
             }
 
             /* simpan ke model (nilai ini dipakai Blade & Export) */
@@ -168,55 +188,47 @@ class RekapController extends Controller
 
 
                 /* presensi */
-                /* (#3) presensi → hadir / terlambat / kosong / di-luar-waktu */
+                /* (#3) presensi → hadir / terlambat / kosong / tidak_valid */
                 if ($row = $mapPres[$tglStr] ?? null) {
-
-                    // ambil keterangan jika sudah dihitung sebelumnya di DB
                     $keterangan = strtolower(trim($row->keterangan ?? ''));
 
-                    // mapping keterangan → type untuk pewarnaan
+                    // raw & parsed times
+                    $inRaw  = $row->jam_masuk;
+                    $outRaw = $row->jam_pulang;
+                    $inC    = $toCarbon($tglStr, $inRaw);
+                    $outC   = $toCarbon($tglStr, $outRaw);
+
+                    // mapping HANYA dari keterangan — TIDAK ADA fallback manual
                     $type = match ($keterangan) {
-                        'tidak valid'        => 'tidak_valid', // merah untuk data tidak lengkap
-                        'diluar waktu absen' => 'kosong',      // merah
-                        'terlambat'          => 'terlambat',   // kuning
-                        'tepat waktu'        => 'hadir',       // tidak berwarna
-                        default              => null,          // belum ada keterangan
+                        'tidak valid'        => 'tidak_valid',
+                        'diluar waktu absen' => 'kosong',     // merah
+                        'terlambat'          => 'terlambat',  // kuning
+                        'tepat waktu'        => 'hadir',
+                        default              => null,         // ⟵ biarkan null, akan diisi di bawah
                     };
 
-                    // ─── kalau belum ada keterangan (type null) fallback ke hitung manual ───
-                    if ($type === null) {
-                        // ***logika lama Anda di sini***  (atau dibiarkan kosong)
-                        $in  = $row->jam_masuk  ? substr($row->jam_masuk , -8, 5) : null;
-                        $out = $row->jam_pulang ? substr($row->jam_pulang, -8, 5) : null;
-                        $late = $in && $in > '07:30';
-                        $type = $in || $out ? ($late ? 'terlambat' : 'hadir') : 'kosong';
+                    // === Override KHUSUS OB (hari kerja) ===
+                    if ($peg->is_ob && $weekday >= 1 && $weekday <= 5) {
+                        if ($inC && $outC && $outC->gt($inC)) {
+                            $type = 'hadir';                 // in–out lengkap → hadir
+                        } elseif (($inC && !$outC) || (!$inC && $outC)) {
+                            $type = 'tidak_valid';           // hanya satu absen → TIDAK VALID
+                        } else {
+                            $type = 'kosong';                // tidak ada absen → kosong
+                        }
                     }
 
-                    // label tetap jam-jam supaya masih terlihat
-                    $in  = $row->jam_masuk  ? substr($row->jam_masuk , -8, 5) : '--:--';
-                    $out = $row->jam_pulang ? substr($row->jam_pulang, -8, 5) : '--:--';
-
-                    $daily[$d] = [
-                        'type'  => $type,
-                        'label' => "$in – $out",
-                    ];
-                }
-                // kalau tidak masuk kondisi apa-pun, isi default
-                    $daily[$d] ??= ['type' => 'kosong', 'label' => '-'];
-
-                if ($peg->is_ob && $weekday >= 1 && $weekday <= 5) {
-                    $row = $mapPres[$tglStr] ?? null;
-                    $in = $row ? $toCarbon($tglStr, $row->jam_masuk) : null;
-                    $out = $row ? $toCarbon($tglStr, $row->jam_pulang) : null;
-
-                    if (!$in && !$out && !isset($holidayMap[$tglStr]) && !isset($mapIzin[$tglStr])) {
-                        $daily[$d] = ['type' => 'kosong', 'label' => '-'];
-                    } else {
-                        $in = $row->jam_masuk ? substr($row->jam_masuk, -8, 5) : '--:--';
-                        $out = $row->jam_pulang ? substr($row->jam_pulang, -8, 5) : '--:--';
-                        $daily[$d] = ['type' => 'hadir', 'label' => "$in – $out"];
+                    // hanya set bila sudah ada type; kalau tetap null, nanti diisi default 'kosong'
+                    if ($type !== null) {
+                        $in  = $inRaw  ? substr($inRaw , -8, 5) : '--:--';
+                        $out = $outRaw ? substr($outRaw, -8, 5) : '--:--';
+                        $daily[$d] = ['type' => $type, 'label' => "$in – $out"];
+                        continue; // ⟵ penting: jangan ditimpa default di bawah
                     }
                 }
+
+                /* default untuk baris yang belum di-set (termasuk keterangan null non-OB) */
+                $daily[$d] ??= ['type' => 'kosong', 'label' => '-'];
 
         }
         
@@ -362,16 +374,33 @@ class RekapController extends Controller
                     if ($row) {
                         $in  = $toCarbon($tglStr, $row->jam_masuk);
                         $out = $toCarbon($tglStr, $row->jam_pulang);
+                        $ket = strtolower(trim($row->keterangan ?? ''));
 
-                        if ($in && $out && $out->gt($in)) {
-                            $menitPerBulan[$bulan] += $in->diffInMinutes($out);
-                        } elseif (($in && !$out) || (!$in && $out)) {
-                            $menitPerBulan[$bulan] += $this->defaultMinutes;
+                        if ($peg->is_ob) {
+                            if ($in && $out && $out->gt($in)) {
+                                $menitPerBulan[$bulan] += $in->diffInMinutes($out);
+                            } else {
+                                $menitPerBulan[$bulan] += $this->defaultMinutes;
+                            }
+                        } else {
+                            $forceDefault = in_array($ket, [
+                                'tidak valid','terlambat','kosong','diluar waktu absen','di luar waktu absen',
+                            ], true);
+
+                            if ($forceDefault) {
+                                $menitPerBulan[$bulan] += $this->defaultMinutes;
+                            } else {
+                                if ($in && $out && $out->gt($in)) {
+                                    $menitPerBulan[$bulan] += $in->diffInMinutes($out);
+                                } else {
+                                    $menitPerBulan[$bulan] += $this->defaultMinutes;
+                                }
+                            }
                         }
                     } else {
-                        // Tambahkan default minutes untuk hari tanpa absensi (opsional)
-                        $menitPerBulan[$bulan] += $this->defaultMinutes; // Aktifkan jika ingin hitung hari kosong
+                        $menitPerBulan[$bulan] += $this->defaultMinutes;
                     }
+
                 }
             }
 
