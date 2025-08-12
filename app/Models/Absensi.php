@@ -10,7 +10,8 @@ class Absensi extends Model
     use HasFactory;
 
     protected $fillable = [
-        'karyawan_id', 'tanggal', 'jam_masuk', 'jam_pulang','keterangan'
+    'karyawan_id','tanggal','jam_masuk','jam_pulang','keterangan',
+    'late_minutes','early_minutes','penalty_minutes','work_minutes','rule_label',
     ];
 
     public function karyawan()
@@ -21,9 +22,11 @@ class Absensi extends Model
     protected $table = 'absensis';        // atau nama tabel Anda
 
     protected $casts = [
-        'tanggal'    => 'date:Y-m-d',     // ⬅️ wajib supaya $presensi->tanggal jadi Carbon
-        'jam_masuk'  => 'datetime:H:i:s',
-        'jam_pulang' => 'datetime:H:i:s',
+    'tanggal'         => 'date',
+    'late_minutes'    => 'integer',
+    'early_minutes'   => 'integer',
+    'penalty_minutes' => 'integer',
+    'work_minutes'    => 'integer',
     ];
 
 }
