@@ -17,7 +17,9 @@ use App\Models\Holiday;
 
 class RekapAbsensiTahunanExport implements FromView, WithEvents, ShouldAutoSize
 {
+    private int $defaultMinutes = 450;   // 7 jam 30 menit
     protected int $tahun;
+
 
     public function __construct(int $tahun)
     {
@@ -43,12 +45,14 @@ class RekapAbsensiTahunanExport implements FromView, WithEvents, ShouldAutoSize
 
         foreach ($pegawaiList as $peg) {
             $menitPerBulan = array_fill(1, 12, 0);
-            $holidayMap = Holiday::whereYear('tanggal', $this->tahun)->get()->keyBy(fn($h) => $h->tanggal->toDateString());
+            $holidayMap = Holiday::whereYear('tanggal', $this->tahun)->get()
+                                ->keyBy(fn($h) => $h->tanggal->toDateString());
 
+            // map izin (skip hari yang di-izin-kan penuh)
             $mapIzin = [];
             foreach ($peg->izins as $iz) {
                 foreach (CarbonPeriod::create($iz->tanggal_awal, $iz->tanggal_akhir ?? $iz->tanggal_awal) as $d) {
-                    $mapIzin[$d->toDateString()] = strtok($iz->jenis_ijin, ' ');
+                    $mapIzin[$d->toDateString()] = true;
                 }
             }
 
@@ -56,43 +60,78 @@ class RekapAbsensiTahunanExport implements FromView, WithEvents, ShouldAutoSize
 
             for ($bulan = 1; $bulan <= 12; $bulan++) {
                 $daysInMonth = Carbon::create($this->tahun, $bulan)->daysInMonth;
-                for ($d = 1; $d <= $daysInMonth; $d++) {
-                    $tglStr = sprintf('%04d-%02d-%02d', $this->tahun, $bulan, $d);
-                    $weekday = Carbon::parse($tglStr)->dayOfWeekIso;
+                $hadAny = false;      // ada minimal satu record presensi di bulan ini?
+                $noRecordCount = 0;   // jumlah hari kerja tanpa record
 
-                    if ($weekday === 6 || $weekday === 7 || isset($holidayMap[$tglStr])) continue;
+                for ($d = 1; $d <= $daysInMonth; $d++) {
+                    $tglStr  = sprintf('%04d-%02d-%02d', $this->tahun, $bulan, $d);
+                    $weekday = Carbon::parse($tglStr)->dayOfWeekIso; // 6=Sabtu 7=Minggu
+
+                    // Lewati weekend, tanggal merah & izin penuh
+                    if ($weekday >= 6) continue;
+                    if (isset($holidayMap[$tglStr])) continue;
                     if (isset($mapIzin[$tglStr])) continue;
 
                     $row = $mapPres[$tglStr] ?? null;
-                    if ($row) {
-                        $in = $toCarbon($tglStr, $row->jam_masuk);
-                        $out = $toCarbon($tglStr, $row->jam_pulang);
+                    if (!$row) {            // tidak ada record sama sekali
+                        $noRecordCount++;   // ditambahkan 450 nanti HANYA jika hadAny=true
+                        continue;
+                    }
 
+                    $hadAny = true;
+
+                    $in  = $toCarbon($tglStr, $row->jam_masuk);
+                    $out = $toCarbon($tglStr, $row->jam_pulang);
+                    $ket = strtolower(trim($row->keterangan ?? ''));
+
+                    $incomplete = ($in && !$out) || (!$in && $out) || ($in && $out && !$out->gt($in));
+                    $forceDefault = $incomplete || in_array($ket, [
+                        'tidak valid','terlambat','kosong','diluar waktu absen','di luar waktu absen',
+                    ], true);
+
+                    if ($peg->is_ob) {
+                        // OB: tidak ada “terlambat”; lengkap = durasi riil; satu/no absen = 7,5 jam
                         if ($in && $out && $out->gt($in)) {
-                            $menitPerBulan[$bulan] += $in->diffInMinutes($out);
-                        } elseif (($in && !$out) || (!$in && $out)) {
-                            $menitPerBulan[$bulan] += 450; // fallback default
+                            $menitPerBulan[$bulan] += $in->diffInMinutes($out);   // kalau mau minimal 7,5 jam → max(..., $this->defaultMinutes)
+                        } else {
+                            $menitPerBulan[$bulan] += $this->defaultMinutes;
                         }
                     } else {
-                        $menitPerBulan[$bulan] += 450; // default untuk hari kosong
+                        // Non-OB: status forceDefault atau tidak lengkap → 7,5 jam; lengkap → selisih
+                        if ($forceDefault) {
+                            $menitPerBulan[$bulan] += $this->defaultMinutes;
+                        } else {
+                            $menitPerBulan[$bulan] += $in->diffInMinutes($out);
+                        }
                     }
+                }
+
+                // Jika ada minimal satu record di bulan ini, hari kerja “tanpa record” dihitung 7,5 jam
+                if ($hadAny) {
+                    $menitPerBulan[$bulan] += $noRecordCount * $this->defaultMinutes;
+                } else {
+                    // sebulan benar-benar tanpa presensi → biarkan 0
+                    $menitPerBulan[$bulan] = 0;
                 }
             }
 
-            // Format ke HH:MM
-            $HHMM = fn(int $m) => sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
-            $peg->rekap_tahunan = array_map($HHMM, $menitPerBulan);
+            // simpan menit untuk view
+            $peg->menitPerBulan = $menitPerBulan;
 
+            // tampilkan '—' jika 0; selain itu HH:MM
+            $toHHMM = function (int $m) { return $m > 0 ? sprintf('%02d:%02d', intdiv($m,60), $m%60) : '—'; };
+            $peg->rekap_tahunan = array_map($toHHMM, $menitPerBulan);
+
+            // total tahunan & format (basis 7j30m per “hari kerja”)
             $totMenit = array_sum($menitPerBulan);
             $peg->total_menit = $totMenit;
-
-            $hari = floor($totMenit / (60 * 24));
-            $sisa = $totMenit % (60 * 24);
-            $jam = floor($sisa / 60);
-            $menit = $sisa % 60;
-
-            $peg->total_fmt = sprintf('%d hari %02d jam %02d menit', $hari, $jam, $menit);
+            $hari = intdiv($totMenit, $this->defaultMinutes);
+            $sisa = $totMenit % $this->defaultMinutes;
+            $jam  = intdiv($sisa, 60);
+            $mnt  = $sisa % 60;
+            $peg->total_fmt = sprintf('%d hari %02d jam %02d menit', $hari, $jam, $mnt);
         }
+
 
         return view('exports.rekap_tahunan', [
             'karyawans' => $pegawaiList,

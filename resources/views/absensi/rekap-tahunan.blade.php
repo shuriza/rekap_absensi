@@ -4,19 +4,31 @@
 @section('content')
   <div class="min-h-screen flex flex-col px-6 py-4">
     @php
-      // range jam 0–165 dibagi 8 langkah
-      $maxHours = 180;
-      $minHours = 160; // Minimum ditentukan
-      $steps = 8;
-      $range = $maxHours - $minHours; // 40 jam
-      $stepSize = (int) ceil($range / $steps); // 10 jam per langkah
+      // === Konfigurasi gradasi kedisiplinan ===
+      // Maksimum (kasar) 1 bulan: 7.5 jam x 30 hari = 13.500 menit
+      $MAX_MINUTES   = (int) (7.5 * 60 * 30);           // 13.500
+      $MAX_BUCKETS   = (int) ceil($MAX_MINUTES / 100);  // skala 100 menit
+      $STEPS         = 8;                               // jumlah shade/tingkatan
+
+      // Palet warna (tidak mengubah UI: tetap keluarga "sky-*")
+      $skyShades = [
+        'bg-sky-200 text-black',
+        'bg-sky-300 text-black',
+        'bg-sky-400 text-white',
+        'bg-sky-500 text-white',
+        'bg-sky-600 text-white',
+        'bg-sky-700 text-white',
+        'bg-sky-800 text-white',
+        'bg-sky-900 text-white',
+      ];
     @endphp
 
 
     {{-- Improved Navigation Tabs --}}
+    terakpan gradasi warnya tampa mengubah ui saya
     <div class="my-8">
       <div class="border-b border-gray-200">
-        <nav class="-mb-px flex space-x-8" aria-label="Tabs">          
+        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
           <a href="{{ route('absensi.rekap') }}"
             class="group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm {{ request()->is('absensi/rekap') ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
             <svg class="w-5 h-5 mr-2 {{ request()->is('absensi/rekap') ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -24,7 +36,7 @@
             </svg>
             Rekap Bulanan
           </a>
-          
+
           <a href="{{ route('absensi.rekap.tahunan') }}"
             class="group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm {{ request()->is('absensi/rekap-tahunan') ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
             <svg class="w-5 h-5 mr-2 {{ request()->is('absensi/rekap-tahunan') ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -47,7 +59,7 @@
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-medium text-gray-900 flex items-center">
             <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 0 00-2 2"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 0 00-2 2"></path>
             </svg>
             Rekap Tahunan Absensi Karyawan
           </h3>
@@ -92,7 +104,7 @@
               Gunakan pencarian dan sorting di tabel untuk filter data
             </span>
           </div>
-          
+
           <a href="{{ route('rekap.export.tahunan', ['tahun' => $tahun]) }}"
             class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -145,49 +157,35 @@
             </tr>
           </thead>
 
-        <tbody class="bg-white text-gray-800">
-          @foreach ($pegawaiList as $pegawai)
-            <tr class="hover:bg-gray-50">
-              <td class="border px-2 py-1">{{ $loop->iteration }}</td>
-              <td class="border px-2 py-1 text-left">{{ $pegawai->nama }}</td>
+          <tbody class="bg-white text-gray-800">
+            @foreach ($pegawaiList as $pegawai)
+              <tr class="hover:bg-gray-50">
+                <td class="border px-2 py-1">{{ $loop->iteration }}</td>
+                <td class="border px-2 py-1 text-left">{{ $pegawai->nama }}</td>
 
-              {{-- Jan-Des --}}
-              @foreach (range(1, 12) as $bln)
-                @php
-                  // definisikan mapping yang eksplisit
-                  $emeraldShades = [
-                    'bg-sky-200 text-black',
-                    'bg-sky-300 text-black',
-                    'bg-sky-400 text-white',
-                    'bg-sky-500 text-white',
-                    'bg-sky-600 text-white',
-                    'bg-sky-700 text-white',
-                    'bg-sky-800 text-white',
-                    'bg-sky-900 text-white',
-                ];
+                {{-- Jan-Des (gradasi: tiap 100 menit makin gelap) --}}
+                @foreach (range(1, 12) as $bln)
+                  @php
+                    $minutes = (int) ($pegawai->menitPerBulan[$bln] ?? 0);
+                    $bucket  = (int) floor(max($minutes, 0) / 100);                     // 0..135
+                    $ratio   = min($bucket / max($MAX_BUCKETS, 1), 1);                  // 0..1
+                    $idx     = (int) floor($ratio * ($STEPS - 1));                       // 0..7
+                    $idx     = max(0, min($idx, $STEPS - 1));
+                    $colorClass = $skyShades[$idx];
+                  @endphp
 
+                  <td class="border px-2 py-1 {{ $colorClass }}">
+                    {{ $pegawai->rekap_tahunan[$bln] ?? '00:00' }}
+                  </td>
+                @endforeach
 
-                  $minutes = $pegawai->menitPerBulan[$bln] ?? 0;
-                  $hours = $minutes / 60;
-                  $idx = max(0, min((int) floor(($hours - $minHours) / $stepSize), $steps - 1));
-
-                  // ambil literal class dari array
-                  $colorClass = $emeraldShades[$idx];
-                @endphp
-
-                <td class="border px-2 py-1  {{ $colorClass }}">
-                  {{ $pegawai->rekap_tahunan[$bln] ?? '00:00' }}
+                {{-- Total setahun : Hari Jam Menit --}}
+                <td class="border px-2 py-1 font-semibold">
+                  {{ $pegawai->total_fmt }}
                 </td>
-              @endforeach
-
-
-              {{-- Total setahun : Hari Jam Menit --}}
-              <td class="border px-2 py-1 font-semibold">
-                {{ $pegawai->total_fmt }}
-              </td>
-            </tr>
-          @endforeach
-        </tbody>
+              </tr>
+            @endforeach
+          </tbody>
         </table>
       </div>
     </div>
@@ -203,75 +201,27 @@
   @push('styles')
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
-    
+
     <style>
-      /* Custom DataTables styling */
-      .dataTables_wrapper {
-        padding: 1rem;
-      }
-      
-      .dataTables_filter {
-        margin-bottom: 1rem;
-      }
-      
+      .dataTables_wrapper { padding: 1rem; }
+      .dataTables_filter { margin-bottom: 1rem; }
       .dataTables_filter input {
-        border: 1px solid #d1d5db;
-        border-radius: 0.375rem;
-        padding: 0.5rem 0.75rem;
-        margin-left: 0.5rem;
-        width: 250px;
+        border: 1px solid #d1d5db; border-radius: .375rem;
+        padding: .5rem .75rem; margin-left: .5rem; width: 250px;
       }
-      
-      .dataTables_filter input:focus {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 1px #3b82f6;
-      }
-      
-      .dataTables_length select {
-        border: 1px solid #d1d5db;
-        border-radius: 0.375rem;
-        padding: 0.25rem 0.5rem;
-        margin: 0 0.5rem;
-      }
-      
-      .dataTables_info {
-        color: #6b7280;
-        font-size: 0.875rem;
-      }
-      
+      .dataTables_filter input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
+      .dataTables_length select { border: 1px solid #d1d5db; border-radius: .375rem; padding: .25rem .5rem; margin: 0 .5rem; }
+      .dataTables_info { color: #6b7280; font-size: .875rem; }
       .dataTables_paginate .paginate_button {
-        padding: 0.5rem 0.75rem;
-        margin: 0 0.125rem;
-        border: 1px solid #d1d5db;
-        border-radius: 0.375rem;
-        background: white;
-        color: #374151;
+        padding: .5rem .75rem; margin: 0 .125rem; border: 1px solid #d1d5db; border-radius: .375rem; background: #fff; color: #374151;
         text-decoration: none;
       }
-      
-      .dataTables_paginate .paginate_button:hover {
-        background: #f3f4f6;
-        border-color: #9ca3af;
-      }
-      
-      .dataTables_paginate .paginate_button.current {
-        background: #3b82f6;
-        border-color: #3b82f6;
-        color: white;
-      }
-      
-      .dataTables_paginate .paginate_button.disabled {
-        color: #9ca3af;
-        cursor: not-allowed;
-      }
-      
-      /* Table header sorting indicators */
+      .dataTables_paginate .paginate_button:hover { background: #f3f4f6; border-color: #9ca3af; }
+      .dataTables_paginate .paginate_button.current { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+      .dataTables_paginate .paginate_button.disabled { color: #9ca3af; cursor: not-allowed; }
       table.dataTable thead th.sorting:after,
       table.dataTable thead th.sorting_asc:after,
-      table.dataTable thead th.sorting_desc:after {
-        opacity: 0.6;
-      }
+      table.dataTable thead th.sorting_desc:after { opacity: .6; }
     </style>
   @endpush
 
@@ -300,43 +250,20 @@
             info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
             infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
             infoFiltered: "(difilter dari _MAX_ total data)",
-            paginate: {
-              first: "Pertama",
-              last: "Terakhir",
-              next: "Selanjutnya",
-              previous: "Sebelumnya"
-            },
+            paginate: { first: "Pertama", last: "Terakhir", next: "Selanjutnya", previous: "Sebelumnya" },
             emptyTable: "Tidak ada data yang tersedia",
             zeroRecords: "Tidak ada data yang cocok"
           },
           columnDefs: [
-            {
-              targets: [0], // No column
-              orderable: true,
-              searchable: false
-            },
-            {
-              targets: [1], // Nama Karyawan column
-              orderable: true,
-              searchable: true
-            },
-            {
-              targets: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], // Monthly columns (Jan-Des)
-              orderable: false, // Disable sorting for monthly columns
-              searchable: false
-            },
-            {
-              targets: [14], // Total Akumulasi column (last column)
-              orderable: true,
-              searchable: false,
-              type: 'string' // Since it's formatted as "XXX Hari XX Jam XX Menit"
-            }
+            { targets: [0], orderable: true,  searchable: false },
+            { targets: [1], orderable: true,  searchable: true  },
+            { targets: [2,3,4,5,6,7,8,9,10,11,12,13], orderable: false, searchable: false },
+            { targets: [14], orderable: true, searchable: false, type: 'string' }
           ],
           dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>' +
                '<"row"<"col-sm-12"tr>>' +
                '<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
           initComplete: function () {
-            // Add custom styling to search box
             $('.dataTables_filter input').addClass('form-control').attr('placeholder', 'Cari nama karyawan...');
           }
         });
