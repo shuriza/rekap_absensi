@@ -10,7 +10,7 @@
       $MAX_BUCKETS   = (int) ceil($MAX_MINUTES / 100);  // skala 100 menit
       $STEPS         = 8;                               // jumlah shade/tingkatan
 
-      // Palet warna (tidak mengubah UI: tetap keluarga "sky-*")
+      // Palet warna (keluarga "sky-*")
       $skyShades = [
         'bg-sky-200 text-black',
         'bg-sky-300 text-black',
@@ -23,9 +23,7 @@
       ];
     @endphp
 
-
     {{-- Improved Navigation Tabs --}}
-    terakpan gradasi warnya tampa mengubah ui saya
     <div class="my-8">
       <div class="border-b border-gray-200">
         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
@@ -40,7 +38,7 @@
           <a href="{{ route('absensi.rekap.tahunan') }}"
             class="group inline-flex items-center py-2 px-1 border-b-2 font-medium text-sm {{ request()->is('absensi/rekap-tahunan') ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
             <svg class="w-5 h-5 mr-2 {{ request()->is('absensi/rekap-tahunan') ? 'text-blue-500' : 'text-gray-400 group-hover:text-gray-500' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2z"></path>
             </svg>
             Rekap Tahunan
           </a>
@@ -59,7 +57,7 @@
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-medium text-gray-900 flex items-center">
             <svg class="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 0 00-2 2"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2"></path>
             </svg>
             Rekap Tahunan Absensi Karyawan
           </h3>
@@ -123,37 +121,14 @@
         <table id="tabel-rekap" class="min-w-full text-sm text-center border-collapse display nowrap">
           <thead class="bg-gradient-to-r from-gray-100 to-gray-200">
             <tr>
-              <th class="border border-gray-300 px-3 py-3 text-gray-800 font-semibold">
-                <div class="flex items-center justify-center space-x-1">
-                  <span>No</span>
-                </div>
-              </th>
-              <th class="border border-gray-300 px-3 py-3 text-gray-800 font-semibold">
-                <div class="flex items-center justify-center space-x-1">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                  </svg>
-                  <span>Nama Karyawan</span>
-                </div>
-              </th>
+              <th class="border border-gray-300 px-3 py-3 text-gray-800 font-semibold">No</th>
+              <th class="border border-gray-300 px-3 py-3 text-gray-800 font-semibold">Nama Karyawan</th>
               @foreach (range(1, 12) as $bln)
                 <th class="border border-gray-300 px-3 py-3 text-gray-800 font-medium">
-                  <div class="flex items-center justify-center space-x-1">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                    </svg>
-                    <span>{{ \Carbon\Carbon::create()->month($bln)->translatedFormat('M') }}</span>
-                  </div>
+                  {{ \Carbon\Carbon::create()->month($bln)->translatedFormat('M') }}
                 </th>
               @endforeach
-              <th class="border border-gray-300 px-3 py-3 text-gray-800 font-semibold">
-                <div class="flex items-center justify-center space-x-1">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                  </svg>
-                  <span>Total Akumulasi</span>
-                </div>
-              </th>
+              <th class="border border-gray-300 px-3 py-3 text-gray-800 font-semibold">Total Akumulasi</th>
             </tr>
           </thead>
 
@@ -163,23 +138,41 @@
                 <td class="border px-2 py-1">{{ $loop->iteration }}</td>
                 <td class="border px-2 py-1 text-left">{{ $pegawai->nama }}</td>
 
-                {{-- Jan-Des (gradasi: tiap 100 menit makin gelap) --}}
+                {{-- Jan-Des (gradasi: tiap 100 menit makin gelap, "-" bila tidak ada data) --}}
                 @foreach (range(1, 12) as $bln)
                   @php
+                    // Total menit yg sudah dihitung di controller
                     $minutes = (int) ($pegawai->menitPerBulan[$bln] ?? 0);
-                    $bucket  = (int) floor(max($minutes, 0) / 100);                     // 0..135
-                    $ratio   = min($bucket / max($MAX_BUCKETS, 1), 1);                  // 0..1
-                    $idx     = (int) floor($ratio * ($STEPS - 1));                       // 0..7
-                    $idx     = max(0, min($idx, $STEPS - 1));
-                    $colorClass = $skyShades[$idx];
+
+                    // Jika controller men-set 0 utk bulan tanpa data, tampilkan "-"
+                    // NOTE: kalau kamu menambahkan flag $peg->hasDataPerBulan[$bln] di controller,
+                    // ganti $noData ini menjadi: !$pegawai->hasDataPerBulan[$bln]
+                    $noData = ($minutes === 0);
+
+                    if ($noData) {
+                      $labelBulan = '-';
+                      $colorClass = ''; // tanpa gradasi
+                    } else {
+                      // Gradasi warna
+                      $bucket  = (int) floor(max($minutes, 0) / 100);               // 0..135
+                      $ratio   = min($bucket / max($MAX_BUCKETS, 1), 1);            // 0..1
+                      $idx     = (int) floor($ratio * ($STEPS - 1));                 // 0..7
+                      $idx     = max(0, min($idx, $STEPS - 1));
+                      $colorClass = $skyShades[$idx];
+
+                      // Teks tampilan: "X hari Y jam Z menit" (1 hari = 450 menit)
+                      $hari = intdiv($minutes, 450);
+                      $sisa = $minutes % 450;
+                      $jam  = intdiv($sisa, 60);
+                      $mnt  = $sisa % 60;
+                      $labelBulan = sprintf('%d hari %d jam %02d menit', $hari, $jam, $mnt);
+                    }
                   @endphp
 
-                  <td class="border px-2 py-1 {{ $colorClass }}">
-                    {{ $pegawai->rekap_tahunan[$bln] ?? '00:00' }}
-                  </td>
+                  <td class="border px-2 py-1 {{ $colorClass }}">{{ $labelBulan }}</td>
                 @endforeach
 
-                {{-- Total setahun : Hari Jam Menit --}}
+                {{-- Total setahun : Hari Jam Menit (sudah dari controller) --}}
                 <td class="border px-2 py-1 font-semibold">
                   {{ $pegawai->total_fmt }}
                 </td>
@@ -201,7 +194,6 @@
   @push('styles')
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
-
     <style>
       .dataTables_wrapper { padding: 1rem; }
       .dataTables_filter { margin-bottom: 1rem; }
