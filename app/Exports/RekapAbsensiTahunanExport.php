@@ -34,7 +34,17 @@ class RekapAbsensiTahunanExport implements FromView, WithEvents, ShouldAutoSize
                 $sub->whereYear('tanggal_awal', $this->tahun)
                     ->orWhereYear('tanggal_akhir', $this->tahun);
             }),
+            'nonaktif_terbaru',
         ])->get();
+
+        // === DETEKSI BULAN AKTIF (BULAN YANG ADA KARYAWAN PUNYA DATA ABSEN) ===
+        $bulanAktif = [];
+        foreach ($pegawaiList as $pegTemp) {
+            foreach ($pegTemp->absensi as $abs) {
+                $bulanData = $abs->tanggal->month;
+                $bulanAktif[$bulanData] = true;
+            }
+        }
 
         $toCarbon = function (string $tgl, ?string $time): ?Carbon {
             if (!$time) return null;
@@ -80,38 +90,39 @@ class RekapAbsensiTahunanExport implements FromView, WithEvents, ShouldAutoSize
 
                     $hadAny = true;
 
-                    $in  = $toCarbon($tglStr, $row->jam_masuk);
-                    $out = $toCarbon($tglStr, $row->jam_pulang);
-                    $ket = strtolower(trim($row->keterangan ?? ''));
-
-                    $incomplete = ($in && !$out) || (!$in && $out) || ($in && $out && !$out->gt($in));
-                    $forceDefault = $incomplete || in_array($ket, [
-                        'tidak valid','terlambat','kosong','diluar waktu absen','di luar waktu absen',
-                    ], true);
-
-                    if ($peg->is_ob) {
-                        // OB: tidak ada “terlambat”; lengkap = durasi riil; satu/no absen = 7,5 jam
-                        if ($in && $out && $out->gt($in)) {
-                            $menitPerBulan[$bulan] += $in->diffInMinutes($out);   // kalau mau minimal 7,5 jam → max(..., $this->defaultMinutes)
-                        } else {
-                            $menitPerBulan[$bulan] += $this->defaultMinutes;
-                        }
-                    } else {
-                        // Non-OB: status forceDefault atau tidak lengkap → 7,5 jam; lengkap → selisih
-                        if ($forceDefault) {
-                            $menitPerBulan[$bulan] += $this->defaultMinutes;
-                        } else {
-                            $menitPerBulan[$bulan] += $in->diffInMinutes($out);
-                        }
-                    }
+                    // === MENGGUNAKAN ALGORITMA KEDISIPLINAN YANG SAMA DENGAN CONTROLLER & BULANAN ===
+                    // SEMUA KARYAWAN (OB DAN NON-OB) MENGGUNAKAN PENALTY MINUTES UNTUK KEDISIPLINAN
+                    $penalty = $row->penalty_minutes;
+                    $menitPerBulan[$bulan] += is_numeric($penalty) ? max(0, (int) $penalty) : $this->defaultMinutes;
                 }
 
-                // Jika ada minimal satu record di bulan ini, hari kerja “tanpa record” dihitung 7,5 jam
+                // Jika ada minimal satu record di bulan ini, hari kerja "tanpa record" dihitung 7,5 jam
                 if ($hadAny) {
                     $menitPerBulan[$bulan] += $noRecordCount * $this->defaultMinutes;
                 } else {
-                    // sebulan benar-benar tanpa presensi → biarkan 0
-                    $menitPerBulan[$bulan] = 0;
+                    // === CEK APAKAH BULAN INI "AKTIF" (ADA KARYAWAN LAIN YANG PUNYA DATA) ===
+                    if (isset($bulanAktif[$bulan])) {
+                        // Bulan aktif: ada karyawan lain yang punya data di bulan ini
+                        // Karyawan yang tidak masuk sama sekali → dihitung penalty full
+                        $totalHariKerja = 0;
+                        for ($d = 1; $d <= $daysInMonth; $d++) {
+                            $tglStr = sprintf('%04d-%02d-%02d', $this->tahun, $bulan, $d);
+                            $weekday = Carbon::parse($tglStr)->dayOfWeekIso;
+                            
+                            // Hitung hari kerja (skip weekend, libur, izin)
+                            if ($weekday >= 6) continue;
+                            if (isset($holidayMap[$tglStr])) continue;
+                            if (isset($mapIzin[$tglStr])) continue;
+                            
+                            $totalHariKerja++;
+                        }
+                        
+                        // Penalty default untuk seluruh hari kerja di bulan ini
+                        $menitPerBulan[$bulan] = $totalHariKerja * $this->defaultMinutes;
+                    } else {
+                        // Bulan tidak aktif: belum ada data siapa pun → tidak ditampilkan
+                        $menitPerBulan[$bulan] = 0;
+                    }
                 }
             }
 
@@ -122,11 +133,21 @@ class RekapAbsensiTahunanExport implements FromView, WithEvents, ShouldAutoSize
             $toHHMM = function (int $m) { return $m > 0 ? sprintf('%02d:%02d', intdiv($m,60), $m%60) : '—'; };
             $peg->rekap_tahunan = array_map($toHHMM, $menitPerBulan);
 
-            // total tahunan & format (basis 7j30m per “hari kerja”)
-            $totMenit = array_sum($menitPerBulan);
-            $peg->total_menit = $totMenit;
-            $hari = intdiv($totMenit, $this->defaultMinutes);
-            $sisa = $totMenit % $this->defaultMinutes;
+            // === TOTAL AKUMULASI DARI BULAN BERDATA DAN BULAN KOSONG DENGAN PENALTY (KONSISTEN DENGAN CONTROLLER) ===
+            $totalAkumulasiHanyaBulanBerdata = 0;
+            foreach ($menitPerBulan as $bln => $menit) {
+                if ($menit > 0) {
+                    // Bulan ini ada data ATAU bulan kosong dengan penalty default
+                    $totalAkumulasiHanyaBulanBerdata += $menit;
+                }
+                // Hanya bulan yang benar-benar 0 yang tidak dimasukkan
+            }
+
+            $peg->total_menit = $totalAkumulasiHanyaBulanBerdata;
+            
+            // Format dengan basis 1440 menit (24 jam kalender) - konsisten dengan view web
+            $hari = intdiv($totalAkumulasiHanyaBulanBerdata, 1440);
+            $sisa = $totalAkumulasiHanyaBulanBerdata % 1440;
             $jam  = intdiv($sisa, 60);
             $mnt  = $sisa % 60;
             $peg->total_fmt = sprintf('%d hari %02d jam %02d menit', $hari, $jam, $mnt);
@@ -198,13 +219,49 @@ class RekapAbsensiTahunanExport implements FromView, WithEvents, ShouldAutoSize
 
                 $sheet->getPageSetup()->setRowsToRepeatAtTopByStartAndEnd($headerRow, $headerRow);
 
-                /* ▸ COLOR GRADIENT BULANAN */
-                $maxHours = 180;
-                $minHours = 160;
-                $steps    = 8;
-                $stepSize = ceil(($maxHours - $minHours) / $steps);
+                /* ▸ COLOR GRADIENT BULANAN DINAMIS (10 STEP BERDASARKAN DATA AKTUAL) */
+                
+                // === LANGKAH 1: KUMPULKAN SEMUA NILAI MENIT DARI CELL YANG ADA ===
+                $semuaMinit = [];
+                
+                // Scan semua cell data untuk mendapatkan nilai menit
+                for ($row = 3; $row <= $highestRow; $row++) {
+                    for ($colIndex = 3; $colIndex <= 14; $colIndex++) {
+                        $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
+                        $cell = $colLetter . $row;
+                        $value = $sheet->getCell($cell)->getValue();
 
+                        // Skip jika nilai kosong atau '-'
+                        if (!$value || $value === '—' || $value === '-') continue;
+
+                        // Parse format "X hari Y jam Z menit" untuk mendapatkan total menit
+                        if (preg_match('/(\d+) hari (\d+) jam (\d+) menit/', $value, $matches)) {
+                            $hari = intval($matches[1]);
+                            $jam = intval($matches[2]);
+                            $menit = intval($matches[3]);
+                            
+                            // Konversi ke total menit (basis 1440 menit per hari)
+                            $totalMinutes = ($hari * 1440) + ($jam * 60) + $menit;
+                            
+                            if ($totalMinutes > 0) {
+                                $semuaMinit[] = $totalMinutes;
+                            }
+                        }
+                    }
+                }
+                
+                // === LANGKAH 2: HITUNG RANGE DINAMIS ===
+                $minMinutes = 0; // Nilai minimum selalu 0
+                $maxMinutes = !empty($semuaMinit) ? max($semuaMinit) : 1000; // Jika tidak ada data, gunakan 1000 sebagai default
+                
+                // === LANGKAH 3: BUAT 10 STEP GRADASI ===
+                $steps = 10;
+                $stepSize = ($maxMinutes - $minMinutes) / $steps;
+                
+                // 10 warna sky dari terang ke gelap
                 $skyShades = [
+                    'FFF0F9FF', // sky-50
+                    'FFE0F2FE', // sky-100
                     'FFBAE6FD', // sky-200
                     'FF7DD3FC', // sky-300
                     'FF38BDF8', // sky-400
@@ -215,21 +272,39 @@ class RekapAbsensiTahunanExport implements FromView, WithEvents, ShouldAutoSize
                     'FF0C4A6E', // sky-900
                 ];
 
-                // Mulai dari baris ke-3 (data) dan kolom ke-3 (C) s/d kolom ke-14 (N)
+                // === LANGKAH 4: TERAPKAN WARNA BERDASARKAN RANGE DINAMIS ===
                 for ($row = 3; $row <= $highestRow; $row++) {
                     for ($colIndex = 3; $colIndex <= 14; $colIndex++) {
                         $colLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
                         $cell = $colLetter . $row;
                         $value = $sheet->getCell($cell)->getValue();
 
-                        if (!$value || !str_contains($value, ':')) continue;
+                        // Skip jika nilai kosong atau '-'
+                        if (!$value || $value === '—' || $value === '-') continue;
 
-                        [$hh, $mm] = explode(':', $value);
-                        $hours = intval($hh) + intval($mm) / 60;
-                        $idx = max(0, min((int) floor(($hours - $minHours) / $stepSize), $steps - 1));
+                        // Parse format "X hari Y jam Z menit" untuk mendapatkan total menit
+                        if (preg_match('/(\d+) hari (\d+) jam (\d+) menit/', $value, $matches)) {
+                            $hari = intval($matches[1]);
+                            $jam = intval($matches[2]);
+                            $menit = intval($matches[3]);
+                            
+                            // Konversi ke total menit (basis 1440 menit per hari)
+                            $totalMinutes = ($hari * 1440) + ($jam * 60) + $menit;
+                            
+                            // === HITUNG INDEX GRADASI BERDASARKAN RANGE DINAMIS ===
+                            if ($totalMinutes <= $minMinutes) {
+                                $idx = 0; // Warna paling terang
+                            } elseif ($totalMinutes >= $maxMinutes) {
+                                $idx = $steps - 1; // Warna paling gelap
+                            } else {
+                                // Hitung posisi dalam range (0-1)
+                                $position = ($totalMinutes - $minMinutes) / ($maxMinutes - $minMinutes);
+                                $idx = min((int) floor($position * $steps), $steps - 1);
+                            }
 
-                        $sheet->getStyle($cell)->getFill()->setFillType(Fill::FILL_SOLID)
-                            ->getStartColor()->setARGB($skyShades[$idx]);
+                            $sheet->getStyle($cell)->getFill()->setFillType(Fill::FILL_SOLID)
+                                ->getStartColor()->setARGB($skyShades[$idx]);
+                        }
                     }
                 }
             },

@@ -21,14 +21,13 @@
     <tbody class="bg-white text-gray-800">
         @foreach ($pegawaiList as $i => $pegawai)
             @php
-                // === Format total bulan pakai basis 7j30m/hari ===
-                $perHari = 450;
-                $total   = (int) ($pegawai->total_menit ?? 0);
-                $hari    = intdiv($total, $perHari);
-                $sisa    = $total % $perHari;
-                $jam     = intdiv($sisa, 60);
-                $menit   = $sisa % 60;
-                $totalFmt = sprintf('%d hari %02d jam %02d menit', $hari, $jam, $menit);
+                // === Format total bulan konsisten dengan web (basis 24 jam/hari) ===
+                $total = (int) ($pegawai->total_menit ?? 0);
+                $hari = intdiv($total, 1440);  // 1440 menit = 24 jam = 1 hari kalender
+                $sisa = $total % 1440;
+                $jam = str_pad(intdiv($sisa, 60), 2, '0', STR_PAD_LEFT);
+                $menit = str_pad($sisa % 60, 2, '0', STR_PAD_LEFT);
+                $totalFmt = "{$hari} hari {$jam} jam {$menit} menit";
             @endphp
 
             <tr class="hover:bg-gray-50">

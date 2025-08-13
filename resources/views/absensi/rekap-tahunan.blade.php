@@ -4,22 +4,39 @@
 @section('content')
   <div class="min-h-screen flex flex-col px-6 py-4">
     @php
-      // === Konfigurasi gradasi kedisiplinan ===
-      // Maksimum (kasar) 1 bulan: 7.5 jam x 30 hari = 13.500 menit
-      $MAX_MINUTES   = (int) (7.5 * 60 * 30);           // 13.500
-      $MAX_BUCKETS   = (int) ceil($MAX_MINUTES / 100);  // skala 100 menit
-      $STEPS         = 8;                               // jumlah shade/tingkatan
-
-      // Palet warna (keluarga "sky-*")
+      // === GRADIENT DINAMIS 10 STEP BERDASARKAN DATA AKTUAL ===
+      
+      // Langkah 1: Kumpulkan semua nilai menit dari seluruh karyawan
+      $semuaMinit = [];
+      foreach ($pegawaiList as $pegTemp) {
+        foreach (range(1, 12) as $blnTemp) {
+          $menitTemp = (int) ($pegTemp->menitPerBulan[$blnTemp] ?? 0);
+          if ($menitTemp > 0) { // Hanya ambil data yang ada (bukan 0)
+            $semuaMinit[] = $menitTemp;
+          }
+        }
+      }
+      
+      // Langkah 2: Hitung range dinamis
+      $minMinutes = 0; // Nilai minimum selalu 0
+      $maxMinutes = !empty($semuaMinit) ? max($semuaMinit) : 1000; // Default 1000 jika tidak ada data
+      
+      // Langkah 3: Buat 10 step gradasi
+      $steps = 10;
+      $stepSize = ($maxMinutes - $minMinutes) / $steps;
+      
+      // 10 warna sky dari terang ke gelap (Tailwind CSS classes)
       $skyShades = [
-        'bg-sky-200 text-black',
-        'bg-sky-300 text-black',
-        'bg-sky-400 text-white',
-        'bg-sky-500 text-white',
-        'bg-sky-600 text-white',
-        'bg-sky-700 text-white',
-        'bg-sky-800 text-white',
-        'bg-sky-900 text-white',
+        'bg-sky-50 text-gray-800',   // sky-50
+        'bg-sky-100 text-gray-800',  // sky-100
+        'bg-sky-200 text-black',     // sky-200
+        'bg-sky-300 text-black',     // sky-300
+        'bg-sky-400 text-white',     // sky-400
+        'bg-sky-500 text-white',     // sky-500
+        'bg-sky-600 text-white',     // sky-600
+        'bg-sky-700 text-white',     // sky-700
+        'bg-sky-800 text-white',     // sky-800
+        'bg-sky-900 text-white',     // sky-900
       ];
     @endphp
 
@@ -88,6 +105,11 @@
               <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                 Tahun {{ $tahun }}
               </span>
+              @if (!empty($semuaMinit))
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800" title="Range gradasi warna">
+                  Gradasi: 0-{{ $maxMinutes }} menit ({{ count($semuaMinit) }} data)
+                </span>
+              @endif
             </div>
           </div>
         </div>
@@ -153,19 +175,25 @@
                       $labelBulan = '-';
                       $colorClass = ''; // tanpa gradasi
                     } else {
-                      // Gradasi warna
-                      $bucket  = (int) floor(max($minutes, 0) / 100);               // 0..135
-                      $ratio   = min($bucket / max($MAX_BUCKETS, 1), 1);            // 0..1
-                      $idx     = (int) floor($ratio * ($STEPS - 1));                 // 0..7
-                      $idx     = max(0, min($idx, $STEPS - 1));
+                      // === GRADIENT DINAMIS: HITUNG INDEX BERDASARKAN RANGE AKTUAL ===
+                      if ($minutes <= $minMinutes) {
+                        $idx = 0; // Warna paling terang
+                      } elseif ($minutes >= $maxMinutes) {
+                        $idx = $steps - 1; // Warna paling gelap
+                      } else {
+                        // Hitung posisi dalam range (0-1)
+                        $position = ($minutes - $minMinutes) / ($maxMinutes - $minMinutes);
+                        $idx = min((int) floor($position * $steps), $steps - 1);
+                      }
+                      
                       $colorClass = $skyShades[$idx];
 
-                      // Teks tampilan: "X hari Y jam Z menit" (1 hari = 450 menit)
-                      $hari = intdiv($minutes, 450);
-                      $sisa = $minutes % 450;
+                      // Teks tampilan: "X hari Y jam Z menit" (1 hari = 1440 menit = 24 jam kalender)
+                      $hari = intdiv($minutes, 1440);
+                      $sisa = $minutes % 1440;
                       $jam  = intdiv($sisa, 60);
                       $mnt  = $sisa % 60;
-                      $labelBulan = sprintf('%d hari %d jam %02d menit', $hari, $jam, $mnt);
+                      $labelBulan = sprintf('%d hari %02d jam %02d menit', $hari, $jam, $mnt);
                     }
                   @endphp
 
@@ -181,6 +209,40 @@
           </tbody>
         </table>
       </div>
+
+      {{-- Legend Gradient Dinamis --}}
+      @if (!empty($semuaMinit))
+        <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+          <h3 class="text-sm font-medium text-gray-700 mb-3">
+            📊 Legend Gradasi Warna (Range: 0 - {{ $maxMinutes }} menit)
+          </h3>
+          <div class="grid grid-cols-5 gap-2">
+            @foreach ($skyShades as $index => $colorClass)
+              @php
+                $rangeMin = $minMinutes + ($index * $stepSize);
+                $rangeMax = $minMinutes + (($index + 1) * $stepSize);
+                if ($index === $steps - 1) {
+                  $rangeMax = $maxMinutes; // Step terakhir sampai nilai maksimal
+                }
+                
+                // Format range untuk display
+                $displayMin = round($rangeMin);
+                $displayMax = round($rangeMax);
+              @endphp
+              <div class="flex items-center text-xs">
+                <div class="w-6 h-6 rounded {{ $colorClass }} border border-gray-300 mr-2"></div>
+                <span class="text-gray-600">
+                  {{ $displayMin }}-{{ $displayMax }} menit
+                </span>
+              </div>
+            @endforeach
+          </div>
+          <p class="text-xs text-gray-500 mt-2">
+            💡 Warna gradasi dihitung dinamis berdasarkan data aktual tahun {{ $tahun }}. 
+            Semakin gelap warna, semakin besar penalty kedisiplinan.
+          </p>
+        </div>
+      @endif
     </div>
 
     {{-- Footer --}}

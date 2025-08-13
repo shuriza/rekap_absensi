@@ -254,6 +254,19 @@ class RekapController extends Controller
         return sprintf('%d hari %d jam %d menit', $hari, $jam, $mnt);
     }
 
+    /**
+     * Format dengan basis 1440 menit (24 jam kalender) - konsisten dengan view tahunan
+     */
+    private function fmtHariJamMenitKalender(int $menit): string
+    {
+        $menitPerHariKalender = 1440;  // 24 jam = 1 hari kalender
+        $hari = intdiv($menit, $menitPerHariKalender);
+        $sisa = $menit % $menitPerHariKalender;
+        $jam  = intdiv($sisa, 60);
+        $mnt  = $sisa % 60;
+        return sprintf('%d hari %02d jam %02d menit', $hari, $jam, $mnt);
+    }
+
     /* ==========================================================
     *  R E K A P   T A H U N A N  (SEARCH & SORT)
     * ========================================================== */
@@ -280,6 +293,15 @@ class RekapController extends Controller
         // libur setahun (sekali ambil)
         $holidayMap = Holiday::whereYear('tanggal', $tahun)->get()
             ->keyBy(fn($h) => $h->tanggal->toDateString());
+
+        // === DETEKSI BULAN AKTIF (BULAN YANG ADA KARYAWAN PUNYA DATA ABSEN) ===
+        $bulanAktif = [];
+        foreach ($pegawaiList as $pegTemp) {
+            foreach ($pegTemp->absensi as $abs) {
+                $bulanData = $abs->tanggal->month;
+                $bulanAktif[$bulanData] = true;
+            }
+        }
 
         // helper parse jam
         $toCarbon = function (string $tgl, ?string $time): ?Carbon {
@@ -347,21 +369,51 @@ class RekapController extends Controller
                 }
 
                 if ($hadAny) {
-                    // bulan ini ada data → hari kerja tanpa record dihitung 7:30
+                    // Untuk tampilan per bulan: hari kerja tanpa record tetap dihitung 7:30
                     $menitPerBulan[$bln] += $noRecordCount * $this->defaultMinutes;
                 } else {
-                    // benar-benar tanpa data sebulan penuh → 0
-                    $menitPerBulan[$bln] = 0;
+                    // === CEK APAKAH BULAN INI "AKTIF" (ADA KARYAWAN LAIN YANG PUNYA DATA) ===
+                    if (isset($bulanAktif[$bln])) {
+                        // Bulan aktif: ada karyawan lain yang punya data di bulan ini
+                        // Karyawan yang tidak masuk sama sekali → dihitung penalty full
+                        $totalHariKerja = 0;
+                        for ($d = 1; $d <= $daysInMonth; $d++) {
+                            $tglStr = sprintf('%04d-%02d-%02d', $tahun, $bln, $d);
+                            $weekday = Carbon::parse($tglStr)->dayOfWeekIso;
+                            
+                            // Hitung hari kerja (skip weekend, libur, izin)
+                            if ($weekday >= 6) continue;
+                            if (isset($holidayMap[$tglStr])) continue;
+                            if (isset($mapIzin[$tglStr])) continue;
+                            
+                            $totalHariKerja++;
+                        }
+                        
+                        // Penalty default untuk seluruh hari kerja di bulan ini
+                        $menitPerBulan[$bln] = $totalHariKerja * $this->defaultMinutes;
+                    } else {
+                        // Bulan tidak aktif: belum ada data siapa pun → tidak ditampilkan
+                        $menitPerBulan[$bln] = 0;
+                    }
                 }
             }
 
+            // === HITUNG TOTAL AKUMULASI DARI BULAN BERDATA DAN BULAN KOSONG DENGAN PENALTY ===
+            $totalAkumulasiHanyaBulanBerdata = 0;
+            foreach ($menitPerBulan as $bln => $menit) {
+                if ($menit > 0) {
+                    // Bulan ini ada data ATAU bulan kosong dengan penalty default
+                    $totalAkumulasiHanyaBulanBerdata += $menit;
+                }
+                // Hanya bulan yang benar-benar 0 yang tidak dimasukkan
+            }
 
             // format & total
             $fmtHHMM = fn(int $m) => sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
             $peg->menitPerBulan  = $menitPerBulan;
             $peg->rekap_tahunan  = array_map($fmtHHMM, $menitPerBulan);
-            $peg->total_menit    = array_sum($menitPerBulan);
-            $peg->total_fmt      = $this->fmtHariJamMenit($peg->total_menit);
+            $peg->total_menit    = $totalAkumulasiHanyaBulanBerdata; // Total hanya dari bulan yang ada datanya
+            $peg->total_fmt      = $this->fmtHariJamMenitKalender($peg->total_menit); // Gunakan format kalender (1440 menit/hari)
         }
 
         // sort
