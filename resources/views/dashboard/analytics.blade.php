@@ -8,6 +8,12 @@
             <div>
                 <h1 class="text-3xl font-bold text-gray-900">Dashboard Analytics</h1>
                 <p class="text-gray-600 mt-2">Statistik dan analisis kehadiran karyawan</p>
+                <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p class="text-sm text-blue-700">
+                        <strong>Info:</strong> Karyawan OB (Office Boy) memiliki sistem penilaian berbeda - 
+                        tidak dikategorikan terlambat, tetapi dihitung berdasarkan kelengkapan jam masuk dan pulang.
+                    </p>
+                </div>
             </div>
             
             {{-- Filter Bulan/Tahun --}}
@@ -119,7 +125,11 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {{-- Top 10 Karyawan Punctual --}}
         <div class="bg-white rounded-lg shadow-md p-6">
-            <h3 class="text-xl font-semibold text-gray-900 mb-4">🏆 Top 10 Karyawan Terpunctual</h3>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">🏆 Top 10 Karyawan Terpunctual</h3>
+            <p class="text-sm text-gray-600 mb-4">
+                <strong>Non-OB:</strong> Berdasarkan kehadiran tepat waktu | 
+                <strong>OB:</strong> Berdasarkan kehadiran lengkap (jam masuk & pulang)
+            </p>
             <div class="overflow-hidden">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -148,6 +158,11 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm font-medium text-gray-900">{{ $karyawan->nama }}</div>
+                                @if($karyawan->is_ob)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                        OB
+                                    </span>
+                                @endif
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm text-gray-500">{{ $karyawan->departemen }}</div>
@@ -167,7 +182,10 @@
 
         {{-- Top 10 Karyawan Terlambat --}}
         <div class="bg-white rounded-lg shadow-md p-6">
-            <h3 class="text-xl font-semibold text-gray-900 mb-4">⚠️ Top 10 Karyawan Sering Terlambat</h3>
+            <h3 class="text-xl font-semibold text-gray-900 mb-2">⚠️ Top 10 Karyawan Sering Terlambat</h3>
+            <p class="text-sm text-gray-600 mb-4">
+                <strong>Catatan:</strong> Hanya menampilkan karyawan non-OB (Office Boy tidak dapat dikategorikan terlambat)
+            </p>
             <div class="overflow-hidden">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
@@ -179,7 +197,7 @@
                         </tr>
                     </thead>
                     <tbody class="bg-white divide-y divide-gray-200">
-                        @foreach($topKaryawanTerlambat as $index => $karyawan)
+                        @forelse($topKaryawanTerlambat as $index => $karyawan)
                         <tr class="{{ $index < 3 ? 'bg-red-50' : '' }}">
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="text-sm font-medium text-gray-900">{{ $index + 1 }}</div>
@@ -197,7 +215,19 @@
                                 </div>
                             </td>
                         </tr>
-                        @endforeach
+                        @empty
+                        <tr>
+                            <td colspan="4" class="px-6 py-8 text-center">
+                                <div class="text-gray-500">
+                                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <h3 class="mt-2 text-sm font-medium text-gray-900">Tidak ada data keterlambatan</h3>
+                                    <p class="mt-1 text-sm text-gray-500">Semua karyawan hadir tepat waktu bulan ini!</p>
+                                </div>
+                            </td>
+                        </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>

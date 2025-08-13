@@ -44,7 +44,11 @@ class DashboardController extends Controller
                 'k.departemen',
                 DB::raw('COUNT(DISTINCT k.id) as total_karyawan'),
                 DB::raw('COUNT(a.id) as total_hadir'),
-                DB::raw('SUM(CASE WHEN a.keterangan = "terlambat" THEN 1 ELSE 0 END) as total_terlambat'),
+                DB::raw('SUM(CASE 
+                    WHEN k.is_ob = 1 THEN 0 
+                    WHEN a.keterangan = "terlambat" THEN 1 
+                    ELSE 0 
+                END) as total_terlambat'),
                 DB::raw('COUNT(i.id) as total_izin')
             ])
             ->leftJoin('absensis as a', function($join) use ($startDate, $endDate) {
@@ -81,8 +85,16 @@ class DashboardController extends Controller
                 ->join('karyawans as k', 'a.karyawan_id', '=', 'k.id')
                 ->select([
                     DB::raw('COUNT(*) as total_hadir'),
-                    DB::raw('SUM(CASE WHEN a.keterangan = "terlambat" THEN 1 ELSE 0 END) as total_terlambat'),
-                    DB::raw('SUM(CASE WHEN a.keterangan = "tepat waktu" THEN 1 ELSE 0 END) as total_tepat_waktu')
+                    DB::raw('SUM(CASE 
+                        WHEN k.is_ob = 1 THEN 0 
+                        WHEN a.keterangan = "terlambat" THEN 1 
+                        ELSE 0 
+                    END) as total_terlambat'),
+                    DB::raw('SUM(CASE 
+                        WHEN k.is_ob = 1 AND a.jam_masuk IS NOT NULL AND a.jam_pulang IS NOT NULL THEN 1
+                        WHEN k.is_ob = 0 AND a.keterangan = "tepat waktu" THEN 1 
+                        ELSE 0 
+                    END) as total_tepat_waktu')
                 ])
                 ->whereBetween('a.tanggal', [$startDate, $endDate])
                 ->where('k.status', 'aktif')
@@ -121,9 +133,18 @@ class DashboardController extends Controller
             ->select([
                 'k.nama',
                 'k.departemen',
+                'k.is_ob',
                 DB::raw('COUNT(a.id) as total_hadir'),
-                DB::raw('SUM(CASE WHEN a.keterangan = "tepat waktu" THEN 1 ELSE 0 END) as tepat_waktu'),
-                DB::raw('ROUND((SUM(CASE WHEN a.keterangan = "tepat waktu" THEN 1 ELSE 0 END) / COUNT(a.id)) * 100, 2) as persentase_punctual')
+                DB::raw('SUM(CASE 
+                    WHEN k.is_ob = 1 AND a.jam_masuk IS NOT NULL AND a.jam_pulang IS NOT NULL THEN 1
+                    WHEN k.is_ob = 0 AND a.keterangan = "tepat waktu" THEN 1 
+                    ELSE 0 
+                END) as tepat_waktu'),
+                DB::raw('ROUND((SUM(CASE 
+                    WHEN k.is_ob = 1 AND a.jam_masuk IS NOT NULL AND a.jam_pulang IS NOT NULL THEN 1
+                    WHEN k.is_ob = 0 AND a.keterangan = "tepat waktu" THEN 1 
+                    ELSE 0 
+                END) / COUNT(a.id)) * 100, 2) as persentase_punctual')
             ])
             ->leftJoin('absensis as a', function($join) use ($startDate, $endDate) {
                 $join->on('k.id', '=', 'a.karyawan_id')
@@ -131,7 +152,7 @@ class DashboardController extends Controller
             })
             ->where('k.status', 'aktif')
             ->havingRaw('COUNT(a.id) >= 5') // Minimal 5 hari hadir
-            ->groupBy('k.id', 'k.nama', 'k.departemen')
+            ->groupBy('k.id', 'k.nama', 'k.departemen', 'k.is_ob')
             ->orderByDesc('persentase_punctual')
             ->limit($limit)
             ->get();
@@ -142,25 +163,37 @@ class DashboardController extends Controller
         $startDate = Carbon::create($tahun, $bulan, 1)->startOfMonth();
         $endDate = Carbon::create($tahun, $bulan, 1)->endOfMonth();
         
-        return DB::table('karyawans as k')
+        $query = DB::table('karyawans as k')
             ->select([
                 'k.nama',
                 'k.departemen',
+                'k.is_ob',
                 DB::raw('COUNT(a.id) as total_hadir'),
-                DB::raw('SUM(CASE WHEN a.keterangan = "terlambat" THEN 1 ELSE 0 END) as total_terlambat'),
-                DB::raw('ROUND((SUM(CASE WHEN a.keterangan = "terlambat" THEN 1 ELSE 0 END) / COUNT(a.id)) * 100, 2) as persentase_terlambat')
+                DB::raw('SUM(CASE 
+                    WHEN k.is_ob = 0 AND a.keterangan = "terlambat" THEN 1 
+                    ELSE 0 
+                END) as total_terlambat'),
+                DB::raw('ROUND((SUM(CASE 
+                    WHEN k.is_ob = 0 AND a.keterangan = "terlambat" THEN 1 
+                    ELSE 0 
+                END) / COUNT(a.id)) * 100, 2) as persentase_terlambat')
             ])
             ->leftJoin('absensis as a', function($join) use ($startDate, $endDate) {
                 $join->on('k.id', '=', 'a.karyawan_id')
                      ->whereBetween('a.tanggal', [$startDate, $endDate]);
             })
             ->where('k.status', 'aktif')
+            ->where('k.is_ob', 0) // Hanya karyawan non-OB yang bisa terlambat
             ->havingRaw('COUNT(a.id) >= 5') // Minimal 5 hari hadir
             ->havingRaw('SUM(CASE WHEN a.keterangan = "terlambat" THEN 1 ELSE 0 END) > 0') // Ada record terlambat
-            ->groupBy('k.id', 'k.nama', 'k.departemen')
+            ->groupBy('k.id', 'k.nama', 'k.departemen', 'k.is_ob')
             ->orderByDesc('total_terlambat')
-            ->limit($limit)
-            ->get();
+            ->limit($limit);
+            
+        $result = $query->get();
+        
+        // Jika tidak ada data terlambat, kembalikan collection kosong
+        return $result->isEmpty() ? collect() : $result;
     }
     
     private function getStatistikUmum($bulan, $tahun)
@@ -174,8 +207,15 @@ class DashboardController extends Controller
             ->join('karyawans as k', 'a.karyawan_id', '=', 'k.id')
             ->select([
                 DB::raw('COUNT(*) as total_kehadiran'),
-                DB::raw('SUM(CASE WHEN a.keterangan = "terlambat" THEN 1 ELSE 0 END) as total_terlambat'),
-                DB::raw('SUM(CASE WHEN a.keterangan = "tepat waktu" THEN 1 ELSE 0 END) as total_tepat_waktu')
+                DB::raw('SUM(CASE 
+                    WHEN k.is_ob = 0 AND a.keterangan = "terlambat" THEN 1 
+                    ELSE 0 
+                END) as total_terlambat'),
+                DB::raw('SUM(CASE 
+                    WHEN k.is_ob = 1 AND a.jam_masuk IS NOT NULL AND a.jam_pulang IS NOT NULL THEN 1
+                    WHEN k.is_ob = 0 AND a.keterangan = "tepat waktu" THEN 1 
+                    ELSE 0 
+                END) as total_tepat_waktu')
             ])
             ->whereBetween('a.tanggal', [$startDate, $endDate])
             ->where('k.status', 'aktif')
