@@ -43,6 +43,7 @@ Route::get('/absensi/upload', [AbsensiController::class, 'formUpload'])->name('a
 Route::post('/absensi/import', [AbsensiController::class, 'import'])->name('absensi.import');
 Route::post('/absensi/preview', [AbsensiController::class, 'preview'])->name('absensi.preview');
 Route::get('/absensi/preview', [AbsensiController::class, 'preview'])->name('absensi.preview');
+Route::post('/absensi/preview/clear', [AbsensiController::class, 'clearPreview'])->name('absensi.preview.clear');
 Route::post('/absensi/store', [AbsensiController::class, 'store'])->name('absensi.store');
 
 Route::get('/absensi/cetak', [AbsensiController::class, 'cetak'])->name('absensi.cetak');

@@ -115,17 +115,23 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      $('#absensiTable').DataTable({
-        dom: 't',
-        ordering: true,
-        stateSave: true,
-        pageLength: 40,
-        columnDefs: [{
-          targets: [0, 4, 5, 6],
-          orderable: false
-        }],
-        responsive: true
-      });
+      // Initialize DataTable only for preview table, disable search/pagination since we handle it server-side
+      const previewTable = document.getElementById('absensiTable');
+      if (previewTable) {
+        $('#absensiTable').DataTable({
+          dom: 't', // Only show table, no search/pagination controls
+          ordering: false, // Disable client-side sorting since we handle it server-side
+          paging: false, // Disable client-side pagination
+          searching: false, // Disable client-side search
+          info: false, // Disable info display
+          stateSave: false, // Disable state saving
+          responsive: true,
+          columnDefs: [{
+            targets: [0], // Disable sorting on row number column
+            orderable: false
+          }]
+        });
+      }
     });
   </script>
 @endpush
@@ -143,6 +149,17 @@
 
       @if (session('success'))
         <div class="bg-green-100 text-green-700 p-3 rounded mb-4">{{ session('success') }}</div>
+      @endif
+      @if (session('upload_success'))
+        <div
+          class="bg-green-100 border border-green-300 text-green-700 p-4 rounded-lg mb-4 flex items-center">
+          <svg class="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor"
+            viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span class="font-medium">{{ session('upload_success') }}</span>
+        </div>
       @endif
       @if (session('error'))
         <div class="bg-red-100 text-red-700 p-3 rounded mb-4">{{ session('error') }}</div>
@@ -898,6 +915,37 @@
               renderFiles();
             }
           });
+
+          // Search enhancement for preview table
+          const searchInput = document.querySelector('input[name="search"]');
+          if (searchInput) {
+            let searchTimeout;
+
+            // Add search feedback
+            searchInput.addEventListener('input', function() {
+              clearTimeout(searchTimeout);
+              const searchValue = this.value.trim();
+
+              // Show loading state for longer searches
+              if (searchValue.length > 2) {
+                searchTimeout = setTimeout(() => {
+                  // Auto-submit search after 1 second of no typing
+                  if (document.querySelector('form[action*="preview"]')) {
+                    this.form.submit();
+                  }
+                }, 1000);
+              }
+            });
+
+            // Submit on Enter
+            searchInput.addEventListener('keypress', function(e) {
+              if (e.key === 'Enter') {
+                clearTimeout(searchTimeout);
+                e.preventDefault();
+                this.form.submit();
+              }
+            });
+          }
         });
       </script>
     @endpush
@@ -907,18 +955,146 @@
   {{-- Preview Table --}}
   @if (!empty($preview) && $preview->count())
     <div class="bg-white p-6 rounded-xl shadow border">
-      <h2 class="text-xl font-bold mb-4">📄 Preview Data Absensi</h2>
-      <p class="text-sm text-gray-600 mb-2">Menampilkan {{ $preview->total() }} data
-        absensi.</p>
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+        <div>
+          <h2 class="text-xl font-bold">📄 Preview Data Absensi</h2>
+          <p class="text-sm text-gray-600 mt-1">
+            Menampilkan {{ $preview->firstItem() }} - {{ $preview->lastItem() }}
+            dari {{ $preview->total() }} data absensi
+            @if (request('search'))
+              <span class="text-blue-600 font-medium">(hasil pencarian:
+                "{{ request('search') }}")</span>
+            @endif
+          </p>
+        </div>
 
-      <form method="GET" action="{{ route('absensi.preview') }}"
-        class="mb-4 md:flex-row gap-2 md:items-center justify-between">
-        <input type="text" name="search" placeholder="Cari nama..."
-          value="{{ request('search') }}" class="border p-2 rounded w-full md:w-1/3" />
-        <button type="submit" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
-          Cari
-        </button>
-      </form>
+        <form method="POST" action="{{ route('absensi.preview.clear') }}" class="inline">
+          @csrf
+          <button type="submit"
+            onclick="return confirm('Apakah Anda yakin ingin menghapus preview data dan memulai dari awal?')"
+            class="inline-flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16">
+              </path>
+            </svg>
+            Hapus Preview
+          </button>
+        </form>
+      </div>
+
+      {{-- Enhanced Search and Filter Form --}}
+      <div class="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
+        <form method="GET" action="{{ route('absensi.preview') }}" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {{-- Search Input --}}
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                🔍 Cari Data
+              </label>
+              <div class="relative">
+                <input type="text" name="search"
+                  placeholder="Cari nama, departemen, atau keterangan..."
+                  value="{{ request('search') }}"
+                  class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" />
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                </div>
+                @if (request('search'))
+                  <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <a href="{{ route('absensi.preview') }}"
+                      class="text-gray-400 hover:text-gray-600 focus:outline-none"
+                      title="Hapus pencarian">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </a>
+                  </div>
+                @endif
+              </div>
+            </div>
+
+            {{-- Sort By --}}
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                📊 Urutkan
+              </label>
+              <select name="sort_by"
+                class="w-full py-2 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                onchange="this.form.submit()">
+                <option value="">Default (Tanggal & Nama)</option>
+                <option value="nama_asc" {{ request('sort_by') == 'nama_asc' ? 'selected' : '' }}>
+                  Nama A-Z</option>
+                <option value="nama_desc" {{ request('sort_by') == 'nama_desc' ? 'selected' : '' }}>
+                  Nama Z-A</option>
+                <option value="departemen_asc"
+                  {{ request('sort_by') == 'departemen_asc' ? 'selected' : '' }}>Departemen A-Z
+                </option>
+                <option value="departemen_desc"
+                  {{ request('sort_by') == 'departemen_desc' ? 'selected' : '' }}>Departemen Z-A
+                </option>
+                <option value="tanggal_asc"
+                  {{ request('sort_by') == 'tanggal_asc' ? 'selected' : '' }}>Tanggal Lama-Baru
+                </option>
+                <option value="tanggal_desc"
+                  {{ request('sort_by') == 'tanggal_desc' ? 'selected' : '' }}>Tanggal Baru-Lama
+                </option>
+              </select>
+            </div>
+
+            {{-- Per Page --}}
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">
+                📄 Per Halaman
+              </label>
+              <select name="per_page"
+                class="w-full py-2 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                onchange="this.form.submit()">
+                <option value="25" {{ request('per_page') == '25' ? 'selected' : '' }}>25
+                </option>
+                <option value="50" {{ request('per_page', '50') == '50' ? 'selected' : '' }}>50
+                </option>
+                <option value="100" {{ request('per_page') == '100' ? 'selected' : '' }}>100
+                </option>
+                <option value="200" {{ request('per_page') == '200' ? 'selected' : '' }}>200
+                </option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-2 justify-between items-center">
+            <button type="submit"
+              class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              Cari & Filter
+            </button>
+
+            @if (request()->hasAny(['search', 'sort_by', 'per_page']))
+              <a href="{{ route('absensi.preview') }}"
+                class="inline-flex items-center px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-all duration-200">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor"
+                  viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                  </path>
+                </svg>
+                Reset Filter
+              </a>
+            @endif
+          </div>
+        </form>
+      </div>
+
+
 
       <form method="POST" action="{{ route('absensi.store') }}">
         @csrf
@@ -952,16 +1128,38 @@
           </tbody>
         </table>
 
-        <div class="flex items-center justify-between flex-col">
-          <button type="submit"
-            class="bg-green-600 text-white px-4 py-2 my-4 rounded hover:bg-green-700">
-            Simpan ke Database
-          </button>
-          <p class="text-sm text-gray-600 my-4">
-            Showing {{ $preview->firstItem() }} to {{ $preview->lastItem() }} of
-            {{ $preview->total() }} results
-          </p>
-          <div class="mt-2">{{ $preview->links() }}</div>
+        <div
+          class="flex items-center justify-between flex-col lg:flex-row gap-4 mt-6 pt-4 border-t border-gray-200">
+          <div class="flex flex-col sm:flex-row gap-4 items-center">
+            <button type="submit"
+              class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-lg shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12">
+                </path>
+              </svg>
+              Simpan {{ $preview->total() }} Data ke Database
+            </button>
+
+            @if ($preview->total() > 0)
+              <div
+                class="text-sm text-gray-600 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+                <span class="font-medium text-blue-800">
+                  📊 Menampilkan {{ $preview->firstItem() }} - {{ $preview->lastItem() }}
+                  dari {{ $preview->total() }} data
+                </span>
+                @if (request('search'))
+                  <br><span class="text-blue-600">🔍 Filter: "{{ request('search') }}"</span>
+                @endif
+              </div>
+            @endif
+          </div>
+
+          @if ($preview->hasPages())
+            <div class="w-full lg:w-auto">
+              {{ $preview->appends(request()->query())->links() }}
+            </div>
+          @endif
         </div>
       </form>
     </div>
