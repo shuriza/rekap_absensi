@@ -799,6 +799,15 @@
       <script>
         let dt;
 
+        
+        // Custom sort plugin for data-order attribute
+        $.fn.dataTable.ext.order['dom-data-order'] = function(settings, col) {
+          return this.api().column(col, {order:'index'}).nodes().map(function(td, i) {
+            return Number($(td).attr('data-order')) || 0;
+          });
+        };
+
+
         $(function() {
           const jumlahTanggal = Number("{{ count($tanggalList) }}");
           const kolomTanggal = Array.from({
@@ -826,10 +835,11 @@
             columnDefs: [{
                 targets: kolomTanggal,
                 orderable: false
-              },
+               },
               {
-                targets: 'no-sort',
-                orderable: false
+                targets: -1,
+                orderDataType: 'dom-data-order',
+                type: 'num'
               }
             ],
           });
@@ -1261,7 +1271,7 @@
                 $menit = str_pad($sisa % 60, 2, '0', STR_PAD_LEFT);
                 $tampil = "{$hari} hari {$jam} jam {$menit} menit";
               @endphp
-              <td class="border px-2 py-1 text-xs font-semibold">
+              <td class="border px-2 py-1 text-xs font-semibold" data-order="{{ $pegawai->total_menit }}">
                 <span class="sr-only">{{ $pegawai->total_fmt }}</span> {{-- untuk sort --}}
                 {{ $tampil }}
               </td>
