@@ -88,15 +88,15 @@ class AbsensiController extends Controller
         $pulangMax = Carbon::createFromFormat('H:i', $range['pulang_max']);
 
         // Status jam masuk
-        $sMasuk = 'hadir';
+        $sMasuk = 'tepat waktu';
         if ($jm->lt($masukMin)) {
             $sMasuk = 'diluar waktu absen';
         } elseif ($jm->gt($masukMax)) {
-            $sMasuk = 'telat';
+            $sMasuk = 'terlambat';
         }
 
         // Status jam pulang  
-        $sPulang = 'hadir';
+        $sPulang = 'tepat waktu';
         if ($jp->gt($pulangMax)) {
             $sPulang = 'diluar waktu absen';
         } elseif ($jp->lt($pulangMin)) {
@@ -104,19 +104,19 @@ class AbsensiController extends Controller
         }
 
         // Kombinasi status
-        if ($sMasuk === 'diluar waktu absen' || $sPulang === 'diluar waktu absen') {
-            return 'Tidak Valid';
-        }
-        
-        if ($sMasuk === 'telat' && $sPulang === 'terlambat') {
-            return 'Telat, terlambat';
-        } elseif ($sMasuk === 'telat') {
-            return 'Telat';
+        // if ($sMasuk === 'diluar waktu absen' || $sPulang === 'diluar waktu absen') {
+        //     return 'Tidak Valid';
+        // }
+
+        if ($sMasuk === 'terlambat' && $sPulang === 'terlambat') {
+            return 'terlambat, terlambat';
+        } elseif ($sMasuk === 'terlambat') {
+            return 'terlambat';
         } elseif ($sPulang === 'terlambat') {
             return 'terlambat';
         }
         
-        return 'Hadir';
+        return 'tepat waktu';
     }
 
     /* ===================== Preview (Orchestrator) ===================== */
@@ -611,11 +611,11 @@ class AbsensiController extends Controller
 
         // Count attendance status
         $statusCounts = [
-            'hadir' => $collection->where('keterangan', 'Hadir')->count(),
-            'telat' => $collection->where('keterangan', 'Telat')->count(),
-            'pulang_awal' => $collection->where('keterangan', 'Pulang Awal')->count(),
-            'telat_pulang_awal' => $collection->where('keterangan', 'Telat, Pulang Awal')->count(),
-            'tidak_valid' => $collection->where('keterangan', 'Tidak Valid')->count(),
+            'tepat waktu' => $collection->where('keterangan', 'tepat waktu')->count(),
+            'terlambat' => $collection->where('keterangan', 'terlambat')->count(),
+            'pulang_awal' => $collection->where('keterangan', 'pulang awal')->count(),
+            'telat_pulang_awal' => $collection->where('keterangan', 'terlambat, pulang awal')->count(),
+            'tidak_valid' => $collection->where('keterangan', 'tidak valid')->count(),
         ];
 
         return [
