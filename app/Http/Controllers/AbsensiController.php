@@ -73,13 +73,7 @@ class AbsensiController extends Controller
         $jm = $jamMasuk ? Carbon::createFromFormat('H:i', $jamMasuk) : null;
         $jp = $jamPulang ? Carbon::createFromFormat('H:i', $jamPulang) : null;
 
-        // Kasus khusus: Hanya jam masuk tanpa jam pulang = Tidak Valid
-        if ($jm && !$jp) return 'Tidak Valid';
-        
-        // Kasus khusus: Hanya jam pulang tanpa jam masuk = Tidak Valid
-        if (!$jm && $jp) return 'Tidak Valid';
-        
-        // Tidak ada jam sama sekali
+        if (($jm && !$jp) || (!$jm && $jp)) return 'tidak valid';
         if (!$jm && !$jp) return null;
 
         $masukMin  = Carbon::createFromFormat('H:i', $range['masuk_min']);
@@ -87,36 +81,10 @@ class AbsensiController extends Controller
         $pulangMin = Carbon::createFromFormat('H:i', $range['pulang_min']);
         $pulangMax = Carbon::createFromFormat('H:i', $range['pulang_max']);
 
-        // Status jam masuk
-        $sMasuk = 'tepat waktu';
-        if ($jm->lt($masukMin)) {
-            $sMasuk = 'diluar waktu absen';
-        } elseif ($jm->gt($masukMax)) {
-            $sMasuk = 'terlambat';
-        }
+        $sMasuk  = $jm->lt($masukMin)  ? 'diluar waktu absen' : ($jm->gt($masukMax) ? 'terlambat' : 'tepat waktu');
+        $sPulang = $jp->gt($pulangMax) ? 'diluar waktu absen' : ($jp->lt($pulangMin) ? 'terlambat' : 'tepat waktu');
 
-        // Status jam pulang  
-        $sPulang = 'tepat waktu';
-        if ($jp->gt($pulangMax)) {
-            $sPulang = 'diluar waktu absen';
-        } elseif ($jp->lt($pulangMin)) {
-            $sPulang = 'terlambat';
-        }
-
-        // Kombinasi status
-        // if ($sMasuk === 'diluar waktu absen' || $sPulang === 'diluar waktu absen') {
-        //     return 'Tidak Valid';
-        // }
-
-        if ($sMasuk === 'terlambat' && $sPulang === 'terlambat') {
-            return 'terlambat, terlambat';
-        } elseif ($sMasuk === 'terlambat') {
-            return 'terlambat';
-        } elseif ($sPulang === 'terlambat') {
-            return 'terlambat';
-        }
-        
-        return 'tepat waktu';
+        return $this->pickStatus($sMasuk, $sPulang);
     }
 
     /* ===================== Preview (Orchestrator) ===================== */
@@ -137,31 +105,18 @@ class AbsensiController extends Controller
 
             $this->ensureSingleMonthOrFail($bulanTahunSet);
             $this->storeSessionPreview($preview, $seninKamis, $jumat, $ramadhanRange);
-            
-            // Redirect to GET request to avoid form resubmission
-            return redirect()->route('absensi.preview')->with('upload_success', 'Data berhasil diproses!');
         } else {
             // GET: ambil dari session
             $preview = session('preview_data', []);
         }
 
         if (count($preview) === 0) {
-            // If no preview data and it's a GET request, redirect back to index
-            if ($request->isMethod('get') && !$request->has('search')) {
-                return redirect()->route('absensi.index')->with('error', 'Tidak ada data preview. Silakan upload file terlebih dahulu.');
-            }
-            return back()->with('error', 'Tidak ada data absensi yang bisa ditampilkan.');
+            return back()->with('success', 'Tidak ada data absensi yang bisa ditampilkan.');
         }
 
         $paginated = $this->paginateAndFilter($preview, $request);
-        
-        // Calculate summary statistics
-        $stats = $this->calculatePreviewStats($preview, $request);
 
-        return view('absensi.index', [
-            'preview' => $paginated,
-            'stats' => $stats
-        ]);
+        return view('absensi.index', ['preview' => $paginated]);
     }
 
     /* ===================== Subroutines Preview ===================== */
@@ -373,7 +328,7 @@ class AbsensiController extends Controller
         return $isFri ? $jumat : $seninKamis;
     }
 
-    /** Tentukan jam masuk/pulang yang “valid” dari list */
+    /** Tentukan jam masuk/pulang yang "valid" dari list */
     private function selectValidInOut(array $jamList, array $range): array
     {
         sort($jamList);
@@ -384,77 +339,41 @@ class AbsensiController extends Controller
 
         $in = null; $out = null;
 
-        // Pisahkan jam berdasarkan logika waktu: jam pagi (< 12:00) dan jam sore (>= 12:00)
-        $jamPagi = [];
-        $jamSore = [];
-        
+        // Jika hanya ada satu jam, tentukan berdasarkan kedekatan dengan range
+        if (count($jamList) === 1) {
+            $jamTunggal = $jamList[0];
+            $jamObj = Carbon::createFromFormat('H:i', $jamTunggal);
+            
+            // Hitung jarak ke tengah range masuk dan pulang
+            $masukTengah = $masukMin->copy()->addMinutes($masukMin->diffInMinutes($masukMax) / 2);
+            $pulangTengah = $pulangMin->copy()->addMinutes($pulangMin->diffInMinutes($pulangMax) / 2);
+            
+            $jarakKeMasuk = abs($jamObj->diffInMinutes($masukTengah));
+            $jarakKePulang = abs($jamObj->diffInMinutes($pulangTengah));
+            
+            // Tentukan penempatan berdasarkan jarak terdekat
+            if ($jarakKeMasuk <= $jarakKePulang) {
+                $in = $jamTunggal;
+            } else {
+                $out = $jamTunggal;
+            }
+            
+            return [$in, $out];
+        }
+
+        // Logika existing untuk multiple jam
         foreach ($jamList as $j) {
             $jObj = Carbon::createFromFormat('H:i', $j);
-            if ($jObj->hour < 12) {
-                $jamPagi[] = $j;
-            } else {
-                $jamSore[] = $j;
-            }
+            if ($jObj->betweenIncluded($masukMin, $masukMax)) { $in = $j; break; }
         }
+        if (!$in) $in = $jamList[0] ?? null;
 
-        // KASUS KHUSUS: Jika hanya ada satu jam dan itu jam sore (>= 12:00), 
-        // anggap sebagai jam pulang saja (tanpa jam masuk)
-        if (count($jamList) === 1 && !empty($jamSore)) {
-            return [null, $jamSore[0]];
-        }
-
-        // Prioritas 1: Cari jam masuk dalam rentang yang ditentukan
-        foreach ($jamPagi as $j) {
+        foreach (array_reverse($jamList) as $j) {
             $jObj = Carbon::createFromFormat('H:i', $j);
-            if ($jObj->betweenIncluded($masukMin, $masukMax)) { 
-                $in = $j; 
-                break; 
-            }
+            if ($in && $j > $in && $jObj->betweenIncluded($pulangMin, $pulangMax)) { $out = $j; break; }
         }
-
-        // Prioritas 2: Jika tidak ada dalam rentang, ambil jam pagi terakhir sebagai masuk
-        if (!$in && !empty($jamPagi)) {
-            $in = end($jamPagi);
-        }
-
-        // Prioritas 3: Jika tidak ada jam pagi sama sekali dan ada lebih dari 1 jam, ambil jam pertama
-        if (!$in && count($jamList) > 1) {
-            $in = $jamList[0];
-        }
-
-        // Prioritas 4: Jika hanya ada satu jam pagi, anggap sebagai jam masuk saja
-        if (!$in && count($jamList) === 1 && !empty($jamPagi)) {
-            return [$jamPagi[0], null];
-        }
-
-        // Cari jam pulang: prioritas dari jam sore yang dalam rentang
-        foreach (array_reverse($jamSore) as $j) {
-            $jObj = Carbon::createFromFormat('H:i', $j);
-            // Jika ada jam masuk, pastikan jam pulang lebih besar
-            // Jika tidak ada jam masuk, ambil jam sore yang dalam rentang
-            if ((!$in || $j > $in) && $jObj->betweenIncluded($pulangMin, $pulangMax)) { 
-                $out = $j; 
-                break; 
-            }
-        }
-
-        // Jika tidak ada jam sore dalam rentang, ambil jam sore terakhir
-        if (!$out && !empty($jamSore)) {
-            $lastSore = end($jamSore);
-            // Jika ada jam masuk, pastikan jam pulang lebih besar
-            if (!$in || $lastSore > $in) {
-                $out = $lastSore;
-            }
-        }
-
-        // Fallback: jika tidak ada jam sore, cari jam terakhir yang lebih besar dari jam masuk
-        if (!$out && count($jamList) > 1 && $in) {
-            foreach (array_reverse($jamList) as $j) {
-                if ($j > $in) {
-                    $out = $j;
-                    break;
-                }
-            }
+        if (!$out && count($jamList) > 1 && end($jamList) > $in) {
+            $out = end($jamList);
         }
 
         return [$in, $out];
@@ -552,29 +471,19 @@ class AbsensiController extends Controller
     {
         $collection = collect($preview);
 
-        // Search functionality - search in nama, departemen, and keterangan
         if ($search = $request->input('search')) {
-            $search = strtolower(trim($search));
-            $collection = $collection->filter(function($row) use ($search) {
-                return stripos($row['nama'], $search) !== false ||
-                       stripos($row['departemen'], $search) !== false ||
-                       stripos($row['keterangan'], $search) !== false;
-            });
+            $collection = $collection->filter(fn($row) => stripos($row['nama'], $search) !== false);
         }
 
-        // Sorting functionality
         switch ($request->input('sort_by')) {
             case 'nama_asc':     $collection = $collection->sortBy('nama');       break;
             case 'nama_desc':    $collection = $collection->sortByDesc('nama');   break;
             case 'tanggal_asc':  $collection = $collection->sortBy('tanggal');    break;
             case 'tanggal_desc': $collection = $collection->sortByDesc('tanggal');break;
-            case 'departemen_asc': $collection = $collection->sortBy('departemen'); break;
-            case 'departemen_desc': $collection = $collection->sortByDesc('departemen'); break;
-            default: $collection = $collection->sortBy(['tanggal', 'nama']); break; // Default sort
         }
 
         $currentPage  = LengthAwarePaginator::resolveCurrentPage();
-        $perPage      = $request->input('per_page', 50); // Increased default per page
+        $perPage      = 25;
         $currentItems = $collection->slice(($currentPage - 1) * $perPage, $perPage)->values();
 
         return new LengthAwarePaginator(
@@ -584,51 +493,6 @@ class AbsensiController extends Controller
             $currentPage,
             ['path' => $request->url(), 'query' => $request->query()]
         );
-    }
-
-    /** Calculate summary statistics for preview data */
-    private function calculatePreviewStats(array $preview, Request $request): array
-    {
-        $collection = collect($preview);
-        
-        // Apply same filter as paginateAndFilter to get accurate stats
-        if ($search = $request->input('search')) {
-            $search = strtolower(trim($search));
-            $collection = $collection->filter(function($row) use ($search) {
-                return stripos($row['nama'], $search) !== false ||
-                       stripos($row['departemen'], $search) !== false ||
-                       stripos($row['keterangan'], $search) !== false;
-            });
-        }
-
-        $totalRecords = $collection->count();
-        $departments = $collection->pluck('departemen')->unique()->count();
-        $employees = $collection->pluck('nama')->unique()->count();
-        
-        $dateRange = $collection->pluck('tanggal')->unique()->sort();
-        $startDate = $dateRange->first();
-        $endDate = $dateRange->last();
-
-        // Count attendance status
-        $statusCounts = [
-            'tepat waktu' => $collection->where('keterangan', 'tepat waktu')->count(),
-            'terlambat' => $collection->where('keterangan', 'terlambat')->count(),
-            'pulang_awal' => $collection->where('keterangan', 'pulang awal')->count(),
-            'telat_pulang_awal' => $collection->where('keterangan', 'terlambat, pulang awal')->count(),
-            'tidak_valid' => $collection->where('keterangan', 'tidak valid')->count(),
-        ];
-
-        return [
-            'total_records' => $totalRecords,
-            'total_departments' => $departments,
-            'total_employees' => $employees,
-            'date_range' => [
-                'start' => $startDate,
-                'end' => $endDate
-            ],
-            'status_counts' => $statusCounts,
-            'filtered' => $request->has('search') && !empty($request->input('search'))
-        ];
     }
 
     /* ===================== Hitung menit/penalti ===================== */
@@ -746,12 +610,5 @@ class AbsensiController extends Controller
     private function clearSessionData(): void
     {
         session()->forget(['preview_data', 'absensi_filter']);
-    }
-
-    /** Clear preview data via route */
-    public function clearPreview(Request $request)
-    {
-        $this->clearSessionData();
-        return redirect()->route('absensi.index')->with('success', 'Preview data telah dihapus. Silakan upload file baru.');
     }
 }

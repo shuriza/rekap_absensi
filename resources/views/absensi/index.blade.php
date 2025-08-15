@@ -164,11 +164,11 @@
       @if (session('error'))
         <div class="bg-red-100 text-red-700 p-3 rounded mb-4">{{ session('error') }}</div>
       @endif
-      @if (session('debug_ramadhan'))
+      {{-- @if (session('debug_ramadhan'))
         <div class="bg-blue-100 text-blue-700 p-3 rounded mb-4">
           <strong>Debug:</strong> {{ session('debug_ramadhan') }}
         </div>
-      @endif
+      @endif --}}
       @if ($errors->any())
         <div class="bg-red-100 text-red-700 p-3 rounded mb-4">
           <ul class="list-disc ml-5">
