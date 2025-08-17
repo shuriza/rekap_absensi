@@ -697,11 +697,7 @@
             showIzinAlert('Tidak bisa input izin pada tanggal merah.');
             return;
           }
-          // Cek kolom yang ada isinya jam (misal: 07:30, 08:00, dst)
-          if (/\d{1,2}:\d{2}/.test(label)) {
-            showIzinAlert('Tidak bisa input izin pada kolom yang sudah ada jam hadir.');
-            return;
-          }
+          // Batasan untuk jam hadir telah dihapus - sekarang bisa input izin meski ada jam hadir
 
           const form = document.getElementById('form-izin');
 
