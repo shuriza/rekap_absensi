@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Absensi;
 use App\Models\Karyawan;
 use App\Models\IzinPresensi;
+use App\Models\Holiday;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +24,7 @@ class DashboardController extends Controller
         $topKaryawanTerlambat = $this->getTopKaryawanTerlambat($bulan, $tahun);
         $topKaryawanTidakMasuk = $this->getTopKaryawanTidakMasuk($bulan, $tahun);
         $topKaryawanPenalty = $this->getTopKaryawanPenalty($bulan, $tahun);
+        $topKaryawanTidakDisiplin = $this->getTopKaryawanTidakDisiplin($bulan, $tahun);
         $statistikUmum = $this->getStatistikUmum($bulan, $tahun);
         
         return view('dashboard.analytics', compact(
@@ -32,10 +34,38 @@ class DashboardController extends Controller
             'topKaryawanTerlambat',
             'topKaryawanTidakMasuk',
             'topKaryawanPenalty',
+            'topKaryawanTidakDisiplin',
             'statistikUmum',
             'bulan',
             'tahun'
         ));
+    }
+    
+    /**
+     * Helper method untuk menghitung hari kerja efektif (tanpa weekend dan holiday)
+     */
+    private function getHariKerjaEfektif($startDate, $endDate)
+    {
+        // Ambil semua holiday dalam periode
+        $holidayDates = Holiday::whereBetween('tanggal', [$startDate, $endDate])
+            ->pluck('tanggal')
+            ->map(function($date) {
+                return Carbon::parse($date)->format('Y-m-d');
+            })
+            ->toArray();
+        
+        $tanggalKerja = [];
+        $current = $startDate->copy();
+        while ($current <= $endDate) {
+            $dateString = $current->format('Y-m-d');
+            // Skip weekend dan holiday
+            if (!$current->isWeekend() && !in_array($dateString, $holidayDates)) {
+                $tanggalKerja[] = $dateString;
+            }
+            $current->addDay();
+        }
+        
+        return $tanggalKerja;
     }
     
     private function getKehadiranPerDepartemen($bulan, $tahun)
@@ -43,17 +73,9 @@ class DashboardController extends Controller
         $startDate = Carbon::create($tahun, $bulan, 1)->startOfMonth();
         $endDate = Carbon::create($tahun, $bulan, 1)->endOfMonth();
         
-        // Hitung jumlah hari kerja dalam bulan (tidak termasuk weekend)
-        $hariKerja = 0;
-        $tanggalKerja = [];
-        $current = $startDate->copy();
-        while ($current <= $endDate) {
-            if (!$current->isWeekend()) {
-                $hariKerja++;
-                $tanggalKerja[] = $current->format('Y-m-d');
-            }
-            $current->addDay();
-        }
+        // Hitung hari kerja efektif (tanpa weekend dan holiday)
+        $tanggalKerja = $this->getHariKerjaEfektif($startDate, $endDate);
+        $hariKerja = count($tanggalKerja);
         
         // Ambil data karyawan per departemen
         $departments = DB::table('karyawans')
@@ -182,15 +204,9 @@ class DashboardController extends Controller
             $startDate = Carbon::create($tahun, $bulan, 1)->startOfMonth();
             $endDate = Carbon::create($tahun, $bulan, 1)->endOfMonth();
             
-            // Hitung jumlah hari kerja dalam bulan (tidak termasuk weekend)
-            $hariKerja = 0;
-            $current = $startDate->copy();
-            while ($current <= $endDate) {
-                if (!$current->isWeekend()) {
-                    $hariKerja++;
-                }
-                $current->addDay();
-            }
+            // Hitung hari kerja efektif (tanpa weekend dan holiday)
+            $tanggalKerja = $this->getHariKerjaEfektif($startDate, $endDate);
+            $hariKerja = count($tanggalKerja);
             
             $stats = DB::table('absensis as a')
                 ->join('karyawans as k', 'a.karyawan_id', '=', 'k.id')
@@ -287,15 +303,8 @@ class DashboardController extends Controller
         $startDate = Carbon::create($tahun, $bulan, 1)->startOfMonth();
         $endDate = Carbon::create($tahun, $bulan, 1)->endOfMonth();
         
-        // Hitung jumlah hari kerja dalam bulan
-        $tanggalKerja = [];
-        $current = $startDate->copy();
-        while ($current <= $endDate) {
-            if (!$current->isWeekend()) {
-                $tanggalKerja[] = $current->format('Y-m-d');
-            }
-            $current->addDay();
-        }
+        // Hitung hari kerja efektif (tanpa weekend dan holiday)
+        $tanggalKerja = $this->getHariKerjaEfektif($startDate, $endDate);
         $hariKerja = count($tanggalKerja);
         
         // Ambil semua karyawan aktif
@@ -368,31 +377,62 @@ class DashboardController extends Controller
                 }
             }
             
-            // PERBAIKAN: Perhitungan berdasarkan hari kerja yang seharusnya
+            // Ranking berdasarkan berapa kali tepat waktu dalam hari kerja 1 bulan
             $karyawan->total_hadir = $totalHadir;
             $karyawan->total_izin = $totalIzin;
             $karyawan->tepat_waktu = $tepatWaktu;
             $karyawan->hari_kerja_tanpa_izin = $hariKerjaTanpaIzin;
             $karyawan->total_hari_kerja = $hariKerja;
             
-            // Attendance Rate: (hadir + izin) / total hari kerja
-            $karyawan->attendance_rate = $hariKerja > 0 ? 
-                round((($totalHadir + $totalIzin) / $hariKerja) * 100, 2) : 0;
+            // Calculate penalty for tie-breaking (same logic as getTopKaryawanPenalty)
+            $totalPenalty = 0;
+            if(!empty($tanggalKerjaTanpaIzin)) {
+                // Ambil data absensi untuk tanggal yang tidak di-izin
+                $absensiData = DB::table('absensis')
+                    ->where('karyawan_id', $karyawan->id)
+                    ->whereIn('tanggal', $tanggalKerjaTanpaIzin)
+                    ->get();
                 
-            // Punctuality Rate: tepat waktu / hari kerja tanpa izin (bukan dari total hadir)
-            $karyawan->punctuality_rate = $hariKerjaTanpaIzin > 0 ? 
-                round(($tepatWaktu / $hariKerjaTanpaIzin) * 100, 2) : 0;
+                // Filter data yang valid berdasarkan jenis karyawan
+                $validAbsensi = $this->filterValidAbsensi($absensiData, $karyawan);
                 
-            // Composite Score: Gabungan attendance (60%) + punctuality (40%)
-            $karyawan->composite_score = ($karyawan->attendance_rate * 0.6) + ($karyawan->punctuality_rate * 0.4);
+                // Hitung total penalty minutes hanya dari data yang valid
+                foreach($validAbsensi as $absensi) {
+                    $penaltyMinutes = $absensi->penalty_minutes ?? 0;
+                    $totalPenalty += $penaltyMinutes;
+                }
+                
+                // TAMBAHAN: Hitung penalty untuk hari tidak masuk (7.5 jam = 450 menit per hari)
+                $hariTidakMasuk = count($tanggalKerjaTanpaIzin) - $totalHadir;
+                $penaltyTidakMasuk = $hariTidakMasuk * 450; // 7.5 jam = 450 menit per hari tidak masuk
+                $totalPenalty += $penaltyTidakMasuk;
+            }
+            
+            $karyawan->total_penalty_minutes = $totalPenalty;
+            
+            // Simple ranking: rank by jumlah hari tepat waktu
+            $karyawan->ranking_score = $tepatWaktu;
             
             return $karyawan;
         })
         ->filter(function($karyawan) {
-            // Filter: minimal 60% attendance dan minimal 5 hari kerja tanpa izin
-            return $karyawan->attendance_rate >= 60 && $karyawan->hari_kerja_tanpa_izin >= 5;
+            // Filter: minimal ada 5 hari kerja efektif, ada data kehadiran, dan BUKAN OB
+            return $karyawan->hari_kerja_tanpa_izin >= 5 && $karyawan->total_hadir > 0 && !$karyawan->is_ob;
         })
-        ->sortByDesc('composite_score') // Sort by composite score instead of punctuality only
+        ->sort(function($a, $b) {
+            // Primary: jumlah hari tepat waktu (descending) - yang lebih banyak tepat waktu di atas
+            if ($a->ranking_score != $b->ranking_score) {
+                return $b->ranking_score <=> $a->ranking_score;
+            }
+            
+            // Tie-breaker 1: penalty lebih sedikit lebih baik (ascending)
+            if ($a->total_penalty_minutes != $b->total_penalty_minutes) {
+                return $a->total_penalty_minutes <=> $b->total_penalty_minutes;
+            }
+            
+            // Final tie-breaker: alfabetis berdasarkan nama
+            return strcmp($a->nama, $b->nama);
+        })
         ->take($limit)
         ->values();
         
@@ -401,21 +441,15 @@ class DashboardController extends Controller
 
     /**
      * Get top karyawan dengan penalty terbanyak (paling tidak disiplin)
+     * Ranking berdasarkan menit penalty - makin sedikit makin baik
      */
     private function getTopKaryawanPenalty($bulan, $tahun, $limit = 10)
     {
         $startDate = Carbon::create($tahun, $bulan, 1)->startOfMonth();
         $endDate = Carbon::create($tahun, $bulan, 1)->endOfMonth();
         
-        // Generate semua tanggal kerja (non-weekend) dalam bulan
-        $tanggalKerja = [];
-        $current = $startDate->copy();
-        while ($current <= $endDate) {
-            if (!$current->isWeekend()) {
-                $tanggalKerja[] = $current->format('Y-m-d');
-            }
-            $current->addDay();
-        }
+        // Hitung hari kerja efektif (tanpa weekend dan holiday)
+        $tanggalKerja = $this->getHariKerjaEfektif($startDate, $endDate);
         
         $karyawanList = DB::table('karyawans')
             ->select(['id', 'nama', 'departemen', 'is_ob'])
@@ -482,31 +516,24 @@ class DashboardController extends Controller
                     $totalLateMinutes += $lateMinutes;
                     $totalEarlyMinutes += $earlyMinutes;
                 }
+                
+                // TAMBAHAN: Hitung penalty untuk hari tidak masuk (7.5 jam = 450 menit per hari)
+                $hariTidakMasuk = count($tanggalKerjaTanpaIzin) - $totalHadir;
+                $penaltyTidakMasuk = $hariTidakMasuk * 450; // 7.5 jam = 450 menit per hari tidak masuk
+                $totalPenalty += $penaltyTidakMasuk;
             }
             
-            // Hitung metrik untuk fair evaluation
-            $hariKerjaSetelahIzin = count($tanggalKerjaTanpaIzin);
-            $persentaseKehadiran = $hariKerjaSetelahIzin > 0 ? 
-                round(($totalHadir / $hariKerjaSetelahIzin) * 100, 2) : 0;
-            $avgPenaltyPerDay = $totalHadir > 0 ? 
-                round($totalPenalty / $totalHadir, 1) : 0;
-            
-            // Penalty score: Lower penalty per day = better score
-            $maxExpectedPenalty = 120; // Assume max 2 hours penalty per day is worst case
-            $penaltyScore = $maxExpectedPenalty > 0 ? 
-                max(0, (($maxExpectedPenalty - $avgPenaltyPerDay) / $maxExpectedPenalty) * 100) : 100;
-            
-            // Composite score untuk penalty ranking (Attendance 50% + Penalty Control 50%)
-            $compositeScore = ($persentaseKehadiran * 0.5) + ($penaltyScore * 0.5);
-            
+            // Ranking berdasarkan total menit penalty - makin sedikit makin baik
             $karyawan->total_hadir = $totalHadir;
             $karyawan->total_penalty_minutes = $totalPenalty;
             $karyawan->total_late_minutes = $totalLateMinutes;
             $karyawan->total_early_minutes = $totalEarlyMinutes;
-            $karyawan->hari_kerja_efektif = $hariKerjaSetelahIzin;
-            $karyawan->persentase_kehadiran = $persentaseKehadiran;
-            $karyawan->avg_penalty_per_day = $avgPenaltyPerDay;
-            $karyawan->composite_score = round($compositeScore, 2);
+            $karyawan->hari_kerja_efektif = count($tanggalKerjaTanpaIzin);
+            $karyawan->hari_tidak_masuk = isset($hariTidakMasuk) ? $hariTidakMasuk : 0;
+            $karyawan->penalty_tidak_masuk = isset($penaltyTidakMasuk) ? $penaltyTidakMasuk : 0;
+            
+            // Simple ranking: rank by total penalty minutes (ascending - semakin sedikit semakin baik)
+            $karyawan->ranking_score = $totalPenalty;
             
             // Convert minutes to hours:minutes format for display
             $karyawan->penalty_hours_display = $this->minutesToHoursDisplay($totalPenalty);
@@ -516,10 +543,150 @@ class DashboardController extends Controller
             return $karyawan;
         })
         ->filter(function($karyawan) {
-            // Hanya tampilkan yang minimal 5 hari kerja efektif dan ada penalty
-            return $karyawan->hari_kerja_efektif >= 5 && $karyawan->total_penalty_minutes > 0;
+            // Hanya tampilkan yang minimal 5 hari kerja efektif, ada kehadiran atau penalty, dan BUKAN OB
+            return $karyawan->hari_kerja_efektif >= 5 && ($karyawan->total_hadir > 0 || $karyawan->total_penalty_minutes > 0) && !$karyawan->is_ob;
         })
-        ->sortBy('composite_score') // Sort ascending (worst performers first for penalty ranking)
+        ->sort(function($a, $b) {
+            // Primary: penalty terendah (ascending) - yang penalty lebih sedikit di atas
+            if ($a->ranking_score != $b->ranking_score) {
+                return $a->ranking_score <=> $b->ranking_score;
+            }
+            
+            // Tie-breaker 1: kehadiran lebih banyak lebih baik (descending)
+            if ($a->total_hadir != $b->total_hadir) {
+                return $b->total_hadir <=> $a->total_hadir;
+            }
+            
+            // Final tie-breaker: alfabetis berdasarkan nama
+            return strcmp($a->nama, $b->nama);
+        })
+        ->take($limit)
+        ->values();
+        
+        return $result;
+    }
+
+    /**
+     * Get top karyawan tidak disiplin (yang paling banyak penalty)
+     * Ranking berdasarkan menit penalty - makin banyak makin buruk
+     */
+    private function getTopKaryawanTidakDisiplin($bulan, $tahun, $limit = 10)
+    {
+        $startDate = Carbon::create($tahun, $bulan, 1)->startOfMonth();
+        $endDate = Carbon::create($tahun, $bulan, 1)->endOfMonth();
+        
+        // Hitung hari kerja efektif (tanpa weekend dan holiday)
+        $tanggalKerja = $this->getHariKerjaEfektif($startDate, $endDate);
+        
+        $karyawanList = DB::table('karyawans')
+            ->select(['id', 'nama', 'departemen', 'is_ob'])
+            ->where('status', 'aktif')
+            ->get();
+        
+        $result = $karyawanList->map(function($karyawan) use ($startDate, $endDate, $tanggalKerja) {
+            // Ambil semua tanggal yang di-izin
+            $izinDates = [];
+            $izinRecords = DB::table('izin_presensi')
+                ->where('karyawan_id', $karyawan->id)
+                ->where(function($query) use ($startDate, $endDate) {
+                    $query->whereBetween('tanggal_awal', [$startDate, $endDate])
+                          ->orWhereBetween('tanggal_akhir', [$startDate, $endDate])
+                          ->orWhere(function($q) use ($startDate, $endDate) {
+                              $q->where('tanggal_awal', '<=', $startDate)
+                                ->where('tanggal_akhir', '>=', $endDate);
+                          });
+                })
+                ->get();
+            
+            // Generate semua tanggal yang di-izin
+            foreach($izinRecords as $izin) {
+                $izinStart = max($startDate, Carbon::parse($izin->tanggal_awal));
+                $izinEnd = min($endDate, Carbon::parse($izin->tanggal_akhir));
+                
+                $current = $izinStart->copy();
+                while($current <= $izinEnd) {
+                    if(!$current->isWeekend()) {
+                        $izinDates[] = $current->format('Y-m-d');
+                    }
+                    $current->addDay();
+                }
+            }
+            $izinDates = array_unique($izinDates);
+            
+            // Hitung penalty hanya untuk hari yang TIDAK di-izin
+            $tanggalKerjaTanpaIzin = array_diff($tanggalKerja, $izinDates);
+            
+            $totalPenalty = 0;
+            $totalHadir = 0;
+            $totalLateMinutes = 0;
+            $totalEarlyMinutes = 0;
+            
+            if(!empty($tanggalKerjaTanpaIzin)) {
+                // Ambil data absensi untuk tanggal yang tidak di-izin
+                $absensiData = DB::table('absensis')
+                    ->where('karyawan_id', $karyawan->id)
+                    ->whereIn('tanggal', $tanggalKerjaTanpaIzin)
+                    ->get();
+                
+                // Filter data yang valid berdasarkan jenis karyawan
+                $validAbsensi = $this->filterValidAbsensi($absensiData, $karyawan);
+                
+                $totalHadir = $validAbsensi->count();
+                
+                // Hitung total penalty minutes hanya dari data yang valid
+                foreach($validAbsensi as $absensi) {
+                    $penaltyMinutes = $absensi->penalty_minutes ?? 0;
+                    $lateMinutes = $absensi->late_minutes ?? 0;
+                    $earlyMinutes = $absensi->early_minutes ?? 0;
+                    
+                    $totalPenalty += $penaltyMinutes;
+                    $totalLateMinutes += $lateMinutes;
+                    $totalEarlyMinutes += $earlyMinutes;
+                }
+                
+                // TAMBAHAN: Hitung penalty untuk hari tidak masuk (7.5 jam = 450 menit per hari)
+                $hariTidakMasuk = count($tanggalKerjaTanpaIzin) - $totalHadir;
+                $penaltyTidakMasuk = $hariTidakMasuk * 450; // 7.5 jam = 450 menit per hari tidak masuk
+                $totalPenalty += $penaltyTidakMasuk;
+            }
+            
+            // Ranking berdasarkan total menit penalty - makin banyak makin buruk
+            $karyawan->total_hadir = $totalHadir;
+            $karyawan->total_penalty_minutes = $totalPenalty;
+            $karyawan->total_late_minutes = $totalLateMinutes;
+            $karyawan->total_early_minutes = $totalEarlyMinutes;
+            $karyawan->hari_kerja_efektif = count($tanggalKerjaTanpaIzin);
+            $karyawan->hari_tidak_masuk = isset($hariTidakMasuk) ? $hariTidakMasuk : 0;
+            $karyawan->penalty_tidak_masuk = isset($penaltyTidakMasuk) ? $penaltyTidakMasuk : 0;
+            
+            // Simple ranking: rank by total penalty minutes (descending - semakin banyak semakin buruk)
+            $karyawan->ranking_score = $totalPenalty;
+            
+            // Convert minutes to hours:minutes format for display
+            $karyawan->penalty_hours_display = $this->minutesToHoursDisplay($totalPenalty);
+            $karyawan->late_hours_display = $this->minutesToHoursDisplay($totalLateMinutes);
+            $karyawan->early_hours_display = $this->minutesToHoursDisplay($totalEarlyMinutes);
+            
+            return $karyawan;
+        })
+        ->filter(function($karyawan) {
+            // Hanya tampilkan yang minimal 5 hari kerja efektif, ada penalty, dan BUKAN OB
+            return $karyawan->hari_kerja_efektif >= 5 && $karyawan->total_penalty_minutes > 0 && !$karyawan->is_ob;
+        })
+        ->sort(function($a, $b) {
+            // Primary: penalty tertinggi (descending) - yang penalty lebih banyak di atas
+            if ($a->ranking_score != $b->ranking_score) {
+                return $b->ranking_score <=> $a->ranking_score;
+            }
+            
+            // Tie-breaker 1: kehadiran lebih banyak menunjukkan dedikasi meski tidak disiplin (descending)
+            if ($a->total_hadir != $b->total_hadir) {
+                return $b->total_hadir <=> $a->total_hadir;
+            }
+            
+            // Final tie-breaker: alfabetis berdasarkan nama
+            return strcmp($a->nama, $b->nama);
+        })
         ->take($limit)
         ->values();
         
@@ -581,15 +748,8 @@ class DashboardController extends Controller
         $startDate = Carbon::create($tahun, $bulan, 1)->startOfMonth();
         $endDate = Carbon::create($tahun, $bulan, 1)->endOfMonth();
         
-        // Hitung jumlah hari kerja dalam bulan
-        $tanggalKerja = [];
-        $current = $startDate->copy();
-        while ($current <= $endDate) {
-            if (!$current->isWeekend()) {
-                $tanggalKerja[] = $current->format('Y-m-d');
-            }
-            $current->addDay();
-        }
+        // Hitung hari kerja efektif (tanpa weekend dan holiday)
+        $tanggalKerja = $this->getHariKerjaEfektif($startDate, $endDate);
         $hariKerja = count($tanggalKerja);
         
         // Ambil semua karyawan non-OB yang aktif
@@ -649,34 +809,34 @@ class DashboardController extends Controller
                 $totalTerlambat = $validAbsensi->where('late_minutes', '>', 0)->count();
             }
             
+            // Ranking berdasarkan berapa kali terlambat dalam hari kerja 1 bulan
             $karyawan->total_hadir = $totalHadir;
             $karyawan->total_terlambat = $totalTerlambat;
+            $karyawan->hari_kerja_efektif = count($tanggalKerjaTanpaIzin);
             
-            // Hitung metrik untuk fair evaluation
-            $hariKerjaSetelahIzin = count($tanggalKerjaTanpaIzin);
-            $persentaseKehadiran = $hariKerjaSetelahIzin > 0 ? 
-                round(($totalHadir / $hariKerjaSetelahIzin) * 100, 2) : 0;
-            $persentaseTerlambat = $totalHadir > 0 ? 
-                round(($totalTerlambat / $totalHadir) * 100, 2) : 0;
-            
-            // Late score: Higher percentage = worse score (invert untuk scoring)
-            $lateScore = max(0, 100 - $persentaseTerlambat);
-            
-            // Composite score untuk late ranking (Attendance 40% + Late Frequency 60%)
-            $compositeScore = ($persentaseKehadiran * 0.4) + ($lateScore * 0.6);
-            
-            $karyawan->hari_kerja_efektif = $hariKerjaSetelahIzin;
-            $karyawan->persentase_kehadiran = $persentaseKehadiran;
-            $karyawan->persentase_terlambat = $persentaseTerlambat;
-            $karyawan->composite_score = round($compositeScore, 2);
+            // Simple ranking: rank by jumlah hari terlambat (descending - semakin banyak semakin buruk)
+            $karyawan->ranking_score = $totalTerlambat;
             
             return $karyawan;
         })
         ->filter(function($karyawan) {
-            // Hanya tampilkan yang minimal 5 hari kerja efektif dan ada record terlambat
-            return $karyawan->hari_kerja_efektif >= 5 && $karyawan->total_terlambat > 0;
+            // Hanya tampilkan yang minimal 5 hari kerja efektif, ada record kehadiran, dan BUKAN OB
+            return $karyawan->hari_kerja_efektif >= 5 && $karyawan->total_hadir > 0 && !$karyawan->is_ob;
         })
-        ->sortBy('composite_score') // Sort ascending (worst performers first for late ranking)
+        ->sort(function($a, $b) {
+            // Primary: jumlah terlambat tertinggi (descending) - yang paling sering terlambat di atas
+            if ($a->ranking_score != $b->ranking_score) {
+                return $b->ranking_score <=> $a->ranking_score;
+            }
+            
+            // Tie-breaker 1: kehadiran lebih banyak menunjukkan dedikasi (descending)
+            if ($a->total_hadir != $b->total_hadir) {
+                return $b->total_hadir <=> $a->total_hadir;
+            }
+            
+            // Final tie-breaker: alfabetis berdasarkan nama
+            return strcmp($a->nama, $b->nama);
+        })
         ->take($limit)
         ->values();
         
@@ -688,15 +848,8 @@ class DashboardController extends Controller
         $startDate = Carbon::create($tahun, $bulan, 1)->startOfMonth();
         $endDate = Carbon::create($tahun, $bulan, 1)->endOfMonth();
         
-        // Hitung jumlah hari kerja dalam bulan (tidak termasuk weekend)
-        $tanggalKerja = [];
-        $current = $startDate->copy();
-        while ($current <= $endDate) {
-            if (!$current->isWeekend()) {
-                $tanggalKerja[] = $current->format('Y-m-d');
-            }
-            $current->addDay();
-        }
+        // Hitung hari kerja efektif (tanpa weekend dan holiday)
+        $tanggalKerja = $this->getHariKerjaEfektif($startDate, $endDate);
         
         $hariKerja = count($tanggalKerja);
         
@@ -764,26 +917,14 @@ class DashboardController extends Controller
             $totalTidakMasuk = count($tanggalKerjaTanpaIzin) - $totalHadir;
             $totalTidakMasuk = max(0, $totalTidakMasuk);
             
-            // Hitung metrik untuk fair evaluation
-            $hariKerjaSetelahIzin = count($tanggalKerjaTanpaIzin);
-            $persentaseKehadiran = $hariKerjaSetelahIzin > 0 ? 
-                round(($totalHadir / $hariKerjaSetelahIzin) * 100, 2) : 0;
-            $persentaseTidakMasuk = $hariKerjaSetelahIzin > 0 ? 
-                round(($totalTidakMasuk / $hariKerjaSetelahIzin) * 100, 2) : 0;
-            
-            // Absence score: Higher percentage tidak masuk = worse score (invert untuk scoring)
-            $absenceScore = max(0, 100 - $persentaseTidakMasuk);
-            
-            // Composite score untuk absence ranking (Attendance 60% + Absence Control 40%)
-            $compositeScore = ($persentaseKehadiran * 0.6) + ($absenceScore * 0.4);
-            
+            // Ranking berdasarkan berapa kali tidak masuk dalam hari kerja 1 bulan
             $karyawan->total_hadir = $totalHadir;
             $karyawan->total_izin = $totalIzin;
             $karyawan->total_tidak_masuk = $totalTidakMasuk;
-            $karyawan->hari_kerja_efektif = $hariKerjaSetelahIzin;
-            $karyawan->persentase_kehadiran = $persentaseKehadiran;
-            $karyawan->persentase_tidak_masuk = $persentaseTidakMasuk;
-            $karyawan->composite_score = round($compositeScore, 2);
+            $karyawan->hari_kerja_efektif = count($tanggalKerjaTanpaIzin);
+            
+            // Simple ranking: rank by jumlah hari tidak masuk (descending - semakin banyak semakin buruk)
+            $karyawan->ranking_score = $totalTidakMasuk;
             
             return $karyawan;
         })
@@ -791,8 +932,20 @@ class DashboardController extends Controller
         ->filter(function($karyawan) {
             return $karyawan->hari_kerja_efektif >= 5 && $karyawan->total_tidak_masuk > 0;
         })
-        // Sort berdasarkan composite score ascending (worst performers first)
-        ->sortBy('composite_score')
+        ->sort(function($a, $b) {
+            // Primary: jumlah tidak masuk tertinggi (descending) - yang paling sering tidak masuk di atas
+            if ($a->ranking_score != $b->ranking_score) {
+                return $b->ranking_score <=> $a->ranking_score;
+            }
+            
+            // Tie-breaker 1: kehadiran lebih banyak menunjukkan dedikasi (descending)
+            if ($a->total_hadir != $b->total_hadir) {
+                return $b->total_hadir <=> $a->total_hadir;
+            }
+            
+            // Final tie-breaker: alfabetis berdasarkan nama
+            return strcmp($a->nama, $b->nama);
+        })
         ->take($limit)
         ->values(); // Reset array keys
         
@@ -806,15 +959,8 @@ class DashboardController extends Controller
         
         $totalKaryawan = Karyawan::where('status', 'aktif')->count();
         
-        // Hitung jumlah hari kerja dalam bulan (tidak termasuk weekend)
-        $tanggalKerja = [];
-        $current = $startDate->copy();
-        while ($current <= $endDate) {
-            if (!$current->isWeekend()) {
-                $tanggalKerja[] = $current->format('Y-m-d');
-            }
-            $current->addDay();
-        }
+        // Hitung hari kerja efektif (tanpa weekend dan holiday)
+        $tanggalKerja = $this->getHariKerjaEfektif($startDate, $endDate);
         $hariKerja = count($tanggalKerja);
         
         // Hitung total berdasarkan semua karyawan

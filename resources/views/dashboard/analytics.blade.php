@@ -29,12 +29,21 @@
                             </div>
                             <div class="ml-3">
                                 <p class="text-sm text-blue-700">
-                                    <strong>Sistem Evaluasi Fair v2.0:</strong> Menggunakan composite scoring dengan bobot konsisten untuk menghindari bias. 
-                                    Semua ranking mengecualikan hari izin dari perhitungan. Karyawan OB memiliki sistem penilaian khusus berdasarkan kelengkapan jam kerja.
+                                    <strong>Sistem Ranking Sederhana v3.1:</strong> Menggunakan sistem ranking langsung berdasarkan frekuensi untuk evaluasi yang lebih objektif. 
+                                    Semua ranking mengecualikan hari izin dari perhitungan. <strong>Karyawan OB hanya masuk dalam ranking "Sering Tidak Masuk"</strong> dan dikecualikan dari ranking lainnya.
                                 </p>
                                 <div class="mt-2 text-xs text-blue-600">
-                                    <strong>Formula Standar:</strong> Kehadiran (60%) + Metrik Spesifik (40%) | 
-                                    <strong>Threshold:</strong> Hijau ≥85, Biru ≥70, Kuning ≥55, Merah <55
+                                    <strong>Formula Baru:</strong> Ranking berdasarkan frekuensi langsung | 
+                                    <strong>Threshold:</strong> Min. 5 hari kerja efektif untuk ranking yang valid |
+                                    <strong>Tie-Breaking:</strong> Jika nilai sama, diurutkan berdasarkan kriteria sekunder lalu nama (alfabetis)
+                                    <button type="button" 
+                                            onclick="showTieBreakingModal()"
+                                            class="ml-2 inline-flex items-center text-blue-500 hover:text-blue-700 transition-colors duration-200"
+                                            title="Lihat penjelasan lengkap sistem tie-breaking">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"></path>
+                                        </svg>
+                                    </button>
                                 </div>
                                 
                                 {{-- Collapse/Expand Button --}}
@@ -53,71 +62,96 @@
                                     
                                     {{-- Top Karyawan Terbaik --}}
                                     <div class="mb-4 p-3 bg-green-50 rounded-lg border-l-4 border-green-400">
-                                        <h5 class="text-xs font-bold text-green-800 mb-2">🏆 TOP KARYAWAN TERBAIK</h5>
+                                        <h5 class="text-xs font-bold text-green-800 mb-2">🏆 TOP 10 KARYAWAN PALING TEPAT WAKTU</h5>
                                         <div class="text-xs text-gray-700 space-y-1">
-                                            <p><strong>Formula:</strong> Composite Score = (Attendance Rate × 0.6) + (Punctuality Rate × 0.4)</p>
-                                            <p><strong>Attendance Rate:</strong> (Hari Hadir + Hari Izin) ÷ Total Hari Kerja × 100%</p>
-                                            <p><strong>Punctuality Rate:</strong> Hari Tepat Waktu ÷ (Hari Kerja - Hari Izin) × 100%</p>
-                                            <p><strong>Syarat:</strong> Min. attendance 60% & min. 5 hari kerja efektif</p>
-                                            <p><strong>Contoh:</strong> Attendance 90% + Punctuality 80% = (90×0.6) + (80×0.4) = 54 + 32 = <strong>86 poin</strong></p>
+                                            <p><strong>Kriteria:</strong> Rank berdasarkan berapa kali tepat waktu dalam hari kerja 1 bulan</p>
+                                            <p><strong>Formula:</strong> Total Hari Tepat Waktu (dalam hari kerja efektif)</p>
+                                            <p><strong>Hari Kerja Efektif:</strong> Total hari dalam bulan - Weekend - Holiday - Hari Izin</p>
+                                            <p><strong>Tepat Waktu:</strong> Untuk non-OB = tanpa keterlambatan, untuk OB = ada jam masuk & pulang</p>
+                                            <p><strong>Syarat:</strong> Min. 5 hari kerja efektif & ada data kehadiran</p>
+                                            <p><strong>Contoh:</strong> 22 hari kerja - 1 holiday - 2 izin = 19 hari efektif. Tepat waktu 15 hari = <strong>Rank 15</strong></p>
                                         </div>
                                     </div>
                                     
                                     {{-- Karyawan Penalty --}}
                                     <div class="mb-4 p-3 bg-purple-50 rounded-lg border-l-4 border-purple-400">
-                                        <h5 class="text-xs font-bold text-purple-800 mb-2">⚡ KARYAWAN PENALTY TERBANYAK</h5>
+                                        <h5 class="text-xs font-bold text-purple-800 mb-2">⚡ 10 KARYAWAN PALING DISIPLIN</h5>
                                         <div class="text-xs text-gray-700 space-y-1">
-                                            <p><strong>Formula:</strong> Composite Score = (Attendance Rate × 0.6) + (Penalty Control Score × 0.4)</p>
-                                            <p><strong>Penalty Control Score:</strong> max(0, (120 - Avg Penalty Per Day) ÷ 120 × 100%)</p>
-                                            <p><strong>Attendance Rate:</strong> Hari Hadir ÷ (Hari Kerja - Hari Izin) × 100%</p>
-                                            <p><strong>Syarat:</strong> Min. 5 hari kerja efektif & ada record penalty</p>
-                                            <p><strong>Contoh:</strong> Attendance 80%, Avg Penalty 60 menit/hari = (80×0.6) + (50×0.4) = 48 + 20 = <strong>68 poin</strong></p>
+                                            <p><strong>Kriteria:</strong> Rank berdasarkan menit disiplin - makin sedikit makin baik</p>
+                                            <p><strong>Formula:</strong> Total Menit Penalty (dalam hari kerja efektif)</p>
+                                            <p><strong>Menit Penalty:</strong> Akumulasi penalty_minutes dari semua kehadiran</p>
+                                            <p><strong>Hari Kerja Efektif:</strong> Total hari dalam bulan - Weekend - Holiday - Hari Izin</p>
+                                            <p><strong>Syarat:</strong> Min. 5 hari kerja efektif & ada data kehadiran</p>
+                                            <p><strong>Contoh:</strong> 22 hari kerja - 1 holiday - 2 izin = 19 hari efektif. Total penalty 30 menit = <strong>Rank 30</strong></p>
+                                        </div>
+                                    </div>
+
+                                    {{-- Karyawan Tidak Disiplin --}}
+                                    <div class="mb-4 p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
+                                        <h5 class="text-xs font-bold text-red-800 mb-2">💸 10 KARYAWAN TIDAK DISIPLIN</h5>
+                                        <div class="text-xs text-gray-700 space-y-1">
+                                            <p><strong>Kriteria:</strong> Rank berdasarkan menit penalty terbanyak - makin banyak makin buruk</p>
+                                            <p><strong>Formula:</strong> Total Menit Penalty (dalam hari kerja efektif)</p>
+                                            <p><strong>Menit Penalty:</strong> Akumulasi penalty_minutes dari semua kehadiran</p>
+                                            <p><strong>Hari Kerja Efektif:</strong> Total hari dalam bulan - Weekend - Holiday - Hari Izin</p>
+                                            <p><strong>Syarat:</strong> Min. 5 hari kerja efektif & ada penalty</p>
+                                            <p><strong>Contoh:</strong> 22 hari kerja - 1 holiday - 2 izin = 19 hari efektif. Total penalty 180 menit = <strong>Rank 180</strong></p>
                                         </div>
                                     </div>
                                     
                                     {{-- Karyawan Terlambat --}}
                                     <div class="mb-4 p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
-                                        <h5 class="text-xs font-bold text-yellow-800 mb-2">⚠️ KARYAWAN SERING TERLAMBAT</h5>
+                                        <h5 class="text-xs font-bold text-yellow-800 mb-2">⚠️ 10 KARYAWAN SERING TERLAMBAT</h5>
                                         <div class="text-xs text-gray-700 space-y-1">
-                                            <p><strong>Formula:</strong> Composite Score = (Attendance Rate × 0.6) + (Late Control Score × 0.4)</p>
-                                            <p><strong>Late Control Score:</strong> max(0, 100 - Persentase Terlambat)</p>
-                                            <p><strong>Persentase Terlambat:</strong> Hari Terlambat ÷ Hari Hadir × 100%</p>
-                                            <p><strong>Syarat:</strong> Min. 5 hari kerja efektif & ada record terlambat</p>
-                                            <p><strong>Contoh:</strong> Attendance 75%, Terlambat 40% = (75×0.6) + (60×0.4) = 45 + 24 = <strong>69 poin</strong></p>
+                                            <p><strong>Kriteria:</strong> Rank berdasarkan berapa kali terlambat dalam hari kerja 1 bulan</p>
+                                            <p><strong>Formula:</strong> Total Hari Terlambat (dalam hari kerja efektif)</p>
+                                            <p><strong>Terlambat:</strong> Hari dengan late_minutes > 0 (hanya non-OB)</p>
+                                            <p><strong>Hari Kerja Efektif:</strong> Total hari dalam bulan - Weekend - Holiday - Hari Izin</p>
+                                            <p><strong>Syarat:</strong> Min. 5 hari kerja efektif & ada data kehadiran</p>
+                                            <p><strong>Contoh:</strong> 22 hari kerja - 1 holiday - 2 izin = 19 hari efektif. Terlambat 8 hari = <strong>Rank 8</strong></p>
                                         </div>
                                     </div>
                                     
                                     {{-- Karyawan Tidak Masuk --}}
                                     <div class="mb-4 p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
-                                        <h5 class="text-xs font-bold text-red-800 mb-2">❌ KARYAWAN SERING TIDAK MASUK</h5>
+                                        <h5 class="text-xs font-bold text-red-800 mb-2">❌ 10 KARYAWAN SERING TIDAK MASUK</h5>
                                         <div class="text-xs text-gray-700 space-y-1">
-                                            <p><strong>Formula:</strong> Composite Score = (Attendance Rate × 0.6) + (Absence Control Score × 0.4)</p>
-                                            <p><strong>Absence Control Score:</strong> max(0, 100 - Persentase Tidak Masuk)</p>
-                                            <p><strong>Persentase Tidak Masuk:</strong> Hari Tidak Masuk ÷ (Hari Kerja - Hari Izin) × 100%</p>
-                                            <p><strong>Syarat:</strong> Min. 5 hari kerja efektif & ada record tidak masuk</p>
-                                            <p><strong>Contoh:</strong> Attendance 60%, Tidak Masuk 30% = (60×0.6) + (70×0.4) = 36 + 28 = <strong>64 poin</strong></p>
+                                            <p><strong>Kriteria:</strong> Rank berdasarkan berapa kali tidak masuk dalam hari kerja 1 bulan</p>
+                                            <p><strong>Formula:</strong> Total Hari Tidak Masuk (dalam hari kerja efektif)</p>
+                                            <p><strong>Tidak Masuk:</strong> Hari kerja tanpa izin yang tidak ada data absensi</p>
+                                            <p><strong>Hari Kerja Efektif:</strong> Total hari dalam bulan - Weekend - Holiday - Hari Izin</p>
+                                            <p><strong>Syarat:</strong> Min. 5 hari kerja efektif & ada aktivitas tidak masuk</p>
+                                            <p><strong>Contoh:</strong> 22 hari kerja - 1 holiday - 2 izin = 19 hari efektif. Tidak masuk 5 hari = <strong>Rank 5</strong></p>
                                         </div>
                                     </div>
                                     
                                     {{-- Sistem Penilaian --}}
                                     <div class="p-3 bg-gray-50 rounded-lg border-l-4 border-gray-400">
-                                        <h5 class="text-xs font-bold text-gray-800 mb-2">🎯 SISTEM PENILAIAN & KETERANGAN</h5>
+                                        <h5 class="text-xs font-bold text-gray-800 mb-2">🎯 SISTEM RANKING & KETERANGAN</h5>
                                         <div class="text-xs text-gray-700 space-y-2">
                                             <div class="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <p><strong>Rentang Skor:</strong></p>
-                                                    <p class="text-green-600">• 85-100: Excellent (Hijau)</p>
-                                                    <p class="text-blue-600">• 70-84: Good (Biru)</p>
-                                                    <p class="text-yellow-600">• 55-69: Fair (Kuning)</p>
-                                                    <p class="text-red-600">• 0-54: Poor (Merah)</p>
+                                                    <p><strong>Kriteria Ranking:</strong></p>
+                                                    <p class="text-green-600">• Tepat Waktu: Ranking tertinggi = paling sering tepat waktu</p>
+                                                    <p class="text-purple-600">• Disiplin: Ranking tertinggi = penalty paling sedikit</p>
+                                                    <p class="text-red-600">• Tidak Disiplin: Ranking tertinggi = penalty paling banyak</p>
+                                                    <p class="text-yellow-600">• Terlambat: Ranking tertinggi = paling sering terlambat</p>
+                                                    <p class="text-red-600">• Tidak Masuk: Ranking tertinggi = paling sering tidak masuk</p>
                                                 </div>
                                                 <div>
                                                     <p><strong>Prinsip Fair:</strong></p>
                                                     <p>• Hari izin tidak dihitung sebagai penalti</p>
-                                                    <p>• Minimum data untuk ranking yang valid</p>
-                                                    <p>• Bobot konsisten 60:40 untuk semua kategori</p>
+                                                    <p>• Holiday dikecualikan dari hari kerja</p>
+                                                    <p>• Minimum 5 hari kerja efektif untuk ranking</p>
+                                                    <p>• Ranking berdasarkan frekuensi langsung</p>
                                                     <p>• Karyawan OB punya sistem khusus</p>
                                                 </div>
+                                            </div>
+                                            <div class="mt-3 p-2 bg-blue-100 rounded border-l-2 border-blue-400">
+                                                <p><strong>📅 Contoh Perhitungan Hari Kerja Efektif:</strong></p>
+                                                <p>• Januari 2025: 31 hari - 8 weekend - 1 holiday (Tahun Baru) = <strong>22 hari kerja efektif</strong></p>
+                                                <p>• Februari 2025: 28 hari - 8 weekend - 0 holiday = <strong>20 hari kerja efektif</strong></p>
+                                                <p>• Agustus 2025: 31 hari - 10 weekend - 1 holiday (17 Agustus) = <strong>20 hari kerja efektif</strong></p>
                                             </div>
                                         </div>
                                     </div>
@@ -296,8 +330,9 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="text-lg font-bold text-gray-900">🏆 Top 10 Karyawan Terbaik</h3>
-                                <p class="text-xs text-green-700">Composite Score: Kehadiran (60%) + Punctuality (40%)</p>
+                                <h3 class="text-lg font-bold text-gray-900">🏆 Top 10 Karyawan Paling Tepat Waktu</h3>
+                                <p class="text-xs text-green-700">Rank by: Jumlah hari tepat waktu dalam 1 bulan</p>
+                                <p class="text-xs text-gray-500 mt-1"><span class="text-orange-600">*Tidak termasuk OB</span></p>
                             </div>
                         </div>
                     </div>
@@ -309,8 +344,7 @@
                                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
                                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
                                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kehadiran</th>
-                                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Punctuality</th>
-                                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tepat Waktu</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
@@ -334,26 +368,20 @@
                                             <div class="text-xs text-gray-500">{{ $karyawan->departemen }}</div>
                                             @if($karyawan->is_ob)
                                                 <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                                    OB
+                                                     OB
                                                 </span>
                                             @endif
                                         </td>
                                         <td class="px-3 py-3 whitespace-nowrap">
                                             <div class="text-xs text-gray-700">{{ $karyawan->total_hadir ?? 0 }}/{{ $karyawan->hari_kerja_tanpa_izin ?? 0 }}</div>
-                                            <div class="text-xs font-medium text-green-600">{{ $karyawan->attendance_rate ?? 0 }}%</div>
                                         </td>
                                         <td class="px-3 py-3 whitespace-nowrap">
-                                            <div class="text-xs font-medium text-blue-600">{{ $karyawan->punctuality_rate ?? 0 }}%</div>
-                                        </td>
-                                        <td class="px-3 py-3 whitespace-nowrap">
-                                            <div class="text-sm font-bold {{ ($karyawan->composite_score ?? 0) >= 85 ? 'text-green-600' : (($karyawan->composite_score ?? 0) >= 70 ? 'text-blue-600' : (($karyawan->composite_score ?? 0) >= 55 ? 'text-yellow-600' : 'text-red-600')) }}">>
-                                                {{ number_format($karyawan->composite_score ?? 0, 1) }}
-                                            </div>
+                                            <div class="text-sm font-bold text-green-600">{{ $karyawan->tepat_waktu ?? 0 }} hari</div>
                                         </td>
                                     </tr>
                                     @empty
                                     <tr>
-                                        <td colspan="5" class="px-3 py-8 text-center">
+                                        <td colspan="4" class="px-3 py-8 text-center">
                                             <div class="text-gray-500">
                                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m13-8l-7 7-7-7m14 8l-7 7-7-7" />
@@ -381,8 +409,9 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="text-lg font-bold text-gray-900">⚡ Karyawan Penalty Terbanyak</h3>
-                                <p class="text-xs text-purple-700">Composite Score: Kehadiran (60%) + Kontrol Penalty (40%)</p>
+                                <h3 class="text-lg font-bold text-gray-900">⚡ 10 Karyawan Paling Disiplin</h3>
+                                <p class="text-xs text-purple-700">Rank by: Menit penalty - makin sedikit makin baik</p>
+                                <p class="text-xs text-gray-500 mt-1"> <span class="text-orange-600">*Tidak termasuk OB</span></p>
                             </div>
                         </div>
                     </div>
@@ -393,8 +422,7 @@
                                     <tr>
                                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
                                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
-                                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Penalty</th>
-                                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Penalty</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
@@ -406,20 +434,25 @@
                                         <td class="px-3 py-3 whitespace-nowrap">
                                             <div class="text-sm font-medium text-gray-900">{{ $karyawan->nama }}</div>
                                             <div class="text-xs text-gray-500">{{ $karyawan->departemen }}</div>
+                                            @if($karyawan->is_ob)
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                     OB
+                                                </span>
+                                            @endif
                                         </td>
                                         <td class="px-3 py-3 whitespace-nowrap">
-                                            <div class="text-sm font-medium text-purple-600">{{ $karyawan->penalty_hours_display ?? 0 }}</div>
-                                            <div class="text-xs text-gray-500">/jam</div>
-                                        </td>
-                                        <td class="px-3 py-3 whitespace-nowrap">
-                                            <div class="text-sm font-bold {{ ($karyawan->composite_score ?? 0) >= 85 ? 'text-green-600' : (($karyawan->composite_score ?? 0) >= 70 ? 'text-blue-600' : (($karyawan->composite_score ?? 0) >= 55 ? 'text-yellow-600' : 'text-red-600')) }}">>
-                                                {{ number_format($karyawan->composite_score ?? 0, 1) }}
+                                            <div class="text-sm font-medium text-purple-600">{{ $karyawan->penalty_hours_display ?? '0m' }}</div>
+                                            <div class="text-xs text-gray-500">
+                                                Total: {{ $karyawan->total_penalty_minutes ?? 0 }}m
+                                                @if(($karyawan->hari_tidak_masuk ?? 0) > 0)
+                                                    <br><span class="text-red-500">Tidak masuk: {{ $karyawan->hari_tidak_masuk }}h × 7.5j</span>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
                                     @empty
                                     <tr>
-                                        <td colspan="4" class="px-3 py-8 text-center">
+                                        <td colspan="3" class="px-3 py-8 text-center">
                                             <div class="text-gray-500">
                                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -435,6 +468,8 @@
                         </div>
                     </div>
                 </div>
+
+
             </div>
 
             {{-- Problem Areas Section --}}
@@ -449,8 +484,9 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="text-lg font-bold text-gray-900">⚠️ Karyawan Sering Terlambat</h3>
-                                <p class="text-xs text-yellow-700">Composite Score: Kehadiran (60%) + Kontrol Keterlambatan (40%)</p>
+                                <h3 class="text-lg font-bold text-gray-900">⚠️ 10 Karyawan Sering Terlambat</h3>
+                                <p class="text-xs text-yellow-700">Rank by: Jumlah hari terlambat dalam 1 bulan</p>
+                                <p class="text-xs text-gray-500 mt-1"> <span class="text-orange-600">*Tidak termasuk OB</span></p>
                             </div>
                         </div>
                     </div>
@@ -463,7 +499,6 @@
                                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
                                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kehadiran</th>
                                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Terlambat</th>
-                                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
@@ -475,30 +510,99 @@
                                         <td class="px-3 py-3 whitespace-nowrap">
                                             <div class="text-sm font-medium text-gray-900">{{ $karyawan->nama }}</div>
                                             <div class="text-xs text-gray-500">{{ $karyawan->departemen }}</div>
+                                            @if($karyawan->is_ob)
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                     OB
+                                                </span>
+                                            @endif
                                         </td>
                                         <td class="px-3 py-3 whitespace-nowrap">
                                             <div class="text-xs text-gray-700">{{ $karyawan->total_hadir ?? 0 }}/{{ $karyawan->hari_kerja_efektif ?? 0 }}</div>
-                                            <div class="text-xs text-gray-500">{{ $karyawan->persentase_kehadiran ?? 0 }}%</div>
                                         </td>
                                         <td class="px-3 py-3 whitespace-nowrap">
-                                            <div class="text-sm font-medium text-red-600">{{ $karyawan->total_terlambat ?? 0 }}x</div>
-                                            <div class="text-xs text-gray-500">({{ $karyawan->persentase_terlambat ?? 0 }}%)</div>
-                                        </td>
-                                        <td class="px-3 py-3 whitespace-nowrap">
-                                            <div class="text-sm font-bold {{ ($karyawan->composite_score ?? 0) >= 85 ? 'text-green-600' : (($karyawan->composite_score ?? 0) >= 70 ? 'text-blue-600' : (($karyawan->composite_score ?? 0) >= 55 ? 'text-yellow-600' : 'text-red-600')) }}">
-                                                {{ number_format($karyawan->composite_score ?? 0, 1) }}
-                                            </div>
+                                            <div class="text-sm font-medium text-red-600">{{ $karyawan->total_terlambat ?? 0 }} hari</div>
                                         </td>
                                     </tr>
                                     @empty
                                     <tr>
-                                        <td colspan="5" class="px-3 py-8 text-center">
+                                        <td colspan="4" class="px-3 py-8 text-center">
                                             <div class="text-gray-500">
                                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                                 </svg>
                                                 <h3 class="mt-2 text-sm font-medium text-gray-900">Tidak ada keterlambatan</h3>
                                                 <p class="mt-1 text-sm text-gray-500">Semua karyawan disiplin waktu!</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                                {{-- Top Karyawan Tidak Disiplin --}}
+                <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+                    <div class="bg-gradient-to-r from-red-50 to-orange-50 px-6 py-4 border-b border-gray-200">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-2 bg-gradient-to-r from-red-400 to-orange-600 rounded-lg">
+                                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">💸 10 Karyawan Tidak Disiplin</h3>
+                                <p class="text-xs text-red-700">Rank by: Menit penalty terbanyak - makin banyak makin buruk</p>
+                                <p class="text-xs text-gray-500 mt-1"> <span class="text-orange-600">*Tidak termasuk OB</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+                                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Penalty</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    @forelse($topKaryawanTidakDisiplin as $index => $karyawan)
+                                    <tr class="{{ $index < 3 ? 'bg-red-50' : '' }}">
+                                        <td class="px-3 py-3 whitespace-nowrap">
+                                            <div class="text-sm font-medium text-gray-900">{{ $index + 1 }}</div>
+                                        </td>
+                                        <td class="px-3 py-3 whitespace-nowrap">
+                                            <div class="text-sm font-medium text-gray-900">{{ $karyawan->nama }}</div>
+                                            <div class="text-xs text-gray-500">{{ $karyawan->departemen }}</div>
+                                            @if($karyawan->is_ob)
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                     OB
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td class="px-3 py-3 whitespace-nowrap">
+                                            <div class="text-sm font-medium text-red-600">{{ $karyawan->penalty_hours_display ?? '0m' }}</div>
+                                            <div class="text-xs text-gray-500">
+                                                Total: {{ $karyawan->total_penalty_minutes ?? 0 }}m
+                                                @if(($karyawan->hari_tidak_masuk ?? 0) > 0)
+                                                    <br><span class="text-red-500">Tidak masuk: {{ $karyawan->hari_tidak_masuk }}h × 7.5j</span>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    @empty
+                                    <tr>
+                                        <td colspan="3" class="px-3 py-8 text-center">
+                                            <div class="text-gray-500">
+                                                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                <h3 class="mt-2 text-sm font-medium text-gray-900">Tidak ada data penalty</h3>
+                                                <p class="mt-1 text-sm text-gray-500">Semua karyawan disiplin bulan ini!</p>
                                             </div>
                                         </td>
                                     </tr>
@@ -519,8 +623,9 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="text-lg font-bold text-gray-900">❌ Karyawan Sering Tidak Masuk</h3>
-                                <p class="text-xs text-red-700">Composite Score: Kehadiran (60%) + Kontrol Absensi (40%)</p>
+                                <h3 class="text-lg font-bold text-gray-900">❌ 10 Karyawan Sering Tidak Masuk</h3>
+                                <p class="text-xs text-red-700">Rank by: Jumlah hari tidak masuk dalam 1 bulan</p>
+                                <p class="text-xs text-gray-500 mt-1"> <span class="text-green-600">*Termasuk OB</span></p>
                             </div>
                         </div>
                     </div>
@@ -532,7 +637,6 @@
                                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
                                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
                                         <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tidak Masuk</th>
-                                        <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
                                     </tr>
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
@@ -544,20 +648,19 @@
                                         <td class="px-3 py-3 whitespace-nowrap">
                                             <div class="text-sm font-medium text-gray-900">{{ $karyawan->nama }}</div>
                                             <div class="text-xs text-gray-500">{{ $karyawan->departemen }}</div>
+                                            @if($karyawan->is_ob)
+                                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                     OB
+                                                </span>
+                                            @endif
                                         </td>
                                         <td class="px-3 py-3 whitespace-nowrap">
-                                            <div class="text-sm font-medium text-red-600">{{ $karyawan->total_tidak_masuk ?? 0 }}x</div>
-                                            <div class="text-xs text-gray-500">({{ $karyawan->persentase_tidak_masuk ?? 0 }}%)</div>
-                                        </td>
-                                        <td class="px-3 py-3 whitespace-nowrap">
-                                            <div class="text-sm font-bold {{ ($karyawan->composite_score ?? 0) >= 85 ? 'text-green-600' : (($karyawan->composite_score ?? 0) >= 70 ? 'text-blue-600' : (($karyawan->composite_score ?? 0) >= 55 ? 'text-yellow-600' : 'text-red-600')) }}">
-                                                {{ $karyawan->composite_score ?? 0 }}
-                                            </div>
+                                            <div class="text-sm font-medium text-red-600">{{ $karyawan->total_tidak_masuk ?? 0 }} hari</div>
                                         </td>
                                     </tr>
                                     @empty
                                     <tr>
-                                        <td colspan="4" class="px-3 py-8 text-center">
+                                        <td colspan="3" class="px-3 py-8 text-center">
                                             <div class="text-gray-500">
                                                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -746,6 +849,112 @@ function toggleFormulaDetail() {
         text.textContent = 'Lihat Detail Formula';
     }
 }
+
+// Function untuk show tie-breaking modal
+function showTieBreakingModal() {
+    document.getElementById('tieBreakingModal').classList.remove('hidden');
+}
+
+function closeTieBreakingModal() {
+    document.getElementById('tieBreakingModal').classList.add('hidden');
+}
 </script>
+
+{{-- Tie-Breaking Information Modal --}}
+<div id="tieBreakingModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            {{-- Header --}}
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-bold text-gray-900">📊 Sistem Tie-Breaking Ranking</h3>
+                <button onclick="closeTieBreakingModal()" class="text-gray-400 hover:text-gray-600 transition-colors duration-200">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            {{-- Content --}}
+            <div class="space-y-4 text-sm">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <h4 class="font-semibold text-blue-900 mb-2">🎯 Mengapa Perlu Tie-Breaking?</h4>
+                    <p class="text-blue-800">Ketika beberapa karyawan memiliki nilai ranking yang sama, sistem tie-breaking memastikan urutan yang konsisten dan adil, sehingga tidak ada ambiguitas dalam menampilkan "Top 10".</p>
+                </div>
+                
+                <div class="grid md:grid-cols-2 gap-4">
+                    {{-- Tepat Waktu --}}
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-green-900 mb-2">🏆 Karyawan Paling Tepat Waktu</h4>
+                        <ol class="text-green-800 space-y-1">
+                            <li><strong>1st:</strong> Jumlah hari tepat waktu ⬇️</li>
+                            <li><strong>2nd:</strong> Total penalty ⬆️</li>
+                            <li><strong>3rd:</strong> Nama (A-Z) ⬆️</li>
+                        </ol>
+                        <p class="text-xs text-green-600 mt-2"><em>Contoh: Jika sama-sama 15 hari tepat waktu, yang penalty lebih sedikit akan ranked lebih tinggi.</em></p>
+                        <p class="text-xs text-orange-600 mt-1"><strong>*Tidak termasuk karyawan OB</strong></p>
+                    </div>
+                    
+                    {{-- Disiplin --}}
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-purple-900 mb-2">⚡ Karyawan Paling Disiplin</h4>
+                        <ol class="text-purple-800 space-y-1">
+                            <li><strong>1st:</strong> Total penalty ⬆️</li>
+                            <li><strong>2nd:</strong> Jumlah kehadiran ⬇️</li>
+                            <li><strong>3rd:</strong> Nama (A-Z) ⬆️</li>
+                        </ol>
+                        <p class="text-xs text-purple-600 mt-2"><em>Contoh: Jika sama-sama 30 menit penalty, yang kehadiran lebih banyak menunjukkan dedikasi.</em></p>
+                        <p class="text-xs text-orange-600 mt-1"><strong>*Tidak termasuk karyawan OB</strong></p>
+                    </div>
+                    
+                    {{-- Tidak Disiplin --}}
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-red-900 mb-2">💸 Karyawan Tidak Disiplin</h4>
+                        <ol class="text-red-800 space-y-1">
+                            <li><strong>1st:</strong> Total penalty ⬇️</li>
+                            <li><strong>2nd:</strong> Jumlah kehadiran ⬇️</li>
+                            <li><strong>3rd:</strong> Nama (A-Z) ⬆️</li>
+                        </ol>
+                        <p class="text-xs text-red-600 mt-2"><em>Contoh: Jika sama-sama 120 menit penalty, yang kehadiran lebih banyak masih menunjukkan usaha.</em></p>
+                        <p class="text-xs text-orange-600 mt-1"><strong>*Tidak termasuk karyawan OB</strong></p>
+                    </div>
+                    
+                    {{-- Terlambat & Tidak Masuk --}}
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-yellow-900 mb-2">⚠️ Sering Terlambat & Tidak Masuk</h4>
+                        <ol class="text-yellow-800 space-y-1">
+                            <li><strong>1st:</strong> Jumlah terlambat/tidak masuk ⬇️</li>
+                            <li><strong>2nd:</strong> Jumlah kehadiran ⬇️</li>
+                            <li><strong>3rd:</strong> Nama (A-Z) ⬆️</li>
+                        </ol>
+                        <p class="text-xs text-yellow-600 mt-2"><em>Contoh: Jika sama-sama 5x terlambat, yang kehadiran lebih banyak menunjukkan konsistensi.</em></p>
+                        <p class="text-xs text-orange-600 mt-1"><strong>*Sering Terlambat: Tidak termasuk karyawan OB</strong></p>
+                        <p class="text-xs text-green-600 mt-1"><strong>*Sering Tidak Masuk: Termasuk semua karyawan (termasuk OB)</strong></p>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h4 class="font-semibold text-gray-900 mb-2">📋 Contoh Skenario</h4>
+                    <div class="text-gray-700 space-y-2">
+                        <p><strong>Kasus:</strong> 3 karyawan sama-sama 15 hari tepat waktu</p>
+                        <ul class="ml-4 space-y-1">
+                            <li>• Andi: 15 hari, 30 menit penalty → <span class="text-green-600 font-semibold">Rank #1</span></li>
+                            <li>• Budi: 15 hari, 60 menit penalty → <span class="text-yellow-600 font-semibold">Rank #3</span></li>
+                            <li>• Charlie: 15 hari, 30 menit penalty → <span class="text-blue-600 font-semibold">Rank #2</span> (nama C > A)</li>
+                        </ul>
+                        <p class="text-xs text-gray-600 mt-2"><em>Sistem tie-breaking memastikan urutan yang konsisten dan dapat diprediksi.</em></p>
+                    </div>
+                </div>
+            </div>
+            
+            {{-- Footer --}}
+            <div class="mt-6 text-center">
+                <button onclick="closeTieBreakingModal()" class="px-4 py-2 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 transition-colors duration-200">
+                    Mengerti
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endpush
 @endsection
