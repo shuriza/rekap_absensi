@@ -441,11 +441,11 @@
                                             @endif
                                         </td>
                                         <td class="px-3 py-3 whitespace-nowrap">
-                                            <div class="text-sm font-medium text-purple-600">{{ $karyawan->penalty_hours_display ?? '0m' }}</div>
+                                            <div class="text-sm font-medium text-purple-600">{{ $karyawan->penalty_hours_display ?? '0 menit' }}</div>
                                             <div class="text-xs text-gray-500">
-                                                Total: {{ $karyawan->total_penalty_minutes ?? 0 }}m
+                                                Total: {{ $karyawan->penalty_hours_display ?? '0 menit' }}
                                                 @if(($karyawan->hari_tidak_masuk ?? 0) > 0)
-                                                    <br><span class="text-red-500">Tidak masuk: {{ $karyawan->hari_tidak_masuk }}h × 7.5j</span>
+                                                    <br><span class="text-red-500">Tidak masuk: {{ $karyawan->hari_tidak_masuk }} hari × 7.5 jam</span>
                                                 @endif
                                             </div>
                                         </td>
@@ -585,11 +585,11 @@
                                             @endif
                                         </td>
                                         <td class="px-3 py-3 whitespace-nowrap">
-                                            <div class="text-sm font-medium text-red-600">{{ $karyawan->penalty_hours_display ?? '0m' }}</div>
+                                            <div class="text-sm font-medium text-red-600">{{ $karyawan->penalty_hours_display ?? '0 menit' }}</div>
                                             <div class="text-xs text-gray-500">
-                                                Total: {{ $karyawan->total_penalty_minutes ?? 0 }}m
+                                                Total: {{ $karyawan->penalty_hours_display ?? '0 menit' }}
                                                 @if(($karyawan->hari_tidak_masuk ?? 0) > 0)
-                                                    <br><span class="text-red-500">Tidak masuk: {{ $karyawan->hari_tidak_masuk }}h × 7.5j</span>
+                                                    <br><span class="text-red-500">Tidak masuk: {{ $karyawan->hari_tidak_masuk }} hari × 7.5 jam</span>
                                                 @endif
                                             </div>
                                         </td>

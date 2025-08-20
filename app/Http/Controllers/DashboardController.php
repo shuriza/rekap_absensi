@@ -415,9 +415,14 @@ class DashboardController extends Controller
             
             return $karyawan;
         })
-        ->filter(function($karyawan) {
-            // Filter: minimal ada 5 hari kerja efektif, ada data kehadiran, dan BUKAN OB
-            return $karyawan->hari_kerja_tanpa_izin >= 5 && $karyawan->total_hadir > 0 && !$karyawan->is_ob;
+        ->filter(function($karyawan) use ($startDate, $endDate) {
+            // Filter: minimal ada 5 hari kerja efektif, ada data absensi di bulan ini, dan BUKAN OB
+            $adaAbsensi = DB::table('absensis')
+                ->where('karyawan_id', $karyawan->id)
+                ->whereBetween('tanggal', [$startDate, $endDate])
+                ->exists();
+                
+            return $karyawan->hari_kerja_tanpa_izin >= 5 && $adaAbsensi && !$karyawan->is_ob;
         })
         ->sort(function($a, $b) {
             // Primary: jumlah hari tepat waktu (descending) - yang lebih banyak tepat waktu di atas
@@ -542,9 +547,14 @@ class DashboardController extends Controller
             
             return $karyawan;
         })
-        ->filter(function($karyawan) {
-            // Hanya tampilkan yang minimal 5 hari kerja efektif, ada kehadiran atau penalty, dan BUKAN OB
-            return $karyawan->hari_kerja_efektif >= 5 && ($karyawan->total_hadir > 0 || $karyawan->total_penalty_minutes > 0) && !$karyawan->is_ob;
+        ->filter(function($karyawan) use ($startDate, $endDate) {
+            // Filter: minimal ada 5 hari kerja efektif, ada data absensi di bulan ini, dan BUKAN OB
+            $adaAbsensi = DB::table('absensis')
+                ->where('karyawan_id', $karyawan->id)
+                ->whereBetween('tanggal', [$startDate, $endDate])
+                ->exists();
+                
+            return $karyawan->hari_kerja_efektif >= 5 && $adaAbsensi && !$karyawan->is_ob;
         })
         ->sort(function($a, $b) {
             // Primary: penalty terendah (ascending) - yang penalty lebih sedikit di atas
@@ -669,9 +679,14 @@ class DashboardController extends Controller
             
             return $karyawan;
         })
-        ->filter(function($karyawan) {
-            // Hanya tampilkan yang minimal 5 hari kerja efektif, ada penalty, dan BUKAN OB
-            return $karyawan->hari_kerja_efektif >= 5 && $karyawan->total_penalty_minutes > 0 && !$karyawan->is_ob;
+        ->filter(function($karyawan) use ($startDate, $endDate) {
+            // Filter: minimal ada 5 hari kerja efektif, ada data absensi di bulan ini, ada penalty, dan BUKAN OB
+            $adaAbsensi = DB::table('absensis')
+                ->where('karyawan_id', $karyawan->id)
+                ->whereBetween('tanggal', [$startDate, $endDate])
+                ->exists();
+                
+            return $karyawan->hari_kerja_efektif >= 5 && $adaAbsensi && $karyawan->total_penalty_minutes > 0 && !$karyawan->is_ob;
         })
         ->sort(function($a, $b) {
             // Primary: penalty tertinggi (descending) - yang penalty lebih banyak di atas
@@ -698,17 +713,17 @@ class DashboardController extends Controller
      */
     private function minutesToHoursDisplay($minutes)
     {
-        if ($minutes == 0) return '0m';
+        if ($minutes == 0) return '0 menit';
         
         $hours = floor($minutes / 60);
         $remainingMinutes = $minutes % 60;
         
         if ($hours > 0 && $remainingMinutes > 0) {
-            return $hours . 'j ' . $remainingMinutes . 'm';
+            return $hours . ' jam ' . $remainingMinutes . ' menit';
         } elseif ($hours > 0) {
-            return $hours . 'j';
+            return $hours . ' jam';
         } else {
-            return $remainingMinutes . 'm';
+            return $remainingMinutes . ' menit';
         }
     }
     
@@ -819,9 +834,14 @@ class DashboardController extends Controller
             
             return $karyawan;
         })
-        ->filter(function($karyawan) {
-            // Hanya tampilkan yang minimal 5 hari kerja efektif, ada record kehadiran, dan BUKAN OB
-            return $karyawan->hari_kerja_efektif >= 5 && $karyawan->total_hadir > 0 && !$karyawan->is_ob;
+        ->filter(function($karyawan) use ($startDate, $endDate) {
+            // Filter: minimal ada 5 hari kerja efektif, ada data absensi di bulan ini, dan BUKAN OB
+            $adaAbsensi = DB::table('absensis')
+                ->where('karyawan_id', $karyawan->id)
+                ->whereBetween('tanggal', [$startDate, $endDate])
+                ->exists();
+                
+            return $karyawan->hari_kerja_efektif >= 5 && $adaAbsensi && !$karyawan->is_ob;
         })
         ->sort(function($a, $b) {
             // Primary: jumlah terlambat tertinggi (descending) - yang paling sering terlambat di atas
@@ -928,9 +948,15 @@ class DashboardController extends Controller
             
             return $karyawan;
         })
-        // Filter hanya yang memiliki minimal 5 hari kerja efektif dan ada aktivitas tidak masuk
-        ->filter(function($karyawan) {
-            return $karyawan->hari_kerja_efektif >= 5 && $karyawan->total_tidak_masuk > 0;
+        // Filter hanya yang memiliki minimal 5 hari kerja efektif, ada data absensi di bulan ini, dan ada aktivitas tidak masuk
+        ->filter(function($karyawan) use ($startDate, $endDate) {
+            // Cek apakah ada data absensi di bulan ini
+            $adaAbsensi = DB::table('absensis')
+                ->where('karyawan_id', $karyawan->id)
+                ->whereBetween('tanggal', [$startDate, $endDate])
+                ->exists();
+                
+            return $karyawan->hari_kerja_efektif >= 5 && $adaAbsensi && $karyawan->total_tidak_masuk > 0;
         })
         ->sort(function($a, $b) {
             // Primary: jumlah tidak masuk tertinggi (descending) - yang paling sering tidak masuk di atas
