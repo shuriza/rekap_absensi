@@ -851,6 +851,14 @@
         function openObModal() {
           document.getElementById('modalOb').classList.remove('hidden');
           document.body.classList.add('overflow-y-hidden');
+          
+          // Focus on search input when modal opens
+          setTimeout(() => {
+            document.getElementById('search-employee').focus();
+          }, 100);
+          
+          // Update initial count
+          updateSelectedCount();
         }
 
         // Function untuk toggle checkbox OB ketika area karyawan diklik
@@ -858,22 +866,130 @@
           const checkbox = document.getElementById('ob-checkbox-' + employeeId);
           if (checkbox) {
             checkbox.checked = !checkbox.checked;
+            updateSelectedCount();
           }
+        }
+
+        // Function untuk search karyawan
+        function searchEmployees() {
+          const searchTerm = document.getElementById('search-employee').value.toLowerCase().trim();
+          const employeeRows = document.querySelectorAll('.employee-row');
+          const clearButton = document.getElementById('clear-search');
+          const noResults = document.getElementById('no-results');
+          const obList = document.getElementById('ob-list');
+          
+          let visibleCount = 0;
+
+          // Show/hide clear button
+          if (searchTerm) {
+            clearButton.classList.remove('hidden');
+          } else {
+            clearButton.classList.add('hidden');
+          }
+
+          employeeRows.forEach(row => {
+            const employeeName = row.dataset.employeeName || '';
+            const employeeDepartment = row.dataset.employeeDepartment || '';
+            
+            const matchesSearch = employeeName.includes(searchTerm) || 
+                                employeeDepartment.includes(searchTerm);
+            
+            if (matchesSearch) {
+              row.style.display = 'flex';
+              visibleCount++;
+            } else {
+              row.style.display = 'none';
+            }
+          });
+
+          // Show/hide no results message
+          if (visibleCount === 0 && searchTerm) {
+            noResults.classList.remove('hidden');
+            obList.classList.add('hidden');
+          } else {
+            noResults.classList.add('hidden');
+            obList.classList.remove('hidden');
+          }
+
+          // Update visible count
+          document.getElementById('total-visible').textContent = visibleCount;
+          updateSelectedCount();
+        }
+
+        // Function untuk clear search
+        function clearEmployeeSearch() {
+          document.getElementById('search-employee').value = '';
+          searchEmployees();
+          document.getElementById('search-employee').focus();
+        }
+
+        // Function untuk select all OB
+        function selectAllOB() {
+          const visibleCheckboxes = document.querySelectorAll('.employee-row[style*="display: flex"] .ob-checkbox, .employee-row:not([style*="display: none"]) .ob-checkbox');
+          visibleCheckboxes.forEach(checkbox => {
+            if (checkbox.closest('.employee-row').style.display !== 'none') {
+              checkbox.checked = true;
+            }
+          });
+          updateSelectedCount();
+        }
+
+        // Function untuk deselect all OB
+        function deselectAllOB() {
+          const visibleCheckboxes = document.querySelectorAll('.employee-row[style*="display: flex"] .ob-checkbox, .employee-row:not([style*="display: none"]) .ob-checkbox');
+          visibleCheckboxes.forEach(checkbox => {
+            if (checkbox.closest('.employee-row').style.display !== 'none') {
+              checkbox.checked = false;
+            }
+          });
+          updateSelectedCount();
+        }
+
+        // Function untuk update selected count
+        function updateSelectedCount() {
+          const visibleRows = document.querySelectorAll('.employee-row:not([style*="display: none"])');
+          const selectedCheckboxes = Array.from(visibleRows).filter(row => {
+            const checkbox = row.querySelector('.ob-checkbox');
+            return checkbox && checkbox.checked;
+          });
+          
+          document.getElementById('selected-count').textContent = selectedCheckboxes.length;
         }
 
         // Event delegation untuk handle klik pada employee rows
         document.addEventListener('DOMContentLoaded', function() {
+          // Setup search functionality
+          const searchInput = document.getElementById('search-employee');
+          if (searchInput) {
+            // Real-time search with debounce
+            let searchTimeout;
+            searchInput.addEventListener('input', function() {
+              clearTimeout(searchTimeout);
+              searchTimeout = setTimeout(searchEmployees, 200);
+            });
+
+            // Handle Enter key
+            searchInput.addEventListener('keydown', function(e) {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                searchEmployees();
+              }
+            });
+          }
+
+          // Setup click handling for employee rows
           const obList = document.getElementById('ob-list');
           if (obList) {
             obList.addEventListener('click', function(event) {
               // Jika yang diklik adalah checkbox, jangan toggle lagi
               if (event.target.classList.contains('ob-checkbox')) {
+                updateSelectedCount();
                 return; // Biarkan checkbox handling default behavior
               }
               
               // Cari parent element yang memiliki class employee-row
               const employeeRow = event.target.closest('.employee-row');
-              if (employeeRow) {
+              if (employeeRow && employeeRow.style.display !== 'none') {
                 const employeeId = employeeRow.getAttribute('data-employee-id');
                 if (employeeId) {
                   toggleObCheckbox(employeeId);
@@ -887,6 +1003,12 @@
         function closeModal(id) {
           document.getElementById(id).classList.add('hidden');
           document.body.classList.remove('overflow-y-hidden');
+          
+          // Clear search when closing modal
+          if (id === 'modalOb') {
+            document.getElementById('search-employee').value = '';
+            searchEmployees();
+          }
         }
       </script>
     @endpush
@@ -935,11 +1057,11 @@
     
 
     {{-- =============================================
-        MODAL OB MANAGEMENT - SIMPLIFIED
+        MODAL OB MANAGEMENT - WITH SEARCH & SELECT2
     ============================================= --}}
     <div id="modalOb" class="fixed inset-0 z-50 hidden bg-gray-900 bg-opacity-60 modal">
       <div class="flex items-center justify-center min-h-screen px-4">
-        <div class="relative bg-white rounded-xl shadow-2xl max-w-lg w-full p-6">
+        <div class="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6">
           {{-- Modal Header --}}
           <div class="flex items-center justify-between pb-4 border-b border-gray-200">
             <h3 class="text-lg font-semibold text-gray-900">Kelola Status OB</h3>
@@ -955,23 +1077,62 @@
           <form id="form-ob" action="{{ route('update-ob-batch') }}" method="POST" class="mt-6">
             @csrf
             
-            {{-- Info Text --}}
-            <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div class="flex items-center space-x-2">
-                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <p class="text-sm text-blue-700">
-                  <strong>Tip:</strong> Klik di mana saja pada baris karyawan untuk menandai/menghapus status OB
-                </p>
+            {{-- Info Text & Search --}}
+            <div class="mb-4 space-y-4">
+              <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div class="flex items-center space-x-2">
+                  <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  <p class="text-sm text-blue-700">
+                    <strong>Tips:</strong> Gunakan pencarian di bawah untuk mencari karyawan dengan cepat, atau klik baris untuk toggle status OB.
+                  </p>
+                </div>
+              </div>
+
+              {{-- Search Box --}}
+              <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                </div>
+                <input type="text" 
+                  id="search-employee" 
+                  placeholder="Cari nama karyawan..." 
+                  class="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  autocomplete="off">
+                <button type="button" 
+                  id="clear-search" 
+                  class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 hidden"
+                  onclick="clearEmployeeSearch()">
+                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+
+              {{-- Quick Actions --}}
+              <div class="flex items-center justify-between text-sm">
+
+                <div class="text-gray-500">
+                  <span id="selected-count">{{ $pegawaiList->where('is_ob', true)->count() }}</span> dari 
+                  <span id="total-visible">{{ $pegawaiList->count() }}</span> karyawan dipilih
+                </div>
               </div>
             </div>
             
             {{-- Employee List --}}
-            <div id="ob-list" class="max-h-80 overflow-y-auto border border-gray-200 rounded-lg">
-              @foreach ($pegawaiList as $pegawai)
-                <div class="employee-row flex items-center justify-between p-3 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 cursor-pointer transition-all duration-200 hover:shadow-sm" 
+            <div id="ob-list" class="max-h-80 overflow-y-auto border border-gray-200 rounded-lg bg-gray-50">
+              @php
+                // Sort pegawai berdasarkan nama untuk konsistensi
+                $sortedPegawai = $pegawaiList->sortBy('nama', SORT_NATURAL|SORT_FLAG_CASE);
+              @endphp
+              @foreach ($sortedPegawai as $pegawai)
+                <div class="employee-row flex items-center justify-between p-3 hover:bg-blue-50 border-b border-gray-100 last:border-b-0 cursor-pointer transition-all duration-200 hover:shadow-sm bg-white" 
                      data-employee-id="{{ $pegawai->id }}"
+                     data-employee-name="{{ strtolower($pegawai->nama) }}"
+                     data-employee-department="{{ strtolower($pegawai->departemen) }}"
                      title="Klik untuk toggle status OB {{ $pegawai->nama }}">
                   <div class="flex items-center space-x-3 pointer-events-none">
                     @php
@@ -983,7 +1144,8 @@
                       name="{{ $inputName }}" 
                       value="{{ $pegawai->id }}" 
                       @if($isChecked) checked @endif
-                      class="w-4 h-4 text-blue-600 rounded pointer-events-auto ob-checkbox">
+                      class="w-4 h-4 text-blue-600 rounded pointer-events-auto ob-checkbox"
+                      onchange="updateSelectedCount()">
                     <div>
                       <div class="font-medium text-gray-900">{{ $pegawai->nama }}</div>
                       <div class="text-sm text-gray-600">{{ $pegawai->departemen }}</div>
@@ -991,7 +1153,9 @@
                   </div>
                   <div class="flex items-center space-x-2">
                     @if($pegawai->is_ob)
-                      <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full pointer-events-none">Active OB</span>
+                      <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full pointer-events-none font-medium">
+                        OB Aktif
+                      </span>
                     @endif
                     {{-- Click indicator icon --}}
                     <svg class="w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1002,14 +1166,22 @@
               @endforeach
             </div>
 
+            {{-- No Results Message (Hidden by default) --}}
+            <div id="no-results" class="hidden text-center py-8 text-gray-500">
+              <svg class="w-12 h-12 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+              </svg>
+              <p class="text-sm">Tidak ada karyawan yang cocok dengan pencarian</p>
+            </div>
+
             {{-- Action Buttons --}}
             <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
               <button type="button" onclick="closeModal('modalOb')" 
-                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg">
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
                 Batal
               </button>
               <button type="submit" 
-                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
                 💾 Simpan Perubahan
               </button>
             </div>
