@@ -80,45 +80,79 @@ class IzinPresensiController extends Controller
     /* ---------------------------------------------------- STORE (POST) */
     public function store(Request $r)
     {
-        $data = $this->validateData($r);
-        $data['tanggal_akhir'] = $data['tanggal_akhir'] ?: $data['tanggal_awal'];
+        try {
+            $data = $this->validateData($r);
+            $data['tanggal_akhir'] = $data['tanggal_akhir'] ?: $data['tanggal_awal'];
 
-        if($r->file('berkas')){
-            $data['berkas'] = $r->file('berkas')->store('izin_presensi','public');
+            // Cek apakah ada data izin yang overlap
+            $existingIzin = $this->checkOverlapped($data);
+            if ($existingIzin) {
+                $karyawan = Karyawan::find($data['karyawan_id']);
+                $tanggalMulai = \Carbon\Carbon::parse($existingIzin->tanggal_awal)->format('d-m-Y');
+                $tanggalSelesai = \Carbon\Carbon::parse($existingIzin->tanggal_akhir)->format('d-m-Y');
+                
+                return back()
+                    ->with('error', "⚠️ Data izin sudah ada! Karyawan {$karyawan->nama} sudah memiliki izin {$existingIzin->jenis_ijin} pada tanggal {$tanggalMulai} s/d {$tanggalSelesai}.")
+                    ->withInput();
+            }
+
+            if($r->file('berkas')){
+                $data['berkas'] = $r->file('berkas')->store('izin_presensi','public');
+            }
+
+            IzinPresensi::create($data);
+
+            return redirect()->route('izin_presensi.index')->with('success','✓ Data izin berhasil ditambahkan.');
+        } catch (\Exception $e) {
+            return back()->with('error','✗ Gagal menambahkan data izin. '.$e->getMessage())->withInput();
         }
-
-        $this->deleteOverlapped($data);
-        IzinPresensi::create($data);
-
-        return back()->with('success','Izin disimpan.');
     }
 
     /* ---------------------------------------------------- UPDATE (PUT) */
     public function update(Request $r, IzinPresensi $izin_presensi)
     {
-        $data = $this->validateData($r);
-        $data['tanggal_akhir'] = $data['tanggal_akhir'] ?: $data['tanggal_awal'];
+        try {
+            $data = $this->validateData($r);
+            $data['tanggal_akhir'] = $data['tanggal_akhir'] ?: $data['tanggal_awal'];
 
-        if($r->file('berkas')){
-            if($izin_presensi->berkas)
-                Storage::disk('public')->delete($izin_presensi->berkas);
-            $data['berkas'] = $r->file('berkas')->store('izin_presensi','public');
+            // Cek apakah ada data izin yang overlap (kecuali data yang sedang di-edit)
+            $existingIzin = $this->checkOverlapped($data, $izin_presensi->id);
+            if ($existingIzin) {
+                $karyawan = Karyawan::find($data['karyawan_id']);
+                $tanggalMulai = \Carbon\Carbon::parse($existingIzin->tanggal_awal)->format('d-m-Y');
+                $tanggalSelesai = \Carbon\Carbon::parse($existingIzin->tanggal_akhir)->format('d-m-Y');
+                
+                return back()
+                    ->with('error', "⚠️ Data izin sudah ada! Karyawan {$karyawan->nama} sudah memiliki izin {$existingIzin->jenis_ijin} pada tanggal {$tanggalMulai} s/d {$tanggalSelesai}.")
+                    ->withInput();
+            }
+
+            if($r->file('berkas')){
+                if($izin_presensi->berkas)
+                    Storage::disk('public')->delete($izin_presensi->berkas);
+                $data['berkas'] = $r->file('berkas')->store('izin_presensi','public');
+            }
+
+            $izin_presensi->update($data);
+
+            return back()->with('success','✓ Data izin berhasil diperbarui.');
+        } catch (\Exception $e) {
+            return back()->with('error','✗ Gagal memperbarui data izin. '.$e->getMessage())->withInput();
         }
-
-        $this->deleteOverlapped($data,$izin_presensi->id);
-        $izin_presensi->update($data);
-
-        return back()->with('success','Izin diperbarui.');
     }
 
     /* ---------------------------------------------------- DESTROY (DELETE) */
     public function destroy(IzinPresensi $izin_presensi)
     {
-        if($izin_presensi->berkas)
-            Storage::disk('public')->delete($izin_presensi->berkas);
+        try {
+            if($izin_presensi->berkas)
+                Storage::disk('public')->delete($izin_presensi->berkas);
 
-        $izin_presensi->delete();
-        return back()->with('success','Izin dihapus.');
+            $izin_presensi->delete();
+            return back()->with('success','✓ Data izin berhasil dihapus.');
+        } catch (\Exception $e) {
+            return back()->with('error','✗ Gagal menghapus data izin. '.$e->getMessage());
+        }
     }
 
     /* ---------------------------------------------------- API PREVIEW */
@@ -158,21 +192,31 @@ class IzinPresensiController extends Controller
             'tanggal_awal'  => ['required','date'],
             'tanggal_akhir' => ['nullable','date','after_or_equal:tanggal_awal'],
             'jenis_ijin'    => ['required','string'],
-            'berkas'        => ['nullable','mimes:pdf,jpg,jpeg,png','max:2048'],
+            'berkas'        => ['required','mimes:pdf,jpg,jpeg,png','max:2048'],
             'keterangan'    => ['nullable','string'],
         ]);
     }
 
-    private function deleteOverlapped(array $data, ?int $except=null): void
+    /**
+     * Cek apakah ada data izin yang overlap dengan tanggal yang diinput
+     * @return IzinPresensi|null
+     */
+    private function checkOverlapped(array $data, ?int $except=null): ?IzinPresensi
     {
-        IzinPresensi::where('karyawan_id',$data['karyawan_id'])
-            ->when($except,fn($q)=>$q->where('id','!=',$except))
-            ->where(function($q)use($data){
-                $a=$data['tanggal_awal']; $b=$data['tanggal_akhir'];
-                $q->whereBetween('tanggal_awal',[$a,$b])
-                  ->orWhereBetween('tanggal_akhir',[$a,$b])
-                  ->orWhere(fn($x)=>$x->where('tanggal_awal','<=',$a)
-                                      ->where('tanggal_akhir','>=',$b));
-            })->delete();
+        $a = $data['tanggal_awal']; 
+        $b = $data['tanggal_akhir'];
+        
+        return IzinPresensi::where('karyawan_id', $data['karyawan_id'])
+            ->when($except, fn($q) => $q->where('id', '!=', $except))
+            ->where(function($q) use ($a, $b) {
+                // Cek apakah tanggal_awal berada di antara range yang sudah ada
+                $q->whereBetween('tanggal_awal', [$a, $b])
+                  // Atau tanggal_akhir berada di antara range yang sudah ada
+                  ->orWhereBetween('tanggal_akhir', [$a, $b])
+                  // Atau range baru berada di dalam range yang sudah ada
+                  ->orWhere(fn($x) => $x->where('tanggal_awal', '<=', $a)
+                                        ->where('tanggal_akhir', '>=', $b));
+            })
+            ->first();
     }
 }

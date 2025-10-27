@@ -475,6 +475,57 @@
 
 <div class="min-h-screen flex flex-col px-6 py-4">
 
+    {{-- Success Notification --}}
+    @if (session('success'))
+        <div id="successAlert" class="mb-6 p-4 bg-green-50 border-l-4 border-green-500 rounded-r-lg animate-pulse">
+            <div class="flex items-start">
+                <svg class="w-5 h-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div>
+                    <h3 class="text-sm font-medium text-green-800">Berhasil!</h3>
+                    <p class="mt-2 text-sm text-green-700">{{ session('success') }}</p>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" class="ml-auto text-green-500 hover:text-green-700 flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <script>
+            // Auto-hide success notification after 5 seconds
+            setTimeout(() => {
+                const alert = document.getElementById('successAlert');
+                if (alert) {
+                    alert.style.transition = 'opacity 0.3s ease-out';
+                    alert.style.opacity = '0';
+                    setTimeout(() => alert.remove(), 300);
+                }
+            }, 5000);
+        </script>
+    @endif
+
+    {{-- Error Notification --}}
+    @if (session('error'))
+        <div id="errorAlert" class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
+            <div class="flex items-start">
+                <svg class="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div>
+                    <h3 class="text-sm font-medium text-red-800">Terjadi Kesalahan!</h3>
+                    <p class="mt-2 text-sm text-red-700">{{ session('error') }}</p>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" class="ml-auto text-red-500 hover:text-red-700 flex-shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    @endif
+
     <h1 class="text-lg font-semibold mb-4">
       Daftar Izin Presensi Dinas Penanaman Modal &amp; Pelayanan Terpadu Satu Pintu
     </h1>
