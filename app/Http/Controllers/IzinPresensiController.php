@@ -149,7 +149,7 @@ class IzinPresensiController extends Controller
                 Storage::disk('public')->delete($izin_presensi->berkas);
 
             $izin_presensi->delete();
-            return back()->with('success','✓ Data izin berhasil dihapus.');
+            return redirect()->route('izin_presensi.index')->with('success','✓ Data izin berhasil dihapus.');
         } catch (\Exception $e) {
             return back()->with('error','✗ Gagal menghapus data izin. '.$e->getMessage());
         }

@@ -66,18 +66,28 @@
             align-items: center !important;
             gap: 0.5rem !important;
             margin-bottom: 0 !important;
+            flex-wrap: nowrap !important;
         }
         
         .dataTables_wrapper .dataTables_filter input[type="search"] {
             margin-left: 0 !important;
+            margin-right: 0 !important;
             padding: 8px 12px !important;
+            padding-right: 35px !important; /* Beri ruang untuk tombol X bawaan browser */
             border: 1px solid #d1d5db !important;
             border-radius: 0.5rem !important;
             background: white !important;
             color: #1f2937 !important;
             font-size: 14px !important;
-            width: 250px !important;
+            width: 280px !important;
             box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+            flex-shrink: 0 !important;
+        }
+        
+        /* Tombol Cari tidak boleh tertimpa */
+        #btnCariIzin {
+            flex-shrink: 0 !important;
+            margin-left: 0.5rem !important;
         }
         
         .dataTables_wrapper .dataTables_filter input[type="search"]:focus {
@@ -221,6 +231,7 @@
 
             /* ----------   DataTables multi‑table   ---------- */
             if (window.jQuery && jQuery.fn.DataTable) {
+                // NONAKTIFKAN searching otomatis dengan searchDelay
                 const dtApi = $('table.display').DataTable({
                     pageLength : 10,
                     lengthMenu : [[10,25,50,100,-1],[10,25,50,100,'Semua']],
@@ -230,7 +241,7 @@
                     dom: '<"dt-top-controls"<"dataTables_length"l><"dataTables_filter"f>>rtip',
                     language   : {
                         search           : '',
-                        searchPlaceholder: 'Cari nama karyawan, tipe, atau jenis izin...',
+                        searchPlaceholder: 'Ketik nama karyawan, tipe, atau jenis izin...',
                         lengthMenu: 'Tampilkan _MENU_ data per halaman',
                         info: 'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',
                         infoEmpty: 'Tidak ada data yang tersedia',
@@ -243,29 +254,96 @@
                         },
                         emptyTable: 'Tidak ada data izin yang tersedia',
                         zeroRecords: 'Tidak ditemukan data yang sesuai'
+                    },
+                    searching: true,
+                    searchDelay: 999999999  // Disable auto search dengan delay yang sangat lama
+                });
+
+                // Tunggu DOM DataTables siap
+                setTimeout(function() {
+                    // Custom search dengan button
+                    const searchInput = $('.dataTables_filter input[type="search"]');
+                    const searchLabel = $('.dataTables_filter label');
+                    
+                    if (searchInput.length && searchLabel.length) {
+                        console.log('Membuat button cari...');
+                        
+                        // Ubah struktur label menjadi flex
+                        searchLabel.css('display', 'flex');
+                        searchLabel.css('align-items', 'center');
+                        searchLabel.css('gap', '0.5rem');
+                        
+                        // Tambahkan icon search di awal jika belum ada
+                        if (!searchLabel.find('svg').length) {
+                            searchLabel.prepend(`
+                                <svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                </svg>
+                            `);
+                        }
+                        
+                        // Tambahkan button Cari setelah input jika belum ada
+                        if (!$('#btnCariIzin').length) {
+                            searchInput.after(`
+                                <button type="button" id="btnCariIzin" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg shadow-sm transition-all duration-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 whitespace-nowrap">
+                                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                    </svg>
+                                    Cari
+                                </button>
+                            `);
+                            
+                            console.log('Button cari berhasil ditambahkan');
+                        }
+                        
+                        // PENTING: Hapus SEMUA event listener auto-search dari DataTables
+                        searchInput.off('keyup.DT search.DT input.DT paste.DT cut.DT');
+                        
+                        // Blokir semua event input yang bisa trigger search
+                        searchInput.on('keyup input paste cut', function(e) {
+                            // Cegah auto search, kecuali Enter
+                            if (e.type !== 'keypress' && e.which !== 13) {
+                                e.stopImmediatePropagation();
+                                return false;
+                            }
+                        });
+                        
+                        // Tambahkan event handler HANYA untuk Enter key
+                        searchInput.on('keypress', function(e) {
+                            if (e.which === 13) { // Enter key
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const searchValue = $(this).val();
+                                console.log('Enter - Mencari:', searchValue);
+                                dtApi.search(searchValue).draw();
+                            }
+                        });
+                        
+                        // Event handler untuk button Cari
+                        $(document).on('click', '#btnCariIzin', function() {
+                            const searchValue = searchInput.val();
+                            console.log('Button - Mencari:', searchValue);
+                            dtApi.search(searchValue).draw();
+                        });
                     }
-                });
+                    
+                    // Custom length label dengan icon
+                    const lengthLabel = $('.dataTables_length label');
+                    if (lengthLabel.length && !lengthLabel.find('svg').length) {
+                        lengthLabel.prepend(`
+                            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+                            </svg>
+                        `);
+                    }
 
-                // Custom search label dengan icon
-                $('.dataTables_filter label').prepend(`
-                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                `);
-                
-                // Custom length label dengan icon
-                $('.dataTables_length label').prepend(`
-                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
-                    </svg>
-                `);
-
-                /* ----------   Tailwind‑ify input & select   ---------- */
-                dtApi.tables().every(function () {
-                    const $c = $(this.table().container());
-                    $c.find('input[type="search"]').addClass('border px-3 py-2 rounded-lg border-gray-200 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 bg-white text-gray-700');
-                    $c.find('select').addClass('border px-3 py-2 rounded-lg border-gray-200 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 bg-white text-gray-700');
-                });
+                    /* ----------   Tailwind‑ify input & select   ---------- */
+                    dtApi.tables().every(function () {
+                        const $c = $(this.table().container());
+                        $c.find('input[type="search"]').addClass('border px-3 py-2 rounded-lg border-gray-200 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 bg-white text-gray-700');
+                        $c.find('select').addClass('border px-3 py-2 rounded-lg border-gray-200 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 bg-white text-gray-700');
+                    });
+                }, 100);
             }
         });
 
@@ -726,7 +804,14 @@
                         <tr class="hover:bg-green-50 odd:bg-white even:bg-gray-50">
                             <td class="px-4 py-3 text-gray-700">{{ $i+1 }}</td>
                             <td class="px-4 py-3 text-gray-700 whitespace-nowrap">
-                                <div class="font-medium">{{ $izin->karyawan->nama }}</div>
+                                <div class="font-medium flex items-center gap-2">
+                                    {{ $izin->karyawan->nama }}
+                                    @if($izin->karyawan->is_ob)
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800 border border-orange-200">
+                                            OB
+                                        </span>
+                                    @endif
+                                </div>
                                 <div class="text-xs text-gray-500">{{ $izin->karyawan->departemen }}</div>
                             </td>
                             <td class="px-4 py-3 text-center text-gray-700">{{ $izin->tipe_ijin }}</td>
